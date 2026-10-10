@@ -58,6 +58,10 @@ python3 scripts/build-tokens.py    # tokens.css -> design/tokens.json
 python3 scripts/render-social.py   # og-image, twitter-card and icons from their sources
 ```
 
+## Contact
+
+contact@lanparty1998.com
+
 ## Licences
 
 Three.js is MIT (`vendor/three/LICENSE`). js-dos is GPL-2.0. VT323 is SIL OFL 1.1 (`fonts/VT323-OFL.txt`). "Volt Cola" and "Nachoz" are parody brands.
