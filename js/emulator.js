@@ -9,7 +9,9 @@ async function pickBundle() {
   if (param) return param;
   try {
     const r = await fetch(LOCAL_BUNDLE, { method: 'HEAD' });
-    if (r.ok) return LOCAL_BUNDLE;
+    // static hosts (e.g. Cloudflare Pages) may answer missing files with index.html
+    const type = r.headers.get('content-type') || '';
+    if (r.ok && !type.includes('text/html')) return LOCAL_BUNDLE;
   } catch { /* fall through */ }
   return REMOTE_BUNDLE;
 }
