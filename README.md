@@ -65,3 +65,18 @@ contact@lanparty1998.com
 ## Licences
 
 Three.js is MIT (`vendor/three/LICENSE`). js-dos is GPL-2.0. VT323 is SIL OFL 1.1 (`fonts/VT323-OFL.txt`). "Volt Cola" and "Nachoz" are parody brands.
+
+## Analytics events (GA4 `G-P6RQJ9BSJ1`)
+
+Sent from `js/analytics.js`:
+
+| Event | Params |
+| --- | --- |
+| `enter_party` | — |
+| `drink_cola` | `cans_total`, `caffeine_level` |
+| `caffeine_overload` | `cans_total` (caffeine above 85) |
+| `eat_snack` | `handfuls_total`, `snack_level` |
+| `sit_down` | `station` |
+| `game_start` | `game_name`, `games_total` (once per emulator boot) |
+| `stand_up` | `game_name`, `play_seconds` |
+| `party_summary` | `cans_total`, `handfuls_total`, `games_total`, `play_seconds` (on tab close) |

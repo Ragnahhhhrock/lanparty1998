@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { buildRoom, ROOM } from './room.js';
 import { DosPC } from './emulator.js';
 import * as sfx from './sfx.js';
+import { analytics } from './analytics.js';
 
 const $ = (id) => document.getElementById(id);
 const ui = {
@@ -48,6 +49,7 @@ ui.enter.addEventListener('click', () => {
   mode = 'walk';
   sfx.startAudio();
   lockPointer();
+  analytics.enterParty();
 });
 ui.enter.focus();
 
@@ -110,6 +112,7 @@ function drink() {
   stats.caffeine = Math.min(100, stats.caffeine + 32);
   stats.cans++;
   sfx.fizz();
+  analytics.drinkCola(stats.caffeine);
   toast(stats.caffeine > 85 ? 'You can hear colours. Maybe slow down.' : DRINK_LINES[stats.cans % DRINK_LINES.length]);
 }
 
@@ -118,6 +121,7 @@ function eat() {
   stats.dust = 1;
   stats.handfuls++;
   sfx.crunch();
+  analytics.eatSnack(stats.snacks);
   toast(EAT_LINES[stats.handfuls % EAT_LINES.length]);
 }
 
@@ -158,17 +162,22 @@ function sitDown(station) {
     ui.monitor.hidden = false;
     ui.seatedBar.hidden = false;
     ui.seatedStatus.textContent = pc.running ? 'Click the screen to play' : 'Booting...';
-    pc.onReady = () => { if (mode === 'seated') ui.seatedStatus.textContent = 'Click the screen to play'; };
+    pc.onReady = () => {
+      analytics.gameStart('DOOM');
+      if (mode === 'seated') ui.seatedStatus.textContent = 'Click the screen to play';
+    };
     pc.boot().catch((err) => { ui.seatedStatus.textContent = `Couldn't start DOS: ${err.message}`; });
     station.screen.setMode('mine', 'DOOM · RUNNING');
   });
   sitDown.station = station;
+  analytics.sitDown(station);
 }
 
 function standUp() {
   if (mode !== 'seated') return;
   const station = sitDown.station;
   pc.pause();
+  analytics.standUp('DOOM');
   if (document.pointerLockElement) document.exitPointerLock();
   ui.monitor.hidden = true;
   ui.seatedBar.hidden = true;
