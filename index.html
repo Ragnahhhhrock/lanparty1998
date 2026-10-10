@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAN Party '98</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+<link rel="stylesheet" href="vendor/js-dos/js-dos.css">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.min.js" } }
+</script>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <!-- HUD while walking around -->
+  <div id="hud" hidden>
+    <div id="crosshair"></div>
+    <div id="prompt" hidden></div>
+    <div id="meters" class="w98-panel">
+      <div class="meter"><span>CAFFEINE</span><div class="bar"><i id="m-caffeine"></i></div></div>
+      <div class="meter"><span>SNACKS</span><div class="bar"><i id="m-snacks"></i></div></div>
+      <div id="clock">11:42 PM</div>
+    </div>
+    <div id="toast" hidden></div>
+  </div>
+
+  <!-- The DOS screen, laid exactly over your CRT when seated -->
+  <div id="monitor" hidden>
+    <div id="dos"></div>
+    <div id="crt-fx"></div>
+    <div id="dust"></div>
+  </div>
+  <div id="seated-bar" hidden>
+    <button id="stand-btn" class="w98-btn">Stand up <kbd>`</kbd></button>
+    <button id="drink-btn" class="w98-btn">Swig of Volt</button>
+    <button id="eat-btn" class="w98-btn">Handful of Nachoz</button>
+    <span id="seated-status">Click the screen to play</span>
+  </div>
+
+  <!-- Intro dialog -->
+  <div id="intro">
+    <div class="w98-window">
+      <div class="w98-title"><span>LANPARTY.EXE</span><b>×</b></div>
+      <div class="w98-body">
+        <h1>LAN Party '98</h1>
+        <p>Saturday night, somebody's basement. Six beige boxes, one 10BASE-T hub, a crate of Volt Cola and far too many Nachoz. Your PC is the one with your name taped to it.</p>
+        <table class="keys">
+          <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> + mouse</td><td>Walk and look</td></tr>
+          <tr><td><kbd>E</kbd></td><td>Sit down · drink · eat</td></tr>
+          <tr><td><kbd>`</kbd></td><td>Stand up from your PC</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Release the mouse</td></tr>
+        </table>
+        <div class="w98-actions"><button id="enter-btn" class="w98-btn default">Walk in</button></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="vendor/js-dos/js-dos.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
