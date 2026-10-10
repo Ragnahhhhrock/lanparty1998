@@ -97,15 +97,17 @@ function chipBag(label) {
   return g;
 }
 
+// Six PCs. Nobody owns one any more: whoever sits down first gets it. The idle screens are
+// whatever the last person left running.
 const STATIONS = [
   // row along the back wall, monitors facing the room
-  { x: -2.8, z: -4.25, face: 0, name: 'DAZ', mode: 'dos' },
-  { x: 0, z: -4.25, face: 0, name: 'YOU', mode: 'mine', mine: true },
-  { x: 2.8, z: -4.25, face: 0, name: 'KEV', mode: 'waiting' },
+  { x: -2.8, z: -4.25, face: 0, idle: 'dos' },
+  { x: 0, z: -4.25, face: 0, idle: 'stars3d' },
+  { x: 2.8, z: -4.25, face: 0, idle: 'waiting' },
   // row along the front wall
-  { x: -2.8, z: 4.25, face: Math.PI, name: 'B-RAD', mode: 'win98' },
-  { x: 0, z: 4.25, face: Math.PI, name: 'MOUSE', mode: 'stars3d' },
-  { x: 2.8, z: 4.25, face: Math.PI, name: 'JONO', mode: 'bios' },
+  { x: -2.8, z: 4.25, face: Math.PI, idle: 'win98' },
+  { x: 0, z: 4.25, face: Math.PI, idle: 'bios' },
+  { x: 2.8, z: 4.25, face: Math.PI, idle: 'dos' },
 ];
 
 export function buildRoom(scene) {
@@ -159,7 +161,8 @@ export function buildRoom(scene) {
     g.rotation.y = s.face;
     scene.add(g);
 
-    const screen = new T.Screen(s.mode, i + 1);
+    const screen = new T.Screen(s.idle, i + 1);
+    screen.pcNumber = i + 1;
     out.screens.push(screen);
     const mon = crt(screen.texture);
     mon.group.position.set(0, TABLE_Y, -0.12);
@@ -178,7 +181,8 @@ export function buildRoom(scene) {
     g.add(box(0.06, 0.03, 0.1, beige, 0.33, TABLE_Y + 0.015, 0.26)); // mouse
     g.add(box(0.2, 0.004, 0.18, new THREE.MeshStandardMaterial({ color: 0x1c3b6e }), 0.34, TABLE_Y + 0.002, 0.25)); // mousepad
 
-    const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.04), new THREE.MeshBasicMaterial({ map: T.nameTag(s.name) }));
+    const tagTex = T.nameTag(`PC-0${i + 1}`);
+    const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.04), new THREE.MeshBasicMaterial({ map: tagTex }));
     tag.position.set(0, 0.39, 0.152);
     mon.group.add(tag);
 
@@ -187,14 +191,15 @@ export function buildRoom(scene) {
     chair.rotation.y = (i * 0.37) % 0.5 - 0.25; // nobody pushes their chair in straight
     g.add(chair);
 
-    // every station gets a can; yours also gets a bag
+    // every station gets a can, every other one a bag of Nachoz
     const can = voltCan(labelVolt);
     can.position.set(-0.36, TABLE_Y, 0.12);
     g.add(can);
 
     const station = {
-      ...s, index: i, group: g, screen, monitor: mon, seatTarget: new THREE.Object3D(),
-      cableStart: new THREE.Vector3(),
+      ...s, index: i, name: `PC-0${i + 1}`, group: g, screen, monitor: mon, seatTarget: new THREE.Object3D(),
+      cableStart: new THREE.Vector3(), chair,
+      setTag: (text) => T.nameTag(text, tagTex),
     };
     // where the camera goes when you sit: square in front of the tube
     station.seatTarget.position.set(0, TABLE_Y + 0.225, -0.12 + 0.157 + 0.36);
@@ -202,20 +207,19 @@ export function buildRoom(scene) {
     g.updateMatrixWorld(true);
     tw.group.localToWorld(station.cableStart.set(0, 0.06, -0.22));
 
-    mon.group.traverse((o) => { o.userData.interact = { kind: s.mine ? 'sit' : 'busy', station }; });
-    tw.group.traverse((o) => { o.userData.interact = { kind: s.mine ? 'sit' : 'busy', station }; });
+    mon.group.traverse((o) => { o.userData.interact = { kind: 'sit', station }; });
+    tw.group.traverse((o) => { o.userData.interact = { kind: 'sit', station }; });
     out.interactables.push(mon.group, tw.group);
 
-    if (s.mine) {
-      can.traverse((o) => { o.userData.interact = { kind: 'drink' }; });
-      out.interactables.push(can);
+    can.traverse((o) => { o.userData.interact = { kind: 'drink' }; });
+    out.interactables.push(can);
+    if (i % 2 === 1) {
       const bag = chipBag(labelNachoz);
       bag.position.set(-0.6, TABLE_Y, 0.02);
       bag.rotation.y = 0.5;
       g.add(bag);
       bag.traverse((o) => { o.userData.interact = { kind: 'eat' }; });
       out.interactables.push(bag);
-      out.mine = station;
     }
     out.stations.push(station);
   });

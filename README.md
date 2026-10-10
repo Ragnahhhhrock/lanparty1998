@@ -5,49 +5,62 @@ Live at **https://lanparty1998.com**
 ![The room](docs/room.png)
 ![Seated at your PC](docs/seated-doom.png)
 
-A 3D basement LAN party in the browser. Walk around, crack a Volt Cola, eat Nachoz, sit at your PC and play DOOM on an emulated DOS box.
+A 3D basement LAN party in the browser. Walk around with everyone else who's online, crack a Volt Cola, eat Nachoz, grab a free PC and play DOOM on an emulated DOS box, then start a deathmatch with whoever else is sitting down.
 
-**Phase 1 (this build):** one room, six stations, your PC runs DOOM shareware via js-dos. The other five PCs are scenery.
+## Playing
 
-## Run it
-
-Any static web server works (the emulator won't load from `file://`):
-
-```sh
-cd lanparty1998
-python3 -m http.server 8000
-# open http://localhost:8000
-```
-
-## Controls
+1. Enter a handle and walk in. Everyone on the site shares the same basement; add `?room=<name>` to the URL for a private room.
+2. Walk up to any free PC (its screen says **FREE**) and press **E**. DOOM boots solo.
+3. To deathmatch: one seated player clicks **Host a deathmatch**, others sitting at PCs click **Join deathmatch** (up to 4), and the host clicks **Start**. Every PC in the match reboots into DOOM's `IPXSETUP` and finds the others over a virtual IPX network.
+4. Standing up (backtick) leaves the deathmatch.
 
 | Key | Action |
 | --- | --- |
 | W A S D + mouse | Walk and look |
-| E | Sit at your PC · drink · eat |
+| E | Sit at a PC · drink · eat |
+| T | Chat |
 | ` (backtick) | Stand up from your PC |
 | Esc | Release the mouse |
 
 ## How it fits together
 
-- `js/room.js` builds the room from primitives: folding tables, beige towers, CRTs, the hub and cat5 runs.
-- `js/textures.js` draws every texture on canvas, including the animated screens on the other PCs.
-- `js/emulator.js` wraps js-dos. When you sit, the DOS canvas is laid exactly over your CRT's glass; standing pauses the emulator.
-- `js/main.js` handles movement, collisions, interaction, the sit/stand camera tween and the caffeine/snack meters.
-- `vendor/` holds pinned copies of Three.js r179 and js-dos 8.5.3 so the page doesn't depend on those CDNs.
+- `js/room.js` builds the basement from primitives: folding tables, six beige PCs, CRTs, the hub and cat5 runs.
+- `js/textures.js` draws every texture on canvas, including the idle and "someone's playing" screens.
+- `js/avatars.js` draws the other players and moves them to wherever the server says they are.
+- `js/net.js` talks to the room server over a WebSocket. If it can't connect, the game runs solo.
+- `js/emulator.js` wraps js-dos. When you sit, the DOS canvas is laid exactly over your CRT's glass; standing pauses it.
+- `js/main.js` handles movement, interaction, seats, chat, the deathmatch flow and the caffeine/snack meters.
+- `server/` is the room server: a Cloudflare Worker with one Durable Object per room. It tracks players, positions, seats, chat and the current deathmatch. It deploys to `room.lanparty1998.com`.
+- `vendor/` holds pinned copies of Three.js r179 and js-dos 8.5.3.
+
+### Deathmatch networking
+
+Game traffic doesn't go through the room server. js-dos emulates IPX over WebRTC: the host's DOSBox runs an IPX tunnelling server, the room server hands its network peer id to the other players, and their DOSBoxes connect to it peer to peer. Signalling uses js-dos's public peer server (`net.dos.zone`), and NAT traversal uses public STUN only. Players behind strict (symmetric) NATs may not be able to connect until a TURN server is added.
+
+## Run it locally
+
+```sh
+# room server (http://127.0.0.1:8787)
+cd server && npm install && npx wrangler dev
+
+# the site, from the repo root
+python3 -m http.server 8000
+# open http://localhost:8000 — on localhost the page uses the local room server
+```
+
+`?server=wss://…` points the page at any room server.
 
 ## Game data
 
-By default your PC loads the public DOOM shareware bundle from `https://v8.js-dos.com/bundles/doom.jsdos`. To self-host, put a bundle at `bundles/doom.jsdos`, or pass `?bundle=<url>`.
+`bundles/doom-shareware.zip` is the DOOM v1.9 shareware release, unmodified and freely redistributable. `bundles/conf-*.jsdos` are tiny js-dos bundles holding only a `dosbox.conf` (solo DOOM, or `IPXSETUP -nodes N -deathmatch`); rebuild them with `python3 tools/make-confs.py`.
 
 Only redistributable data goes in this repo. Commercial game files (full DOOM, DOOM II, Quake, etc.) must be supplied by the player.
 
-## Next phases
+## Next
 
-2. Two players in the same room (WebSocket presence, avatars).
-3. DOOM deathmatch between two virtual PCs. js-dos already supports IPX over WebRTC (`startIpxServer` / `connectIpxAddress`), which is the starting point.
-4. Quake, Quake II and Red Alert/C&C via OpenRA.
-5. Lobby, hosting, more snacks.
+- TURN server for players behind strict NATs.
+- Quake, Quake II and Red Alert/C&C via OpenRA.
+- More rooms, more snacks.
 
 ## Design system
 
@@ -64,7 +77,7 @@ contact@lanparty1998.com
 
 ## Licences
 
-Three.js is MIT (`vendor/three/LICENSE`). js-dos is GPL-2.0. VT323 is SIL OFL 1.1 (`fonts/VT323-OFL.txt`). "Volt Cola" and "Nachoz" are parody brands.
+Three.js is MIT (`vendor/three/LICENSE`). js-dos is GPL-2.0. DOOM shareware © id Software, distributed under its shareware terms. VT323 is SIL OFL 1.1 (`fonts/VT323-OFL.txt`). "Volt Cola" and "Nachoz" are parody brands.
 
 ## Analytics events (GA4 `G-P6RQJ9BSJ1`)
 

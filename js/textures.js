@@ -136,12 +136,13 @@ export function poster(title, sub, hue) {
   return tex(c);
 }
 
-export function nameTag(name) {
-  const [c, g] = canvas(256, 64);
+export function nameTag(name, existing) {
+  const [c, g] = existing ? [existing.image, existing.image.getContext('2d')] : canvas(256, 64);
   g.fillStyle = '#f5f0dc'; g.fillRect(0, 0, 256, 64);
   g.fillStyle = 'rgba(255,255,255,.5)'; g.fillRect(0, 0, 256, 10);
   g.font = 'bold 40px "Comic Sans MS", "Marker Felt", cursive'; g.fillStyle = '#1b2a8a';
-  g.textAlign = 'center'; g.fillText(name, 128, 48);
+  g.textAlign = 'center'; g.fillText(name, 128, 48, 240);
+  if (existing) { existing.needsUpdate = true; return existing; }
   return tex(c);
 }
 
@@ -165,6 +166,8 @@ export class Screen {
     [this.canvas, this.g] = canvas(W, H);
     this.texture = tex(this.canvas);
     this.mode = mode;
+    this.idle = mode;
+    this.free = true;
     this.t0 = seed * 3.7;
     this.stars = Array.from({ length: 90 }, (_, i) => { const r = rand(seed * 100 + i); return [r() - 0.5, r() - 0.5, r()]; });
     this.message = '';
@@ -173,10 +176,20 @@ export class Screen {
 
   setMode(mode, message = '') { this.mode = mode; this.message = message; this.draw(performance.now() / 1000); }
 
+  // free: the attract screen plus a sign saying so; taken: someone else's game
+  setFree(free, who = '', what = '') {
+    this.free = free; this.who = who; this.what = what;
+    if (this.mode !== 'mine') this.mode = free ? this.idle : 'remote';
+  }
+
   draw(time) {
     const g = this.g, t = time + this.t0;
     g.save();
     this[this.mode]?.(g, t);
+    if (this.free && this.mode === this.idle) {
+      g.fillStyle = '#000080'; g.fillRect(0, H - 34, W, 34); // --w98-title
+      this.text(g, `PC-${String(this.pcNumber ?? 0).padStart(2, '0')} FREE · Press E to sit`, 10, H - 11, '#ffffff', 20);
+    }
     g.restore();
     this.texture.needsUpdate = true;
   }
@@ -240,6 +253,19 @@ export class Screen {
     const dots = '.'.repeat(1 + Math.floor(t * 2) % 3);
     this.text(g, 'Waiting' + dots, 10, 100, '#9dff7a', 22);
     this.text(g, 'Press ESC to abort', 10, H - 14, '#777', 16);
+  }
+
+  remote(g, t) { // somebody else's game, seen over their shoulder
+    g.fillStyle = '#000000'; g.fillRect(0, 0, W, H);
+    // a suggestion of DOOM: grey walls, a brown floor, the status bar (token colours only)
+    g.fillStyle = '#808080'; g.fillRect(0, 0, W, 90);       // --w98-shadow
+    g.fillStyle = '#4a2c17'; g.fillRect(0, 90, W, 100);     // --wood
+    const sway = Math.sin(t * 1.7) * 30;
+    g.fillStyle = '#aaaaaa'; g.fillRect(40 + sway, 30, 60, 120); g.fillRect(220 + sway, 40, 50, 110); // --dos-grey
+    if (Math.floor(t * 3) % 4 === 0) { g.fillStyle = '#ffcc00'; g.fillRect(150, 130, 20, 14); } // --amber muzzle flash
+    g.fillStyle = '#24150b'; g.fillRect(0, 190, W, 50);     // --wood-dark
+    this.text(g, this.who || 'SOMEONE', 10, 214, '#ffcc00', 22);
+    this.text(g, this.what || 'PLAYING DOOM', 10, 234, '#aaaaaa', 18);
   }
 
   mine(g, t) { // your PC while you're standing

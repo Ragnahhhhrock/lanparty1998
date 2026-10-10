@@ -1,3 +1,4 @@
-bundles/*.jsdos
+bundles/doom.jsdos
 .DS_Store
 node_modules/
+tests/

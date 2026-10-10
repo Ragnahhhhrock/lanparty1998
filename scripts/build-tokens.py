@@ -14,6 +14,7 @@ GROUPS = {
     "crt": ("crt-", "phosphor", "dos-", "amber", "toast"),
     "basement": ("basement", "wood", "carpet", "ceiling", "beige", "paper"),
     "brand": ("volt", "nacho", "cheese"),
+    "people": ("link-led", "skin", "denim", "shoe", "hair", "shirt-"),
     "font": ("font-",),
     "text": ("text-", "leading-"),
     "space": ("space-", "gutter"),
