@@ -1,0 +1,108 @@
+/* LAN Party '98 — design tokens.
+   Single source of truth for every colour, font, size and bevel used on the site,
+   in canvas textures and in generated assets. Mirror: design/tokens.json.
+   Rules for using them: STYLEGUIDE.md. Live reference: /styleguide.html */
+
+@font-face {
+  font-family: "VT323";
+  src: url("../fonts/vt323-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* ---- Shell: the Win98 chrome every UI surface is built from ---- */
+  --w98-face: #c0c0c0;      /* window / button / panel face */
+  --w98-light: #ffffff;     /* outer highlight */
+  --w98-hilite: #dfdfdf;    /* inner highlight */
+  --w98-shadow: #808080;    /* inner shadow */
+  --w98-dark: #0a0a0a;      /* outer shadow */
+  --w98-title: #000080;     /* active title bar, start */
+  --w98-title2: #1084d0;    /* active title bar, end */
+  --w98-desktop: #008080;   /* desktop teal */
+  --w98-key: #e8e8e8;       /* keycap face */
+  --w98-text: #000000;
+
+  /* ---- Phosphor: anything shown "on a CRT" ---- */
+  --crt-black: #000000;
+  --phosphor: #9dff7a;      /* primary CRT text, prompts, status */
+  --phosphor-link: #4dff5a; /* links on CRT surfaces */
+  --dos-grey: #aaaaaa;      /* default DOS text */
+  --amber: #ffcc00;         /* CRT highlights, network titles */
+  --toast: #ffe066;         /* in-world announcements */
+
+  /* ---- Basement: the room the UI floats over ---- */
+  --basement: #0b0906;      /* page background, deepest shadow */
+  --wood: #4a2c17;          /* wall panelling */
+  --wood-dark: #24150b;     /* panel grooves */
+  --carpet: #3b2f2a;
+  --ceiling: #d9d4c7;
+  --beige: #d6cdb4;         /* PC plastic */
+  --beige-light: #ebe4cf;   /* keycaps, bezels */
+  --paper: #e8e1cc;         /* text on dark basement surfaces */
+
+  /* ---- Parody brands (never use real brand names or marks) ---- */
+  --volt: #e2231a;          /* Volt Cola, UI red, caffeine meter */
+  --volt-can: #c4161c;      /* Volt Cola can */
+  --volt-yellow: #ffd400;   /* Volt Cola wordmark */
+  --nacho: #f28a1c;         /* Nachoz, snack meter */
+  --nacho-navy: #1d1a5c;    /* Nachoz bag */
+  --cheese: #ffcc00;        /* Nachoz wordmark */
+
+  /* ---- Type ---- */
+  --font-crt: "VT323", "Lucida Console", "Courier New", monospace; /* display, CRT, numbers */
+  --font-ui: "Tahoma", "MS Sans Serif", "Segoe UI", system-ui, sans-serif; /* shell UI, body copy */
+  --text-ui-xs: 11px;  /* meter labels */
+  --text-ui-sm: 12px;  /* keycaps, bars */
+  --text-ui: 13px;     /* default body */
+  --text-crt-sm: 18px;
+  --text-crt: 20px;
+  --text-crt-md: 24px;
+  --text-crt-lg: 26px;
+  --text-crt-xl: 40px; /* window headline */
+  --text-crt-hero: 96px; /* social images, splash only */
+  --leading-ui: 1.4;
+
+  /* ---- Space (4px grid; 2 and 6 only for bevel-adjacent nudges) ---- */
+  --space-0: 2px;
+  --space-1: 4px;
+  --space-1h: 6px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --gutter: 16px;     /* minimum screen edge gutter */
+
+  /* ---- Bevels: the only way depth is shown in UI. No blur shadows, no radius. ---- */
+  --bevel-raised: inset -1px -1px var(--w98-dark), inset 1px 1px var(--w98-light),
+                  inset -2px -2px var(--w98-shadow), inset 2px 2px var(--w98-hilite);
+  --bevel-pressed: inset 1px 1px var(--w98-dark), inset -1px -1px var(--w98-light),
+                   inset 2px 2px var(--w98-shadow);
+  --bevel-sunken: inset 1px 1px var(--w98-shadow), inset -1px -1px var(--w98-light);
+  --bevel-small: inset -1px -1px var(--w98-dark), inset 1px 1px var(--w98-light);
+  --bevel-key: inset -1px -1px var(--w98-shadow), inset 1px 1px var(--w98-light);
+  --title-gradient: linear-gradient(90deg, var(--w98-title), var(--w98-title2));
+  --text-shadow-hard: 2px 2px 0 #000;
+
+  /* ---- Overlays ---- */
+  --scrim: rgba(5, 4, 2, .55);
+  --hud-bg: rgba(0, 0, 0, .7);
+  --bar-bg: rgba(10, 8, 6, .82);
+  --scanlines: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px);
+  --vignette: radial-gradient(ellipse at center, transparent 62%, rgba(0,0,0,.45) 100%);
+
+  /* ---- Layers ---- */
+  --z-scene: 0;
+  --z-hud: 10;
+  --z-monitor: 20;
+  --z-seated: 21;
+  --z-dialog: 30;
+
+  /* ---- Motion ---- */
+  --dur-fast: .4s;
+  --dur-slow: 1.2s;
+
+  color-scheme: dark;
+}

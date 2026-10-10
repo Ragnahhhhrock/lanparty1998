@@ -49,6 +49,15 @@ Only redistributable data goes in this repo. Commercial game files (full DOOM, D
 4. Quake, Quake II and Red Alert/C&C via OpenRA.
 5. Lobby, hosting, more snacks.
 
+## Design system
+
+All UI, textures, icons and social images follow [`STYLEGUIDE.md`](STYLEGUIDE.md). Tokens live in `css/tokens.css` (mirrored to `design/tokens.json`), and a live reference is at [/styleguide.html](https://lanparty1998.com/styleguide.html).
+
+```sh
+python3 scripts/build-tokens.py    # tokens.css -> design/tokens.json
+python3 scripts/render-social.py   # og-image, twitter-card and icons from their sources
+```
+
 ## Licences
 
-Three.js is MIT (`vendor/three/LICENSE`). js-dos is GPL-2.0. "Volt Cola" and "Nachoz" are parody brands.
+Three.js is MIT (`vendor/three/LICENSE`). js-dos is GPL-2.0. VT323 is SIL OFL 1.1 (`fonts/VT323-OFL.txt`). "Volt Cola" and "Nachoz" are parody brands.

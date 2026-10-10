@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Style guide — LAN Party '98</title>
+<meta name="description" content="The LAN Party '98 design system: Basement, Shell and Phosphor layers, colour tokens, type, components and asset rules.">
+<meta name="robots" content="noindex">
+<link rel="canonical" href="https://lanparty1998.com/styleguide.html">
+<meta name="theme-color" content="#000080">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="LAN Party '98">
+<meta property="og:url" content="https://lanparty1998.com/styleguide.html">
+<meta property="og:title" content="Style guide — LAN Party '98">
+<meta property="og:description" content="Colour tokens, type, components and asset rules for LAN Party '98.">
+<meta property="og:image" content="https://lanparty1998.com/img/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A Windows 98 style window titled LANPARTY.EXE beside a beige CRT showing an IPX network game lobby.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://lanparty1998.com/img/twitter-card.png">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  html, body { height: auto; overflow: auto; }
+  body { background: var(--basement); color: var(--paper); }
+  .page { max-width: 1040px; margin: 0 auto; padding: var(--space-8) var(--gutter) 64px; display: grid; gap: var(--space-6); }
+  .w98-window { max-width: none; width: auto; }
+  .w98-body h2 { font: var(--text-crt-lg)/1 var(--font-crt); color: var(--w98-title); margin: 0 0 var(--space-3); }
+  .w98-body h3 { font-size: var(--text-ui); margin: var(--space-4) 0 var(--space-2); }
+  .w98-body code { font: var(--text-crt-sm)/1 var(--font-crt); }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-2); }
+  .sw { background: var(--w98-light); box-shadow: var(--bevel-sunken); padding: var(--space-1); font-size: var(--text-ui-xs); }
+  .sw div { height: 48px; margin-bottom: var(--space-1); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+  .sw b { display: block; }
+  .row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+  .crt-demo { background: var(--crt-black); padding: var(--space-4); position: relative; border-radius: 6px / 8px; overflow: hidden;
+    font: var(--text-crt)/1.2 var(--font-crt); color: var(--dos-grey); }
+  .crt-demo::after { content: ""; position: absolute; inset: 0; background: var(--scanlines), var(--vignette); pointer-events: none; }
+  .crt-demo .g { color: var(--phosphor); } .crt-demo .a { color: var(--amber); }
+  .type-crt { font: var(--text-crt-xl)/1 var(--font-crt); color: var(--w98-title); }
+  .demo-prompt { font: var(--text-crt-md)/1 var(--font-crt); color: var(--phosphor); background: var(--hud-bg); padding: 6px 10px; display: inline-block; }
+  .demo-toast { font: var(--text-crt-lg)/1.1 var(--font-crt); color: var(--toast); text-shadow: var(--text-shadow-hard); }
+  .stage { background: var(--wood); padding: var(--space-4); }
+  .demo-meters { padding: 8px 10px; display: grid; gap: 5px; width: 200px; }
+  .demo-meters .bar i { transition: none; }
+  .social img { width: 100%; height: auto; display: block; box-shadow: var(--bevel-sunken); padding: 2px; background: var(--w98-light); }
+  .social { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .icons { display: flex; gap: var(--space-4); align-items: end; }
+  .icons img { image-rendering: pixelated; }
+  table.spec { border-collapse: collapse; width: 100%; }
+  table.spec td, table.spec th { text-align: left; padding: 4px 8px 4px 0; vertical-align: top; }
+  @media (max-width: 600px) { .type-crt { font-size: var(--text-crt-lg); } }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <section class="w98-window">
+    <div class="w98-title"><span>STYLE.HLP</span><b>×</b></div>
+    <div class="w98-body">
+      <h1>LAN Party '98 style guide</h1>
+      <p>Saturday night, 1998, somebody's basement. Three layers: <b>Basement</b> for the room, <b>Shell</b> for every UI surface, <b>Phosphor</b> for anything on a screen. Every asset must use the tokens in <code>css/tokens.css</code>. Full rules live in <code>STYLEGUIDE.md</code>.</p>
+    </div>
+  </section>
+
+  <section class="w98-window">
+    <div class="w98-title"><span>COLOURS.PAL</span><b>×</b></div>
+    <div class="w98-body" id="colours"></div>
+  </section>
+
+  <section class="w98-window">
+    <div class="w98-title"><span>FONTS.INF</span><b>×</b></div>
+    <div class="w98-body">
+      <h2>Type</h2>
+      <div class="type-crt">VT323 — C:\&gt; NETFRAG 0123456789</div>
+      <p style="margin-top:12px"><b>Tahoma</b> for shell UI and body copy. Six beige boxes, one 10BASE-T hub and a crate of Volt Cola.</p>
+      <table class="spec">
+        <tr><th>VT323</th><td>18 · 20 · 24 · 26 · 40 · 96 (social only). Headlines, CRT text, clocks, prompts, toasts.</td></tr>
+        <tr><th>Tahoma</th><td>11 · 12 · 13. UI labels, buttons, body. Bold only for labels and title bars.</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="w98-window">
+    <div class="w98-title"><span>CONTROLS.DLL</span><b>×</b></div>
+    <div class="w98-body">
+      <h2>Components</h2>
+      <h3>Buttons</h3>
+      <div class="row"><button class="w98-btn default">Walk in</button><button class="w98-btn">Stand up <kbd>`</kbd></button><button class="w98-btn">Swig of Volt</button></div>
+      <h3>Keycaps</h3>
+      <div class="row"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><kbd>E</kbd><kbd>Esc</kbd></div>
+      <h3>HUD meters, prompt and toast</h3>
+      <div class="stage row">
+        <div class="w98-panel demo-meters">
+          <div class="meter"><span>CAFFEINE</span><div class="bar"><i id="m-caffeine" style="width:72%"></i></div></div>
+          <div class="meter"><span>SNACKS</span><div class="bar"><i id="m-snacks" style="width:48%"></i></div></div>
+          <div id="clock" style="font:var(--text-crt)/1 var(--font-crt);text-align:right">11:42 PM</div>
+        </div>
+        <div style="display:grid;gap:12px">
+          <span class="demo-prompt">Press E to sit down</span>
+          <span class="demo-toast">+ CAFFEINE</span>
+        </div>
+      </div>
+      <h3>CRT surface</h3>
+      <div class="crt-demo">
+        <div>C:\&gt; NETFRAG</div>
+        <div class="a">IPX NETWORK GAME</div>
+        <div>Players found: 5 of 6</div>
+        <div class="g">Waiting for PC-04…</div>
+        <div>Bad command or file name.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="w98-window">
+    <div class="w98-title"><span>ICONS.ICO</span><b>×</b></div>
+    <div class="w98-body">
+      <h2>Icon</h2>
+      <div class="icons">
+        <img src="favicon.svg" width="16" height="16" alt="Favicon at 16px">
+        <img src="favicon.svg" width="32" height="32" alt="Favicon at 32px">
+        <img src="apple-touch-icon.png" width="90" height="90" alt="Apple touch icon">
+        <img src="img/icon-192.png" width="128" height="128" alt="Manifest icon">
+      </div>
+    </div>
+  </section>
+
+  <section class="w98-window">
+    <div class="w98-title"><span>SHARE.BMP</span><b>×</b></div>
+    <div class="w98-body">
+      <h2>Social images</h2>
+      <div class="social">
+        <figure style="margin:0"><img src="img/og-image.png" alt="Open Graph image" width="1200" height="630"><figcaption>Open Graph · 1200×630</figcaption></figure>
+        <figure style="margin:0"><img src="img/twitter-card.png" alt="Twitter card image" width="1200" height="600"><figcaption>X / Twitter · 1200×600</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+</main>
+<script>
+  const groups = {
+    Shell: ['w98-face','w98-light','w98-hilite','w98-shadow','w98-dark','w98-title','w98-title2','w98-desktop','w98-key'],
+    Phosphor: ['crt-black','phosphor','phosphor-link','dos-grey','amber','toast'],
+    Basement: ['basement','wood','wood-dark','carpet','ceiling','beige','beige-light','paper'],
+    Brand: ['volt','volt-can','volt-yellow','nacho','nacho-navy','cheese'],
+  };
+  const css = getComputedStyle(document.documentElement);
+  const host = document.getElementById('colours');
+  host.innerHTML = '<h2>Colour</h2>';
+  for (const [name, keys] of Object.entries(groups)) {
+    const h = document.createElement('h3'); h.textContent = name; host.append(h);
+    const grid = document.createElement('div'); grid.className = 'swatches';
+    for (const k of keys) {
+      const v = css.getPropertyValue('--' + k).trim();
+      const el = document.createElement('div'); el.className = 'sw';
+      el.innerHTML = `<div style="background:${v}"></div><b>--${k}</b>${v}`;
+      grid.append(el);
+    }
+    host.append(grid);
+  }
+</script>
+</body>
+</html>

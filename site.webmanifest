@@ -1,0 +1,16 @@
+{
+  "name": "LAN Party '98",
+  "short_name": "LAN Party '98",
+  "description": "A 1998 basement LAN party in your browser.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b0906",
+  "theme_color": "#000080",
+  "icons": [
+    { "src": "/img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
