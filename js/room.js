@@ -672,6 +672,11 @@ export function buildRoom(scene) {
     [-1.4, minZ + 0.01, 0, T.poster('Y2K', '13 MONTHS TO GO\nIS YOUR BIOS READY?', 120)],
     [1.4, minZ + 0.01, 0, T.poster('56K', "DON'T PICK UP\nTHE PHONE", 280)],
     [-1.4, maxZ - 0.01, Math.PI, T.pixelAdventure()],
+    // gig posters for invented bands (see textures.js bandPoster)
+    [-4.4, maxZ - 0.01, Math.PI, T.bandPoster('grunge')],
+    [1.4, maxZ - 0.01, Math.PI, T.bandPoster('industrial')],
+    [4.2, maxZ - 0.01, Math.PI, T.bandPoster('hairmetal')],
+    [minX + 0.01, 2.8, Math.PI / 2, T.bandPoster('dance')],
   ];
   for (const [x, z, ry, tex] of nostalgia) {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.98), posterMat(tex));

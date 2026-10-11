@@ -192,6 +192,92 @@ export function poster(title, sub, hue) {
   return tex(c);
 }
 
+// Gig posters for invented 1990s bands (grunge, industrial, hair metal, dance).
+// Every name, venue and graphic is made up. Flat, hard-edged, VT323 only; colours are tokens.
+const BAND_SIZES = [96, 40, 26, 24, 20, 18]; // VT323 sizes from STYLEGUIDE.md
+
+function fitSize(g, lines, maxW, sizes = BAND_SIZES) {
+  for (const s of sizes) {
+    g.font = `${s}px ${CRT_FONT}`;
+    if (lines.every((ln) => g.measureText(ln).width <= maxW)) return s;
+  }
+  return sizes[sizes.length - 1];
+}
+
+function bandText(g, lines, cx, y, maxW, fill, shadow, sizes) {
+  const s = fitSize(g, lines, maxW, sizes);
+  g.font = `${s}px ${CRT_FONT}`; g.textAlign = 'center';
+  lines.forEach((ln, i) => {
+    const ly = y + i * Math.round(s * 0.9);
+    if (shadow) { g.fillStyle = shadow; g.fillText(ln, cx + 2, ly + 2); } // --text-shadow-hard
+    g.fillStyle = fill; g.fillText(ln, cx, ly);
+  });
+  return y + lines.length * Math.round(s * 0.9);
+}
+
+export function bandPoster(kind) {
+  const [c, g] = canvas(256, 360);
+  const r = rand(kind.length * 977 + kind.charCodeAt(0));
+  const paper = '#e8e1cc', black = '#141414', crt = '#000000', volt = '#e2231a'; // --paper --clothes-black --crt-black --volt
+  const amber = '#ffcc00', navy = '#1d1a5c', phos = '#9dff7a', grey = '#aaaaaa'; // --amber --nacho-navy --phosphor --dos-grey
+  const duct = '#9aa0a6', tape = '#5c6166', nacho = '#f28a1c'; // --duct-silver --duct-tape --nacho
+  const rect = (col, x, y, w, h) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+
+  if (kind === 'grunge') { // WET CEMENT: photocopied flyer, black slab, drips
+    rect(paper, 0, 0, 256, 360);
+    rect(black, 16, 16, 224, 184);
+    for (let i = 0; i < 140; i++) rect(paper, 16 + ((r() * 112) | 0) * 2, 16 + ((r() * 92) | 0) * 2, 2, 2); // toner dropout
+    for (let i = 0; i < 90; i++) rect(black, 2 * ((r() * 128) | 0), 208 + 2 * ((r() * 70) | 0), 2, 2); // stray specks
+    for (let i = 0; i < 12; i++) rect(black, 24 + i * 18, 200, 8, 8 + ((r() * 5) | 0) * 8); // drips
+    rect(volt, 200, 24, 32, 16); // LIVE stamp
+    g.font = `18px ${CRT_FONT}`; g.textAlign = 'center'; g.fillStyle = paper; g.fillText('LIVE', 216, 38);
+    bandText(g, ['WET', 'CEMENT'], 128, 112, 192, paper);
+    bandText(g, ['LIVE AT THE CRAWLSPACE'], 128, 278, 224, black, null, [24, 20, 18]);
+    bandText(g, ['FRI 20 NOV 1998', 'ALL AGES · $6 AT THE DOOR'], 128, 308, 224, black, null, [20, 18]);
+  } else if (kind === 'industrial') { // COLD FURNACE: pipes, rivets, a pixel flame
+    rect(crt, 0, 0, 256, 360);
+    for (let i = 0; i < 3; i++) { // horizontal pipes
+      rect(tape, 0, 16 + i * 24, 256, 16); rect(duct, 0, 16 + i * 24, 256, 4);
+      for (let x = 12; x < 256; x += 32) rect(black, x, 22 + i * 24, 4, 4);
+    }
+    rect(tape, 24, 88, 16, 120); rect(tape, 216, 88, 16, 120); // risers
+    rect(duct, 24, 88, 4, 120); rect(duct, 216, 88, 4, 120);
+    const flame = [
+      '.....11.....', '....111.....', '....1111....', '...111111...', '..11122111..', '..11222211..',
+      '.111223322111', '.11223333221.', '.11223333221.', '.11223333221.', '..122333321..', '...1222221...',
+    ];
+    const fc = { 1: volt, 2: nacho, 3: amber }; // --volt --nacho --amber
+    flame.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') rect(fc[ch], 80 + x * 8, 96 + y * 8, 8, 8); }));
+    bandText(g, ['COLD', 'FURNACE'], 128, 248, 224, paper);
+    bandText(g, ['THE BOILER ROOM TOUR'], 128, 306, 224, amber, null, [24, 20, 18]);
+    bandText(g, ['SAT 21 NOV 1998 · EARPLUGS $1'], 128, 336, 240, grey, null, [18]);
+  } else if (kind === 'hairmetal') { // DIAMOND FANG: navy, stripes, an amber bolt with a hard shadow
+    rect(navy, 0, 0, 256, 360);
+    for (let i = 0; i < 6; i++) rect(volt, 0, 24 + i * 16, 256, i % 2 ? 4 : 8); // stage-light stripes
+    const bolt = [
+      '......1111..', '.....1111...', '....1111....', '...111111...', '....11111...', '.....1111...',
+      '....11111...', '...11111....', '..1111......', '.111........', '.11.........',
+    ];
+    const drawBolt = (col, ox, oy) => bolt.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') rect(col, ox + x * 12, oy + y * 12, 12, 12); }));
+    drawBolt(crt, 80 + 8, 88 + 8); drawBolt(amber, 80, 88);
+    bandText(g, ['DIAMOND', 'FANG'], 128, 244, 224, amber, crt);
+    bandText(g, ['THE LAST HAIRSPRAY TOUR'], 128, 308, 224, paper, null, [24, 20, 18]);
+    bandText(g, ['SUN 22 NOV 1998 · ONE NIGHT ONLY'], 128, 336, 240, paper, null, [18]);
+    rect(volt, 0, 344, 256, 16);
+  } else { // BASS CADET: equaliser bars on black glass
+    rect(crt, 0, 0, 256, 360);
+    for (let i = 0; i < 16; i++) {
+      const h = 3 + ((r() * 7) | 0); // bars of 8px blocks, hot tip on top
+      for (let k = 0; k < h; k++) rect(k === h - 1 ? amber : phos, 16 + i * 14, 256 - k * 8, 10, 6);
+    }
+    rect(grey, 16, 264, 224, 2);
+    bandText(g, ['BASS', 'CADET'], 128, 72, 224, phos);
+    bandText(g, ['LIVE PA'], 128, 296, 224, paper, null, [26, 24, 20]);
+    bandText(g, ['FRI 27 NOV 1998', 'DOORS 11 PM · 18+'], 128, 320, 224, grey, null, [20, 18]);
+  }
+  return tex(c);
+}
+
 // An invented 1990s point-and-click adventure: a pixel treasure chest and a text parser.
 export function pixelAdventure() {
   const [c, g] = canvas(256, 360);
