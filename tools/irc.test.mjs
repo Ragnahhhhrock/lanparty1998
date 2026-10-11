@@ -1,6 +1,6 @@
 // node tools/irc.test.mjs: the #lanparty98 banter engine, with a seeded rng.
 import assert from 'node:assert/strict';
-import { Banter, REGULARS, SCENES } from '../js/irc.js';
+import { Banter, REGULARS, SCENES, GAME_TALK, GAME_OF } from '../js/irc.js';
 
 const seeded = (seed) => () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
 let n = 0;
@@ -80,5 +80,28 @@ test('most of the chatter is scenes', () => {
   const orig = b.scene.bind(b); b.scene = () => { scenes++; return orig(); };
   for (let i = 0; i < 100; i++) b.line();
   assert.ok(scenes > 45 && scenes < 75, String(scenes));
+});
+test('every game has talk, and every regular has a game', () => {
+  for (const [game, lines] of Object.entries(GAME_TALK)) {
+    assert.ok(lines.length >= 5, game);
+    assert.ok(lines.every((l) => l.length > 4 && !l.includes('!')), game);
+  }
+  for (const nick of REGULARS) assert.ok(GAME_TALK[GAME_OF[nick]], nick);
+});
+test('gamer talk fills its templates and comes from the regulars', () => {
+  for (let seed = 1; seed < 60; seed++) {
+    const b = new Banter({ rng: seeded(seed) });
+    b.gamerTalk();
+    const msgs = b.tick(30);
+    assert.ok(msgs.length >= 1);
+    assert.ok(msgs.every((m) => REGULARS.includes(m.nick) && !/\{\w\}/.test(m.text)));
+  }
+});
+test('they talk about the game you are on', () => {
+  const b = new Banter({ rng: seeded(2) });
+  b.game = 'descent';
+  const seen = new Set();
+  for (let i = 0; i < 300; i++) { b.gamerTalk(); for (const m of b.tick(30)) seen.add(m.text); }
+  assert.ok(GAME_TALK.descent.some((l) => !l.includes('{') && seen.has(l)));
 });
 console.log(`${n} passed`);

@@ -563,6 +563,7 @@ const gameTitle = () => `${gameOf(pc.game ?? myGame).name}${pc.kind && pc.kind !
 function updateGameBtn() {
   const locked = inMatch(); // the match picks the game
   const g = gameOf(locked ? link.match.game : myGame);
+  banter.game = g.id; // the regulars talk about what you are playing
   ui.gameBtn.textContent = `Game: ${g.name}`;
   ui.gameBtn.disabled = locked;
   ui.gameBtn.title = locked ? 'The deathmatch decides the game' : 'Reboot into another game';
@@ -631,6 +632,7 @@ function standUp() {
   pc.pause();
   ui.bsod.hidden = true;
   analytics.standUp(gameTitle());
+  banter.game = null;
   if (document.pointerLockElement) document.exitPointerLock();
   ui.monitor.hidden = true;
   ui.seatedBar.hidden = true;

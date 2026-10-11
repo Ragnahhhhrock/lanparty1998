@@ -100,6 +100,94 @@ const REACT = {
   ],
 };
 
+// What each regular is playing, so their game talk matches the screen they are looking at.
+// 'console' is the telly on the couch. Dazza is on the phone but still has a game in mind.
+export const GAME_OF = { 'K-Rad': 'quake', n00bslayer: 'doom', 'xX_Ghoul_Xx': 'descent', PhatBass: 'console', Macca: 'console', Dazza: 'hexen' };
+
+// Gamer talk, one pool per game. Specific, dry and a bit too serious about it. {t} is another player.
+// Names of weapons and moves are fine as text; there is nothing from the games' art or code in here.
+export const GAME_TALK = {
+  doom: [
+    'who took the blue key. I need the blue key. I am standing at the blue door',
+    'there is a secret door behind the pillar. I found it. do not follow me',
+    'I have one shell and a dream',
+    'the chainsaw is a lifestyle. it is also a very loud way to find out you are not alone',
+    'I got the big gun and then I forgot to aim it. ten out of ten, no regrets',
+    '{t} you are standing in the green slime. you have been standing in the green slime',
+    'I just fragged {t} with a rocket I fired at the floor. that is called splash damage and I meant it',
+    'spawn camping is not a strategy. it is a personality',
+    'the little guy that throws fireballs has a lot of confidence for a guy made of four pixels',
+    'I have been on this level for 40 minutes and I think I have walked past the exit twice',
+    'who left the lift down. the lift does not go down by itself. someone is a lamer',
+  ],
+  quake: [
+    '{t} I just rocket jumped onto the roof. you are welcome. nobody asked',
+    'quad damage is up. do not go near it. I am going near it',
+    'I got the quad and died in lava. that was the quad doing that. the quad hates me',
+    'the nailgun has a very specific sound and it is the sound of me winning',
+    'telefragged {t} at the spawn. I did not even mean to. I just showed up',
+    'there is a guy sitting on the red armour like it is a nest',
+    'my ping is 60 and I am still losing. so it is a skill ping',
+    'grenade launcher is for people who want to say sorry to {t} with fire',
+    'I have been looking for the shotgun for three minutes. it was in my hand',
+    'bunny hopping is just walking but with commitment',
+    '{t} that was a lucky shot. no. the second one was too. okay fine you are good',
+  ],
+  heretic: [
+    'I used the tome of power and the whole room turned into a rainbow of pain',
+    'gargoyles have no manners. they hit me from behind and I did not even hear them',
+    'the staff is the weapon of a man with no hope. it is also the only one I have',
+    '{t} you wasted the crystal vial. that is a heal. you do not eat a heal on the spot',
+    'I want a door that does not require three keys and a guided tour',
+    'golems are slow and I am slower',
+    'I think the wizards are just waving at me. it is hard to tell with the fire',
+  ],
+  hexen: [
+    'hexen is a maze with extra steps and I am the extra steps',
+    'I am the fighter. I punch things. that is the whole class',
+    '{t} you are the mage and you have been casting at the wall. the wall was never in the way',
+    'the hub has seven levels and I am lost in at least four',
+    'I pulled a switch and a door opened somewhere in the next postcode',
+    'who is the cleric. oh. it is me. I forgot. I am a bad cleric',
+    'there is a bridge and a puzzle and a puzzle in the puzzle',
+  ],
+  descent: [
+    'I am spinning and I cannot stop spinning. send help',
+    '{t} I am inside the wall. I do not know how. I am simply in the wall',
+    'the thief bot took my laser and now I am just a ship with a bad attitude',
+    'there is a red door and a red key. in a different mine. in a different life',
+    'I have six degrees of freedom and I am using none of them well',
+    'reactor is about to blow. I am three tunnels away and in the wrong ship',
+    'I got motion sick on a monitor. it is 14 inches. how',
+    'the mine is a corridor with a mood',
+  ],
+  console: [
+    'player two is cheating. I can see his half of the screen. I can see it from here',
+    'pass the pad. you have had it for twenty minutes and you are not even winning',
+    'do not lean on the console. that is a delicate machine and also my save file',
+    'I just beat the whole level on one life. I will not be taking questions',
+    '{t} you died on the first jump. the jump is not even a jump. it is a step',
+    'the rumble pack is rumbling and I did not touch anything. someone is haunted',
+    'who unplugged the controller. I felt that. I felt the pad go cold',
+    'split screen is a loyalty test',
+  ],
+  starcraft: [
+    'zergling rush. every game. I do not care. I am the zergling now',
+    'I am out of minerals and also out of ideas',
+    '{t} you have been building for ten minutes. build an army. you are a farmer',
+    'they have a wall and I have a dream',
+    'supply blocked. again. I keep forgetting how houses work',
+    'who sent the scout. the scout is dead. long live the scout',
+  ],
+};
+
+// short reactions to a gamer line, from whoever happens to be looking
+const GAME_REPLIES = [
+  'gg', 'gg no re', 'lamer', 'camper', 'n00b', 'lucky shot', 'that was lag', 'ping 400. not my fault', 'owned',
+  'again. again', 'rematch', 'nice one', 'I saw that. unreal', 'what a legend', 'that was so rigged',
+  'respect', 'no way', 'show me the demo', 'you are the worst teammate and I love you', 'sit down',
+];
+
 // the regulars go at each other: one roasts, the target hits back, a third cackles.
 // ROASTS {t} = the target. COMEBACKS {t} = whoever just roasted. LAUGHS {t} = the one who got it.
 const ROASTS = [
@@ -175,6 +263,14 @@ export const SCENES = [
   [['a', 'I just burped and it tasted like pizza'], ['a', '*burp*', 'burp'], ['b', 'mate that is just old pizza. from last week'], ['c', 'that is a science experiment now']],
   [['a', '{b} what is that on your shirt'], ['b', 'it is sauce'], ['c', 'it has been sauce since tuesday'], ['b', 'it is a vintage sauce']],
   [['a', '*ppft*', 'fart'], ['a', 'I have armed the beanbag'], ['b', 'nobody sit in the beanbag'], ['c', 'too late. I am in it. oh no. oh nooo']],
+  [['a', '{b} you took my rocket'], ['b', 'it was on the floor'], ['a', 'it was on the floor of MY room'], ['c', 'that is not how maps work']],
+  [['a', 'I have the quad. I have the quad. do not look at me'], ['b', 'I am looking at you'], ['a', 'oh no'], ['c', 'gg. he died in the lava. again']],
+  [['a', '{b} you are the worst teammate'], ['b', 'I got three kills'], ['a', 'on our team'], ['c', '*wheeze*', 'laugh']],
+  [['a', 'got the red key'], ['b', 'which door'], ['a', 'I do not know. I just wanted the key'], ['c', 'this is why you are no use in a team']],
+  [['a', 'spawn camping is cheating'], ['b', 'it is a tactic'], ['c', 'it is a tactic that smells of cheese dust'], ['b', 'I will take that']],
+  [['a', '{b} what is your ping'], ['b', '350'], ['c', 'that is not a ping. that is a postcode'], ['b', 'it is the hub. I am blaming the hub']],
+  [['a', 'I am inside the wall'], ['b', '{a} you are not inside the wall'], ['a', 'I am. I can see the other side. it is lovely'], ['c', 'send a bucket']],
+  [['a', 'player two keeps shooting me in the back'], ['b', 'it is a two player game. that is the point'], ['a', 'it is a co-op game'], ['b', 'it is now not']],
 ];
 
 const pick = (arr, rng) => arr[Math.floor(rng() * arr.length)];
@@ -191,6 +287,7 @@ export class Banter {
     this.queue = [];      // { at, nick, text }
     this.now = 0;
     this.last = null;
+    this.game = null;     // the game the player is on right now, so the regulars can talk about it
     this.next = 2 + rng() * 3;
   }
 
@@ -233,6 +330,23 @@ export class Banter {
     return t;
   }
 
+  // a regular talks about the game they are playing (or yours, when you are on one), and someone answers
+  gamerTalk() {
+    const nick = pick(this.others(this.last), this.rng);
+    this.last = nick;
+    const mine = this.game && GAME_TALK[this.game] && this.rng() < 0.4;
+    const game = mine ? this.game : (GAME_OF[nick] ?? 'doom');
+    const t = pick(this.victims(nick), this.rng);
+    this.say(nick, fill(pick(GAME_TALK[game], this.rng), { t }));
+    let end = 2;
+    if (this.rng() < 0.65) {
+      const r = pick(this.others(nick), this.rng);
+      end = 1.5 + this.rng() * 2.5;
+      this.say(r, fill(pick(this.rng() < 0.7 ? GAME_REPLIES : GAME_TALK[GAME_OF[r] ?? 'doom'], this.rng), { t: nick }), end);
+    }
+    return end;
+  }
+
   // enough lines to fill the window on load, oldest first
   prefill(count = 14) {
     const out = [];
@@ -246,6 +360,7 @@ export class Banter {
   // a line from a regular; mostly a duel, sometimes a mock at somebody, maybe followed by a reply
   line() {
     if (this.rng() < 0.6) return this.scene();
+    if (this.rng() < 0.45) return this.gamerTalk();
     if (this.rng() < 0.7) return this.duel();
     const nick = pick(this.others(this.last), this.rng);
     this.last = nick;
