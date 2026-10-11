@@ -7,6 +7,7 @@
 //            by itself, so the room knows exactly how many are playing.
 //   'lobby'  the game has its own multiplayer menu: the host makes a game, the others join it.
 
+// Adding a game? Draw its box in BOXES in js/textures.js and it lands on the shelf in the room by itself.
 export const MAX_PLAYERS = 4;       // the room server caps a deathmatch at four
 export const DEFAULT_GAME = 'doom';
 

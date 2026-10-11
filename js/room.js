@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import * as T from './textures.js';
 import { BURNER } from './party.js';
 import { headphones } from './headphones.js';
+import { GAME_IDS } from './games.js';
 
 export const ROOM = { minX: -6, maxX: 6, minZ: -5, maxZ: 5, height: 2.8 };
 const TABLE_Y = 0.74;
@@ -1121,6 +1122,42 @@ function buildMedia(scene, out) {
   put(scene, pack(), -4.4, 0, 2.7, 0.8);
 }
 
+// The games the PCs can run, boxed, on a shelf on the left wall by the front corner: one big box per game in
+// js/games.js, in the same order. The box art is invented (see textures.js gameBoxFront). Decoration only.
+// Colours are tokens: --wood and --wood-dark for the shelf.
+const BOX = { w: 0.2, h: 0.28, d: 0.05 };
+function buildGameShelf(scene) {
+  const { minX } = ROOM;
+  const wood = new THREE.MeshStandardMaterial({ color: 0x4a2c17, roughness: 0.8 });       // --wood
+  const woodDark = new THREE.MeshStandardMaterial({ color: 0x24150b, roughness: 0.85 });  // --wood-dark
+  const cardboard = new THREE.MeshStandardMaterial({ color: 0xb8935a, roughness: 0.95 }); // --cardboard
+  const SHELF_Y = 1.05, GAP = 0.07, n = GAME_IDS.length;
+  const len = n * BOX.w + (n + 1) * GAP, z0 = 4.15 - len / 2;
+  scene.add(box(0.16, 0.03, len, wood, minX + 0.08, SHELF_Y - 0.015, z0 + len / 2));
+  scene.add(box(0.16, 0.012, 0.03, woodDark, minX + 0.08, SHELF_Y - 0.036, z0 + 0.015));   // front lip is a rail under the plank
+  for (const z of [z0 + 0.12, z0 + len / 2, z0 + len - 0.12]) { // L brackets
+    scene.add(box(0.02, 0.14, 0.03, woodDark, minX + 0.01, SHELF_Y - 0.1, z));
+    scene.add(box(0.14, 0.02, 0.03, woodDark, minX + 0.08, SHELF_Y - 0.04, z));
+  }
+  GAME_IDS.forEach((id, i) => {
+    const mats = [ // +x, -x, +y, -y, +z, -z: spine and the other side, top, bottom, front, back
+      new THREE.MeshStandardMaterial({ map: T.gameBoxSpine(id), roughness: 0.7 }),
+      cardboard,
+      cardboard, cardboard,
+      new THREE.MeshStandardMaterial({ map: T.gameBoxFront(id), roughness: 0.55 }),
+      new THREE.MeshStandardMaterial({ map: T.gameBoxBack(id), roughness: 0.7 }),
+    ];
+    const g = new THREE.Group(); // origin: the box's bottom back edge, facing +x into the room
+    g.position.set(minX + 0.03, SHELF_Y, z0 + GAP + BOX.w / 2 + i * (BOX.w + GAP));
+    g.rotation.y = Math.PI / 2;
+    const lean = new THREE.Group();
+    lean.rotation.x = -0.08 - (i % 2) * 0.02; // leaning back on the wall, not quite in a line
+    lean.add(box(BOX.w, BOX.h, BOX.d, mats, 0, BOX.h / 2, BOX.d / 2));
+    g.add(lean);
+    scene.add(g);
+  });
+}
+
 // Nachoz and Cheez Curlz, spilled everywhere: triangle chips, curls and cheese-dust crumbs lying on the desks, keyboards,
 // chair seats, the snack table, the coffee table and the carpet. Colours are tokens: --nacho (chips), --curlz (curls),
 // --cheese (dust). It is all decoration, so nothing here is interactive and each kind is one instanced mesh per surface.
@@ -1353,6 +1390,7 @@ export function buildRoom(scene) {
   buildPizza(scene, out);
   buildCeilingGamer(scene, out);
   buildMedia(scene, out);
+  buildGameShelf(scene);
   buildChips(scene, out);
 
   // posters and the scoreboard

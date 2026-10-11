@@ -143,6 +143,7 @@ All defined in `css/style.css` and shown on `/styleguide.html`.
 
 - 3D textures are drawn procedurally in `js/textures.js`. Colours there must match tokens (read `design/tokens.json` values; don't invent new hexes).
 - Illustrations are **flat, hard-edged, pixel-aligned** (`shape-rendering: crispEdges` in SVG). No photographs, no stock, no AI-generated imagery, no 3D renders with soft lighting outside the actual game.
+- **Game boxes** (the shelf, `gameBoxFront` in `js/textures.js`): the title is plain VT323 text and the picture is invented, one generic scene per game. Never a real cover, logo, character or publisher mark. Tokens only (`--poster-*` and the usual accents).
 - Screenshots in docs come from the real game at 1280×760.
 
 ## 8. Icon

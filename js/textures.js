@@ -516,6 +516,134 @@ export function moviePoster(kind) {
   return tex(c);
 }
 
+// Big boxes for the games the PCs can run (js/games.js), the way they stood on a shop shelf in 1998.
+// The title is plain VT323 text, which is as far as STYLEGUIDE.md goes with real names: the pictures are
+// invented, one generic scene per game, and not a copy of any real cover or logo. Flat, hard-edged,
+// pixel-aligned; colours are tokens (hex in comments). To box a new game, add its id to BOXES.
+function octagon(g, cx, cy, r, col) { // blocky octagon: a plus sign with the corners cut off
+  const cut = Math.round(r * 0.4 / 4) * 4;
+  g.fillStyle = col;
+  g.fillRect(cx - r, cy - r + cut, r * 2, r * 2 - cut * 2);
+  g.fillRect(cx - r + cut, cy - r, r * 2 - cut * 2, r * 2);
+}
+
+const BOXES = {
+  doom: { spine: '#7a1a12', title: 'DOOM', tag: ['SHAREWARE · 4 PLAYER IPX', 'DEATHMATCH ON THE LAN'] }, // --poster-ember
+  heretic: { spine: '#0b1033', title: 'HERETIC', tag: ['SHAREWARE · 4 PLAYER IPX', 'SWORD, SORCERY, SCROLL LOCK'] }, // --poster-space
+  hexen: { spine: '#5b2f86', title: 'HEXEN', tag: ['4 LEVEL DEMO · IPX', 'THREE STONES, ONE BLADE'] }, // --poster-nebula
+  quake: { spine: '#3d352f', title: 'QUAKE', tag: ['SHAREWARE · IPX LOBBY', 'FULL 3D · PENTIUM RECOMMENDED'] }, // --poster-rock-dark
+  descent: { spine: '#46697a', title: 'DESCENT', tag: ['SHAREWARE · IPX LOBBY', 'SIX WAYS OUT OF THE MINE'] }, // --poster-steel
+};
+
+export const BOX_IDS = Object.keys(BOXES);
+
+export function gameBoxFront(id) {
+  const [c, g] = canvas(256, 360);
+  const b = BOXES[id] ?? { spine: '#3d352f', title: String(id).toUpperCase(), tag: ['SHAREWARE'] };
+  const r = rand(String(id).length * 2711 + String(id).charCodeAt(0));
+  const rect = (col, x, y, w, h) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  const crt = '#000000', paper = '#e8e1cc', amber = '#ffcc00', volt = '#e2231a', nacho = '#f28a1c'; // --crt-black --paper --amber --volt --nacho
+  const ember = '#7a1a12', steel = '#46697a', steelHi = '#8fb1c0', space = '#0b1033'; // --poster-ember --poster-steel --poster-steel-light --poster-space
+  const nebula = '#5b2f86', planet = '#b4532a', chrome = '#c9d5dd', chromeDk = '#5e6c76'; // --poster-nebula --poster-planet --poster-chrome --poster-chrome-dark
+  const rock = '#6e6055', rockDk = '#3d352f', phos = '#9dff7a', grey = '#aaaaaa', black = '#141414'; // --poster-rock --poster-rock-dark --phosphor --dos-grey --clothes-black
+  const sprite = (rows, pal, ox, oy, px) => rows.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') rect(pal[ch], ox + x * px, oy + y * px, px, px); }));
+
+  if (id === 'doom') { // a blast door on a dark base, red light leaking through the gap, a crosshair
+    rect(rockDk, 0, 0, 256, 360);
+    for (let y = 96; y < 320; y += 16) for (let x = (y / 16) % 2 ? 0 : 16; x < 256; x += 32) rect(black, x, y, 16, 4); // wall plating seams
+    rect(chromeDk, 40, 104, 176, 192); rect(steel, 56, 120, 144, 176);
+    rect(steelHi, 56, 120, 144, 4); rect(steelHi, 56, 120, 4, 176);
+    for (let x = 56; x < 200; x += 32) { rect(amber, x, 128, 16, 12); rect(black, x + 16, 128, 16, 12); } // hazard stripes
+    rect(black, 120, 120, 16, 176); rect(volt, 124, 120, 8, 176); rect(amber, 127, 120, 2, 176); // the gap, lit from inside
+    for (let y = 148; y < 290; y += 40) { rect(black, 64, y, 8, 8); rect(black, 184, y, 8, 8); } // bolts
+    disc(g, 56, 100, 12, volt); disc(g, 200, 100, 12, volt); rect(paper, 52, 92, 4, 4); rect(paper, 196, 92, 4, 4); // warning lamps
+    for (let i = 0; i < 6; i++) rect(i % 2 ? ember : volt, 40 + i * 8, 296 + i * 4, 176 - i * 16, 4); // light spilling on the floor
+    rect(phos, 96, 206, 20, 4); rect(phos, 140, 206, 20, 4); rect(phos, 126, 180, 4, 20); rect(phos, 126, 216, 4, 20); // crosshair
+    bandText(g, ['DOOM'], 128, 84, 232, amber, ember, [96]);
+  } else if (id === 'heretic') { // a night graveyard, a raven on a gothic window
+    rect(space, 0, 0, 256, 360);
+    for (let i = 0; i < 50; i++) rect(r() > 0.8 ? amber : paper, 4 * ((r() * 64) | 0), 4 * ((r() * 44) | 0) + 60, 4, 4); // stars
+    disc(g, 208, 100, 24, paper); disc(g, 216, 92, 22, space); // crescent moon
+    rect(rockDk, 48, 190, 160, 130); disc(g, 128, 190, 80, rockDk); // window frame
+    rect(nebula, 72, 190, 112, 130); disc(g, 128, 190, 56, nebula); // the opening
+    [volt, amber, planet, ember].forEach((col, k) => { for (let y = 200 + (k % 2) * 16; y < 320; y += 32) for (let x = 80 + (k >> 1) * 16; x < 176; x += 32) rect(col, x, y, 12, 12); }); // stained glass panes
+    rect(rockDk, 124, 136, 8, 184); rect(rockDk, 72, 248, 112, 8); // mullion and transom, over the glass
+    sprite(['..11.........', '.1111........', '21111111.....', '..11111111...', '...1111111111', '...11111111..', '....111111...', '.....1.1.....'],
+      { 1: black, 2: amber }, 78, 62, 6); // the raven, on its perch
+    for (const x of [16, 224]) { rect(black, x, 280, 8, 40); rect(black, x - 8, 288, 24, 8); } // crosses
+    bandText(g, ['HERETIC'], 128, 56, 232, paper, black, [40]);
+  } else if (id === 'hexen') { // three standing stones at dusk, a sword in the turf
+    rect(space, 0, 0, 256, 360);
+    [nebula, nebula, ember, volt, planet, nacho].forEach((col, i) => rect(col, 0, 80 + i * 40, 256, 40)); // dusk bands
+    for (let i = 0; i < 24; i++) rect(paper, 4 * ((r() * 64) | 0), 100 + 4 * ((r() * 20) | 0), 4, 4);
+    rect(rockDk, 0, 288, 256, 72);
+    const stone = (x, y, w, h) => { rect(rock, x, y, w, h); rect(rockDk, x + w - 12, y, 12, h); rect(chrome, x, y, 4, h); rect(rockDk, x, y - 8, w, 8); };
+    stone(40, 140, 48, 164); stone(104, 108, 48, 196); stone(168, 140, 48, 164);
+    const rune = (x, y, k) => { // three invented glyphs: a fork, a hook and a ladder
+      if (k === 0) { rect(phos, x + 6, y, 4, 24); rect(phos, x, y, 4, 8); rect(phos, x + 12, y, 4, 8); rect(phos, x, y + 8, 16, 4); }
+      else if (k === 1) { rect(phos, x, y, 4, 24); rect(phos, x + 4, y + 4, 8, 4); rect(phos, x + 12, y + 8, 4, 8); rect(phos, x + 4, y + 16, 8, 4); }
+      else { rect(phos, x + 6, y, 4, 24); rect(phos, x, y + 4, 16, 4); rect(phos, x, y + 12, 16, 4); rect(phos, x, y + 20, 16, 4); }
+    };
+    rune(56, 168, 0); rune(120, 140, 1); rune(184, 168, 2); rune(56, 224, 1); rune(184, 224, 0);
+    rect(amber, 124, 204, 8, 8); rect(black, 124, 212, 8, 16); rect(amber, 108, 228, 40, 8); // pommel, grip, crossguard
+    rect(chrome, 122, 236, 12, 76); rect(chromeDk, 128, 236, 6, 76); rect(chrome, 124, 312, 8, 4); // blade
+    for (let x = 100; x < 160; x += 8) rect(black, x, 312 + (x % 16 ? 0 : 4), 4, 4); // turf
+    bandText(g, ['HEXEN'], 128, 84, 232, paper, black, [96]);
+  } else if (id === 'quake') { // a brick hall, lightning into a glowing archway
+    rect(rock, 0, 0, 256, 360);
+    for (let y = 0; y < 320; y += 16) for (let x = (y / 16) % 2 ? -16 : 0; x < 256; x += 32) { rect(rockDk, x, y, 32, 4); rect(rockDk, x + 28, y, 4, 16); }
+    rect(black, 72, 112, 112, 104); rect(black, 88, 96, 80, 16); rect(black, 104, 88, 48, 8); // the arch, stepped
+    rect(steel, 84, 124, 88, 92); rect(steel, 96, 112, 64, 12); rect(steelHi, 100, 136, 56, 80); rect(paper, 116, 152, 24, 64); // portal glow
+    sprite(['.....11111..', '....11111...', '...11111....', '..11111111..', '....111111..', '...11111....', '..1111......', '.111........', '.11.........'],
+      { 1: crt }, 84, 12, 8); sprite(['.....11111..', '....11111...', '...11111....', '..11111111..', '....111111..', '...11111....', '..1111......', '.111........', '.11.........'],
+      { 1: amber }, 80, 8, 8); // the bolt, with a hard shadow
+    rect(rockDk, 56, 216, 144, 20); rect(rock, 56, 216, 144, 4); // threshold
+    bandText(g, ['QUAKE'], 128, 310, 232, paper, black, [96]);
+  } else if (id === 'descent') { // down a mine shaft: nested octagons, a sensor eye, a ship from behind
+    rect(crt, 0, 0, 256, 360);
+    [[120, ember], [100, black], [80, planet], [60, black], [40, nacho], [24, black], [12, amber]].forEach(([rr, col]) => octagon(g, 128, 190, rr, col));
+    rect(volt, 120, 176, 16, 16); rect(paper, 124, 180, 4, 4); // a sensor, watching
+    sprite(['....11....', '...1221...', '..122221..', '.11111111.', '1111111111', '3.33..33.3'], { 1: chrome, 2: chromeDk, 3: amber }, 88, 252, 8); // the ship
+    rect(chromeDk, 120, 236, 16, 16); rect(chrome, 124, 228, 8, 12);
+    bandText(g, ['DESCENT'], 128, 52, 232, amber, ember, [40]);
+  } else { // a game with no box art of its own yet
+    rect(rockDk, 0, 0, 256, 360); rect(black, 16, 16, 224, 288);
+    bandText(g, [b.title], 128, 180, 224, paper, null, [96, 40]);
+  }
+  rect(crt, 0, 320, 256, 40);
+  b.tag.forEach((ln, i) => bandText(g, [ln], 128, 334 + i * 16, 240, i ? grey : phos, null, [18]));
+  rect(volt, 0, 0, 256, 4); rect(volt, 0, 356, 256, 4); // the stripe every box had
+  return tex(c);
+}
+
+export function gameBoxSpine(id) {
+  const [c, g] = canvas(64, 360);
+  const b = BOXES[id] ?? { spine: '#3d352f', title: String(id).toUpperCase() };
+  g.fillStyle = b.spine; g.fillRect(0, 0, 64, 360);
+  g.fillStyle = '#e2231a'; g.fillRect(0, 0, 64, 4); g.fillRect(0, 356, 64, 4); // --volt
+  g.fillStyle = '#000000'; g.fillRect(0, 300, 64, 56); // --crt-black
+  g.save(); g.translate(40, 150); g.rotate(Math.PI / 2);
+  g.font = `40px ${CRT_FONT}`; g.textAlign = 'center';
+  g.fillStyle = '#000000'; g.fillText(b.title, 2, 2); g.fillStyle = '#e8e1cc'; g.fillText(b.title, 0, 0); // --crt-black, --paper
+  g.restore();
+  g.font = `18px ${CRT_FONT}`; g.textAlign = 'center'; g.fillStyle = '#9dff7a'; g.fillText('PC CD-ROM', 32, 332); // --phosphor
+  return tex(c);
+}
+
+export function gameBoxBack(id) {
+  const [c, g] = canvas(256, 360);
+  const b = BOXES[id] ?? { spine: '#3d352f', title: String(id).toUpperCase() };
+  g.fillStyle = b.spine; g.fillRect(0, 0, 256, 360);
+  g.fillStyle = '#000000'; g.fillRect(16, 16, 224, 328); // --crt-black
+  g.textAlign = 'center';
+  bandText(g, [b.title], 128, 60, 208, '#ffcc00', null, [40]); // --amber
+  bandText(g, ['SYSTEM REQUIREMENTS'], 128, 100, 208, '#e8e1cc', null, [24]); // --paper
+  ['486 DX2/66 OR BETTER', 'MS-DOS 6.0 OR WINDOWS 95', '8 MB RAM', 'VGA · SOUND BLASTER', 'IPX NETWORK FOR LAN PLAY'].forEach((ln, i) => bandText(g, [ln], 128, 140 + i * 24, 208, '#aaaaaa', null, [20])); // --dos-grey
+  bandText(g, ['COPY FREELY · SEE README'], 128, 300, 208, '#9dff7a', null, [20]); // --phosphor
+  g.fillStyle = '#e2231a'; g.fillRect(0, 0, 256, 4); g.fillRect(0, 356, 256, 4); // --volt
+  return tex(c);
+}
+
 // An invented 1990s point-and-click adventure: a pixel treasure chest and a text parser.
 export function pixelAdventure() {
   const [c, g] = canvas(256, 360);

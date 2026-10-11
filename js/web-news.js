@@ -8,6 +8,11 @@
 
 export const NEWS = [
   {
+    date: '1998-02-06', kind: 'new', title: 'The games, in their boxes',
+    text: 'There is a shelf on the left wall by the front corner with a box for each game on the PCs: DOOM, Heretic, Hexen, Quake and Descent. The pictures on the front are ours, not the real covers. Turn one round for the system requirements.',
+    link: ['/games.htm', 'All the games'],
+  },
+  {
     date: '1998-02-06', kind: 'new', title: 'Speakers and headphones',
     text: 'Three PCs now have speakers and three have headphones on the tower. Whoever is at a speaker PC is playing something, and you can hear it from across the room: shotgun blasts, imps, the odd rocket. At a headphone PC you put them on, and it is quiet. Some people turn up wearing a pair already. N turns the noises off.',
   },
