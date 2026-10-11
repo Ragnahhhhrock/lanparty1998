@@ -85,6 +85,12 @@
   --hair-black: #121212;
   --hair-blond: #e3c45a;
   --hair-red: #a8431f;
+  /* faces: eyes, lips (blended into each person's skin) */
+  --eye-white: #f4efe6;     /* eyeballs and teeth */
+  --iris-brown: #4a2e1a;
+  --iris-blue: #3c6ea8;
+  --iris-green: #4e7a52;
+  --lip: #a8493f;
   /* clothes and rave gear for the 90s crowd */
   --clothes-black: #141414;   /* trench coats, band tees */
   --clothes-khaki: #b5a47a;
