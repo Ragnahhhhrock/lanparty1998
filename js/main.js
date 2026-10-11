@@ -12,8 +12,10 @@ import * as dialog from './dialog.js';
 import { Banter, IrcView, REGULARS } from './irc.js';
 import { Player } from './music.js';
 import { initLanamp } from './lanamp.js';
+import { initShare } from './share.js';
 
 const $ = (id) => document.getElementById(id);
+initShare();
 const ui = {
   intro: $('intro'), enter: $('enter-btn'), hud: $('hud'), prompt: $('prompt'), toast: $('toast'),
   caffeine: $('m-caffeine'), snacks: $('m-snacks'), cash: $('m-cash'), shares: $('m-shares'), clock: $('clock'), schedule: $('schedule'),

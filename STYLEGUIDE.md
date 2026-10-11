@@ -90,6 +90,7 @@ All defined in `css/style.css` and shown on `/styleguide.html`.
 | Button | `.w98-btn`, `.w98-btn.default` | Min-width 88px. Default action gets the 1px black outline. Focus = dotted inset outline. |
 | Panel | `.w98-panel` | Raised bevel, used for HUD meters. |
 | Meter | `.meter` > `span` + `.bar > i` | Segmented fill (7px block, 2px gap). Caffeine red, snacks orange. |
+| Share row | `.share` > `.share-label` + `.w98-btn.share-btn` | Text labels only, no network logos. Links are plain anchors with `rel="noopener noreferrer"`; status text speaks DOS ("Bad command or file name."). |
 | Keycap | `kbd` | Name keys as they appear on a 1998 keyboard: `Esc`, `` ` ``, `W`. |
 | Prompt | `#prompt` | VT323 24px phosphor on `--hud-bg`. Verb first: "Press E to sit down". |
 | Toast | `#toast` | VT323 26px `--toast` with hard black shadow. Short, in-world. |
