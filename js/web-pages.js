@@ -224,6 +224,8 @@ ${box('The night\'s chores', `<ul class="w-list">
 <li><b>RAM.</b> Every PC starts on 16MB. Macca is in Singapore, where a 16MB SIMM is $35. Give him the cash first.</li>
 <li><b>The CD burner.</b> PC-04 only, 2x, 37 minutes a disc. Do not sit at PC-04 while it writes.</li>
 <li><b>The fan.</b> Overclocked PCs blue screen if the pedestal fan goes off. E turns it back on.</li>
+<li><b>Lights.</b> The switch is on the back wall by the stairs door. With the lights off every monitor glows much brighter. Handy for Quake, bad for the Nachoz.</li>
+<li><b>The extension lead.</b> The yellow one across the aisle feeds PC-04 to PC-06. Trip on it and all three go dark. E on the lead, or F at a dead PC, plugs it back in.</li>
 <li><b>Cables.</b> They lie across the floor. Each step over one is a roll. F at the PC to plug it back in.</li>
 </ul>`)}
 <p><a href="games.htm">The games</a> | <a href="news.htm">What's new</a></p>`,

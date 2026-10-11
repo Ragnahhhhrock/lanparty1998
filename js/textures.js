@@ -192,6 +192,85 @@ export function assetTag() {
   return tex(c);
 }
 
+// An Australian double power point: a plate with a rocker switch above each socket, and the three flat slots
+// (two angled, one upright) every plug in the room goes into. Colours: --beige-light, --beige, --w98-hilite, --w98-shadow, --w98-dark.
+export function wallSocket() {
+  const [c, g] = canvas(160, 240);
+  g.fillStyle = '#ebe4cf'; g.fillRect(0, 0, 160, 240);                      // --beige-light: yellowed white plastic
+  g.fillStyle = '#d6cdb4'; g.fillRect(0, 0, 160, 3); g.fillRect(0, 237, 160, 3); g.fillRect(0, 0, 3, 240); g.fillRect(157, 0, 3, 240); // --beige
+  for (const y0 of [0, 120]) {
+    g.fillStyle = '#dfdfdf'; g.fillRect(58, y0 + 12, 44, 18);               // --w98-hilite: the rocker
+    g.fillStyle = '#808080'; g.fillRect(58, y0 + 29, 44, 2); g.fillRect(101, y0 + 12, 2, 18); // --w98-shadow
+    g.fillStyle = '#d6cdb4'; g.fillRect(26, y0 + 38, 108, 72);              // the socket face, sunk a little
+    g.fillStyle = '#808080'; g.fillRect(26, y0 + 38, 108, 2); g.fillRect(26, y0 + 38, 2, 72);
+    g.fillStyle = '#0a0a0a';                                                // --w98-dark: the slots
+    for (const [x, y, a] of [[60, 62, -0.5], [100, 62, 0.5], [80, 92, 0]]) {
+      g.save(); g.translate(x, y0 + y); g.rotate(a); g.fillRect(-4, -11, 8, 22); g.restore();
+    }
+  }
+  g.fillStyle = '#808080'; g.beginPath(); g.arc(80, 120, 3, 0, Math.PI * 2); g.fill(); // the screw between them
+  return tex(c);
+}
+
+// The top of a power board: four sockets, a mains switch on the right and, if asked, a strip of masking tape on
+// the front edge in blue biro. The switch lamp is a separate mesh, so it can go out. 0.40 x 0.09 m.
+export function powerBoardTop(tape = '') {
+  const [c, g] = canvas(512, 116);
+  g.fillStyle = '#ebe4cf'; g.fillRect(0, 0, 512, 116);                      // --beige-light
+  g.fillStyle = '#d6cdb4'; g.fillRect(0, 0, 512, 3); g.fillRect(0, 113, 512, 3); // --beige
+  for (const x of [77, 179, 282, 384]) {
+    g.fillStyle = '#d6cdb4'; g.fillRect(x - 40, 10, 80, 68);
+    g.fillStyle = '#808080'; g.fillRect(x - 40, 10, 80, 2); g.fillRect(x - 40, 10, 2, 68); // --w98-shadow
+    g.fillStyle = '#0a0a0a';                                                // --w98-dark
+    for (const [dx, dy, a] of [[-14, 30, -0.5], [14, 30, 0.5], [0, 56, 0]]) {
+      g.save(); g.translate(x + dx, dy + 6); g.rotate(a); g.fillRect(-4, -10, 8, 20); g.restore();
+    }
+  }
+  g.fillStyle = '#dfdfdf'; g.fillRect(447, 18, 40, 56);                     // --w98-hilite: the rocker
+  g.fillStyle = '#808080'; g.fillRect(447, 72, 40, 3); g.fillRect(485, 18, 3, 56);
+  g.font = `16px ${CRT_FONT}`; g.fillStyle = '#0a0a0a'; g.fillText('I', 462, 40); g.fillText('O', 462, 66);
+  if (tape) { // on the edge nearest the person, so it reads the right way up from the room
+    g.fillStyle = '#e8e1cc'; g.fillRect(14, 88, 200, 22);                   // --paper: masking tape
+    g.font = `22px ${CRT_FONT}`; g.fillStyle = '#000080'; g.fillText(tape, 20, 106); // --w98-title: biro
+  }
+  return tex(c);
+}
+
+// The cover of the switchboard on the wall: grey steel, a row of breakers and a strip of paper under each in
+// biro. The sockets along the front wall are on the dryer's circuit. 0.28 x 0.36 m.
+export function switchboardDoor() {
+  const [c, g] = canvas(256, 336);
+  g.fillStyle = '#8a8d92'; g.fillRect(0, 0, 256, 336);                      // --floppy-grey
+  g.fillStyle = '#44474b'; g.fillRect(0, 0, 256, 6); g.fillRect(0, 330, 256, 6); g.fillRect(0, 0, 6, 336); g.fillRect(250, 0, 6, 336); // --console-dark
+  g.font = `24px ${CRT_FONT}`; g.fillStyle = '#0a0a0a'; g.fillText('MAIN SWITCHBOARD', 24, 34);
+  g.fillStyle = '#e2231a'; g.fillRect(24, 44, 208, 6);                      // --volt
+  const rows = [['LIGHTS', 'POWER 1', 'POWER 2', 'STOVE'], ['HOT WATER', 'DRYER+FRONT', 'SPARE', 'MAIN']];
+  rows.forEach((row, ri) => row.forEach((name, ci) => {
+    const x = 18 + ci * 58, y = 70 + ri * 124;
+    g.fillStyle = '#26262b'; g.fillRect(x, y, 48, 70);                      // --disk-case: the breaker housing
+    g.fillStyle = '#0a0a0a'; g.fillRect(x + 8, y + 8, 32, 54);
+    const on = name !== 'DRYER+FRONT';
+    g.fillStyle = name === 'MAIN' ? '#e2231a' : '#dfdfdf';                  // --volt main, --w98-hilite toggles
+    g.fillRect(x + 12, y + (on ? 12 : 36), 24, 22);
+    g.fillStyle = '#e8e1cc'; g.fillRect(x - 2, y + 78, 52, 24);             // --paper
+    g.font = `15px ${CRT_FONT}`; g.fillStyle = '#000080';
+    g.fillText(name, x + 1, y + 95, 46);
+  }));
+  return tex(c);
+}
+
+// A soft round glow for the light a CRT throws. Drawn white: the material tints it and adds it to what is behind.
+export function glowHalo() {
+  const [c, g] = canvas(128, 128);
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.3, 'rgba(255,255,255,0.5)');
+  grad.addColorStop(0.65, 'rgba(255,255,255,0.14)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad; g.fillRect(0, 0, 128, 128);
+  return tex(c);
+}
+
 export function voltLabel() {
   const [c, g] = canvas(256, 128);
   g.fillStyle = '#c4161c'; g.fillRect(0, 0, 256, 128);

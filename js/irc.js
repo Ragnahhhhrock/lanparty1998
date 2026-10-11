@@ -67,6 +67,20 @@ const REACT = {
     'did {t} just go down. someone check on {t}. no do not. film it',
     'the cable has beaten {t} again. cable leads 3-0',
   ],
+  lights: [
+    'who turned the lights off. oh good. the monitors look cool',
+    '{t} has found the light switch. we are a cave now',
+    'ok the CRT glow in the dark is actually sick',
+    'lights back on. my eyes were just starting to like it',
+    'can you not. I was reading something',
+  ],
+  power: [
+    'half the room just went dark. someone check the extension lead',
+    'who pulled the plug. WHO PULLED THE PLUG',
+    '{t} found the extension lead the hard way. PC-04 to PC-06 are gone',
+    'plug it back in and pretend this did not happen',
+    'that lead was always going to go. it is yellow and it is across the aisle',
+  ],
   hot: [
     '{t} is running so hot you could fry an egg on the case',
     'turn the fan on. the box is cooking',

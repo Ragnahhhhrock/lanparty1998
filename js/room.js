@@ -1,12 +1,14 @@
 // Builds the basement: walls, tables, six PC stations, the hub, cables and the snack table.
 import * as THREE from 'three';
 import * as T from './textures.js';
+import { buildPower } from './power.js';
 import { BURNER } from './party.js';
 import { headphones } from './headphones.js';
 import { GAME_IDS } from './games.js';
 
 export const ROOM = { minX: -6, maxX: 6, minZ: -5, maxZ: 5, height: 2.8 };
 const TABLE_Y = 0.74;
+const DESK_WALL_Z = -0.55;   // the desks pushed against the side walls: the wall is 0.55 m behind a PC's middle (js/power-plan.js)
 
 const beige = new THREE.MeshStandardMaterial({ color: 0xd9cfb3, roughness: 0.7 });
 const beigeDark = new THREE.MeshStandardMaterial({ color: 0xbfb497, roughness: 0.75 });
@@ -92,7 +94,7 @@ function crt(screenTexture) {
   g.add(screen);
   const led = box(0.012, 0.012, 0.005, new THREE.MeshBasicMaterial({ color: 0x3cff5a }), 0.17, 0.055, 0.152);
   g.add(led);
-  return { group: g, screen };
+  return { group: g, screen, led };
 }
 
 function tower(burner = false) {
@@ -112,7 +114,7 @@ function tower(burner = false) {
   const power = box(0.015, 0.008, 0.004, new THREE.MeshBasicMaterial({ color: 0x33ff55 }), -0.04, 0.12, 0.223);
   const hdd = box(0.015, 0.008, 0.004, new THREE.MeshBasicMaterial({ color: 0x400000 }), 0.04, 0.12, 0.223);
   g.add(power, hdd);
-  return { group: g, hdd, drive };
+  return { group: g, hdd, drive, power };
 }
 
 // A pair of desktop speakers, one each side of the monitor, the way every PC with a sound card had them.
@@ -837,7 +839,8 @@ function buildGamers(scene, out, labelVolt) {
       const screen = new T.Screen('remote', 20 + di * 3 + pi);
       screen.setFree(false, who.toUpperCase(), what);
       out.gamerScreens.push(screen);
-      const { chair, phones } = pcSetup(g, screen, who.toUpperCase(), 0.1 * (pi + 1) - 0.15, false, audio);
+      const { chair, phones, mon } = pcSetup(g, screen, who.toUpperCase(), 0.1 * (pi + 1) - 0.15, false, audio);
+      (out.gamerPcs ??= []).push({ group: g, wallZ: DESK_WALL_Z, mon });
       if (phones) phones.visible = false; // they're wearing them
       const can = voltCan(labelVolt);
       can.position.set(-0.36, TABLE_Y, 0.12);
@@ -1288,13 +1291,16 @@ export function buildRoom(scene) {
   }
 
   // fluorescent tubes and lights
-  scene.add(new THREE.HemisphereLight(0xfff1d6, 0x3a2a1e, 1.5));
+  const hemi = new THREE.HemisphereLight(0xfff1d6, 0x3a2a1e, 1.5);
+  scene.add(hemi);
+  out.ceiling = { hemi, tubes: [] };   // the light switch (js/power.js) dims these
   for (const x of [-2.8, 2.8]) {
     const fixture = box(1.3, 0.04, 0.3, new THREE.MeshBasicMaterial({ color: 0xe9f3ff }), x, height - 0.02, 0);
     scene.add(fixture);
     const light = new THREE.PointLight(0xdfeaff, 22, 12, 1.4);
     light.position.set(x, height - 0.3, 0);
     scene.add(light);
+    out.ceiling.tubes.push({ fixture, light });
   }
 
   // stations
@@ -1328,7 +1334,7 @@ export function buildRoom(scene) {
 
     const station = {
       ...s, index: i, name: `PC-0${i + 1}`, group: g, screen, monitor: mon, seatTarget: new THREE.Object3D(),
-      cableStart: new THREE.Vector3(), chair, deskPhones: phones, // deskPhones: on the tower while nobody is wearing them
+      tower: tw, cableStart: new THREE.Vector3(), chair, deskPhones: phones, // deskPhones: on the tower while nobody is wearing them
       setTag: (text) => T.nameTag(text, tagTex),
     };
     // where the camera goes when you sit: square in front of the tube
@@ -1430,6 +1436,7 @@ export function buildRoom(scene) {
   buildGameShelf(scene);
   buildLooseBoxes(scene, out);
   buildChips(scene, out);
+  buildPower(scene, out, { tableY: TABLE_Y });
 
   // posters and the scoreboard
   const posterMat = (t) => new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 });

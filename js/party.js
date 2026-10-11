@@ -30,6 +30,11 @@ export const OC = [
   { label: 'Pentium II 300 at 504 (112MHz bus, extra volts)', mhz: 504, heat: 0.8 },
 ];
 export const FAN = { cool: 1.4, period: 14, knockEvery: [9, 16] }; // heat/s at best, seconds per sweep, game minutes between knocks
+
+// Power. The sockets along the front wall are on the dryer's circuit and trip the safety switch, so the front row
+// (PC-04, PC-05, PC-06) runs off one chain of boards, and the lead for it comes across the room from the back wall.
+// Trip over that lead and the plug comes out of the board: all three go dark until somebody plugs it back in.
+export const LEAD = { pcs: [3, 4, 5], bootSeconds: 6 }; // the PCs on the lead, and how long a box spends in its POST after the power returns
 export const HEAT = { crash: 100, warn: 75, ok: 60, afterReboot: 70 };
 export const celsius = (heat) => Math.round(28 + heat * 0.5);
 
@@ -93,7 +98,8 @@ export class Party extends EventTarget {
     this.job = null;       // the burn in progress: { kind, left, total, abused }
 
     this.net = 'coax';     // coax -> hub -> (borrowed) switch
-    this.pcs = Array.from({ length: PC_COUNT }, () => ({ linkDown: false, oc: 0, heat: 0, crashed: false, hot: false, ram: RAM.start, share: 'broken' }));
+    this.pcs = Array.from({ length: PC_COUNT }, () => ({ linkDown: false, oc: 0, heat: 0, crashed: false, hot: false, ram: RAM.start, share: 'broken', boot: 0 }));
+    this.leadIn = true;    // the extension lead is plugged into the front row's board
     this.fixes = new Map(); // pc -> the file sharing job in progress
     this.swapped = 0;       // MB that have gone round the network
     this.library = 0;       // milestones reached
@@ -135,13 +141,13 @@ export class Party extends EventTarget {
 
   sharingCount() { return this.pcs.filter((pc) => pc.share === 'ok').length; }
   // a PC that is both sharing and reachable, which is what counts for swapping files
-  sharing(i) { const pc = this.pcs[i]; return pc.share === 'ok' && !pc.crashed && this.pcLinkUp(i); }
+  sharing(i) { const pc = this.pcs[i]; return pc.share === 'ok' && !pc.crashed && this.pcPowered(i) && this.pcLinkUp(i); }
   swapRate() { // MB per second across the whole room
     const n = this.pcs.filter((_, i) => this.sharing(i)).length;
     return (n * (n - 1) / 2) * SWAP_MB_PER_SEC * NET[this.net].speed;
   }
 
-  canFixShare(i) { const pc = this.pcs[i]; return pc.share === 'broken' && !pc.crashed && this.pcLinkUp(i) && !this.fixes.has(i); }
+  canFixShare(i) { const pc = this.pcs[i]; return pc.share === 'broken' && !pc.crashed && this.pcPowered(i) && this.pcLinkUp(i) && !this.fixes.has(i); }
 
   startFix(i) {
     if (!this.canFixShare(i)) return false;
@@ -279,6 +285,12 @@ export class Party extends EventTarget {
   tickHeat(dt) {
     if (this.fan.on) this.fan.phase += (dt * 2 * Math.PI) / FAN.period;
     this.pcs.forEach((pc, i) => {
+      if (pc.boot > 0) pc.boot = Math.max(0, pc.boot - dt);
+      if (!this.pcPowered(i)) { // no power: the case just cools, and nothing can crash
+        pc.heat = Math.max(0, pc.heat - 0.5 * dt);
+        pc.hot = false;
+        return;
+      }
       if (pc.crashed) return;
       let rate = OC[pc.oc].heat;
       if (this.fan.on) rate -= FAN.cool * this.fanFactor(i);
@@ -326,10 +338,58 @@ export class Party extends EventTarget {
     return true;
   }
 
+  /* ---- power: the extension lead to the front row ---- */
+
+  pcPowered(i) { return this.leadIn || !LEAD.pcs.includes(i); }
+  pcBooting(i) { return this.pcs[i].boot > 0; }
+  // the PCs that are dark right now
+  deadPcs() { return LEAD.pcs.filter((i) => !this.pcPowered(i)); }
+
+  // The plug comes out of the board. Everything on it loses power, and nothing it was doing survives: shares
+  // are gone, a file sharing fix is cancelled, and a disc being written is a coaster.
+  pullLead(why) {
+    if (!this.leadIn) return false;
+    this.leadIn = false;
+    for (const i of LEAD.pcs) {
+      const pc = this.pcs[i];
+      pc.boot = 0;
+      pc.hot = false;
+      if (pc.share === 'ok') pc.share = 'broken';
+      this.fixes.delete(i);
+    }
+    if (this.job && !this.pcPowered(BURNER.pc)) {
+      this.job = null;
+      this.coasters++;
+      this.emit('coaster', { reason: 'power' });
+    }
+    this.emit('power-down', { pcs: [...LEAD.pcs], why });
+    return true;
+  }
+
+  // Back in the board: every box goes through its POST, and comes up cold and with a clean slate.
+  plugLead() {
+    if (this.leadIn) return false;
+    this.leadIn = true;
+    for (const i of LEAD.pcs) {
+      const pc = this.pcs[i];
+      pc.boot = LEAD.bootSeconds;
+      pc.crashed = false;
+      pc.heat = 0;
+    }
+    this.emit('power-up', { pcs: [...LEAD.pcs] });
+    return true;
+  }
+
   // Someone has tripped on a cable lying across the floor. On a hub or switch that is one lead
   // out of one PC. On coax it is the cable to PC-06, the end that runs across the floor, and
   // that takes the whole segment down.
   tripOver(kind, pc) {
+    if (kind === 'lead') { // the extension lead, across the aisle
+      this.tripped++;
+      const dropped = this.pullLead('tripped');
+      this.emit('trip', { kind, pc: null, dropped });
+      return dropped;
+    }
     if (kind === 'fan') { // the fan's lead runs across the floor too
       this.tripped++;
       const dropped = this.setFan(false, 'tripped');
@@ -399,7 +459,7 @@ export class Party extends EventTarget {
   // game minutes a burn takes: 74 minutes of disc at 2x is 37 minutes of waiting
   burnMinutes() { return BURNER.discMinutes / BURNER.speed; }
 
-  canBurn() { return !this.job && this.cash >= BURNER.blankCost; }
+  canBurn() { return !this.job && this.cash >= BURNER.blankCost && this.pcPowered(BURNER.pc); }
 
   startBurn(kind = 'MIX') {
     if (!DISCS[kind] || !this.canBurn()) return false;

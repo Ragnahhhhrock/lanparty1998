@@ -8,6 +8,18 @@
 
 export const NEWS = [
   {
+    date: '1998-02-06', kind: 'new', title: 'The lights have a switch',
+    text: 'There is a light switch on the back wall by the stairs door. Turn the ceiling tubes off and the room is nearly dark, and the monitors become the light: each one glows on the keyboard, the table and your face, in the colour of whatever is on it. Teal for Windows, green for Solitaire, grey for DOS. The switch has a small orange dot so you can find it.',
+  },
+  {
+    date: '1998-02-06', kind: 'new', title: 'The yellow extension lead',
+    text: 'The front wall is on the dryer circuit, so PC-04, PC-05 and PC-06 now run off a yellow extension lead from the back wall, across the aisle. Trip on it and all three go dark: shares gone, and a CD in PC-04 is a coaster. Press E on the lead, or F at a dead PC, to plug it back in. Expect a POST and a lot of fixing.',
+  },
+  {
+    date: '1998-02-06', kind: 'new', title: 'Power points and boards',
+    text: 'The walls now have power points, and every PC is plugged into a power board behind its table instead of floating in the air. The fan, the TV and the hub are plugged in too. Nobody has labelled any of the boards except with masking tape.',
+  },
+  {
     date: '1998-02-06', kind: 'new', title: 'Boxes all over the place',
     text: 'Sixteen more game boxes have come off the shelf and are lying around: on the tables, the snack table, a chair, the middle couch cushion and the carpet, a couple stacked. Nobody owns up to leaving them.',
   },

@@ -21,8 +21,11 @@ export const analytics = {
     track('eat_snack', { handfuls_total: totals.handfuls, snack_level: Math.round(snacks) });
   },
 
-  // Tripped over a cable on the floor; `kind` is 'cat5' or 'coax'.
+  // Tripped over a cable on the floor; `kind` is 'cat5', 'coax', 'fan' or 'lead' (the extension lead across the aisle).
   tripCable(kind, total) { track('trip_cable', { cable: kind, trips_total: total }); },
+
+  // The ceiling lights, switched `on` or off.
+  lightSwitch(on) { track('light_switch', { on }); },
 
   sitDown(station) {
     seatedAt = performance.now();

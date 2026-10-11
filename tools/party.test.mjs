@@ -1,6 +1,6 @@
 // Logic tests for js/party.js. Run: node tools/party.test.mjs
 import assert from 'node:assert/strict';
-import { PIZZA, Party, BURNER, DISCS, SEC_PER_GAME_MIN, SHOP, DAD, PC_COUNT, OC, HEAT, FAN, RAM, NIGHT, ANNOUNCEMENTS, SHARE_STEPS, SHARE_FAIL, SWAP_MB_PER_SEC, WAREZ } from '../js/party.js';
+import { PIZZA, Party, BURNER, DISCS, SEC_PER_GAME_MIN, SHOP, DAD, PC_COUNT, OC, HEAT, FAN, RAM, NIGHT, ANNOUNCEMENTS, SHARE_STEPS, SHARE_FAIL, SWAP_MB_PER_SEC, WAREZ, LEAD } from '../js/party.js';
 
 const run = (p, seconds, ctx = {}) => { for (let i = 0; i < seconds * 10; i++) p.tick(0.1, ctx); };
 let n = 0;
@@ -538,6 +538,86 @@ test('you cannot order a pizza with no money', () => {
   const p = new Party();
   p.cash = PIZZA.cost - 1;
   assert.ok(!p.orderPizza());
+});
+
+/* ---- the extension lead: the front row runs off one board ---- */
+
+test('the front row, burner included, is on the lead and the back row is not', () => {
+  assert.deepEqual(LEAD.pcs, [3, 4, 5]);
+  assert.ok(LEAD.pcs.includes(BURNER.pc));
+  const p = new Party();
+  assert.ok(p.pcs.every((_, i) => p.pcPowered(i)));
+  p.pullLead('test');
+  assert.deepEqual(p.deadPcs(), [3, 4, 5]);
+  assert.ok([0, 1, 2].every((i) => p.pcPowered(i)));
+});
+
+test('tripping over the lead pulls the plug, once', () => {
+  const p = new Party();
+  const events = [];
+  p.addEventListener('power-down', (e) => events.push(e.detail));
+  assert.ok(p.tripOver('lead', null));
+  assert.equal(p.tripped, 1);
+  assert.equal(p.leadIn, false);
+  assert.deepEqual(events, [{ pcs: [3, 4, 5], why: 'tripped' }]);
+  assert.equal(p.tripOver('lead', null), false, 'it is already out');
+  assert.equal(p.tripped, 2, 'but you still went over it');
+  assert.equal(events.length, 1);
+});
+
+test('no power takes the shares, the fix in progress and the disc being written', () => {
+  const p = quiet();
+  p.setNet('hub');
+  for (const i of [0, 3, 4]) p.pcs[i].share = 'ok';
+  p.pcs[5].share = 'broken';
+  assert.ok(p.startFix(5));
+  assert.ok(p.startBurn());
+  const coasters = [];
+  p.addEventListener('coaster', (e) => coasters.push(e.detail.reason));
+  p.pullLead('test');
+  assert.equal(p.pcs[0].share, 'ok', 'the back row keeps its share');
+  assert.equal(p.pcs[3].share, 'broken');
+  assert.equal(p.pcs[4].share, 'broken');
+  assert.equal(p.fixes.has(5), false);
+  assert.equal(p.job, null);
+  assert.equal(p.coasters, 1);
+  assert.deepEqual(coasters, ['power']);
+});
+
+test('a dark box cannot swap files, be fixed, burn a disc or overheat', () => {
+  const p = quiet();
+  p.setNet('hub');
+  p.pcs[4].share = 'ok'; p.pcs[0].share = 'ok';
+  p.pcs[4].oc = 2; p.pcs[4].heat = 90;
+  p.pullLead('test');
+  assert.equal(p.sharing(4), false);
+  assert.equal(p.canFixShare(4), false);
+  assert.equal(p.canBurn(), false, 'PC-04 is dead');
+  assert.equal(p.startFix(4), false);
+  const crashes = []; p.addEventListener('crash', (e) => crashes.push(e.detail.pc));
+  run(p, 120);
+  assert.deepEqual(crashes, [], 'an overclocked box with no power does not blue screen');
+  assert.ok(Math.abs(p.pcs[4].heat - 30) < 0.01, 'it just cools: 90 down at half a degree a second');
+  run(p, 120);
+  assert.equal(p.pcs[4].heat, 0);
+});
+
+test('plugging the lead back in boots every box cold, and the shares stay gone', () => {
+  const p = quiet();
+  p.pcs[3].crashed = true; p.pcs[3].heat = 100; p.pcs[4].share = 'ok';
+  p.pullLead('test');
+  const events = []; p.addEventListener('power-up', (e) => events.push(e.detail.pcs));
+  assert.ok(p.plugLead());
+  assert.equal(p.plugLead(), false);
+  assert.deepEqual(events, [[3, 4, 5]]);
+  assert.ok(p.pcs.every((_, i) => p.pcPowered(i)));
+  assert.ok(LEAD.pcs.every((i) => p.pcBooting(i)));
+  assert.equal(p.pcs[3].crashed, false);
+  assert.equal(p.pcs[3].heat, 0);
+  assert.equal(p.pcs[4].share, 'broken');
+  run(p, LEAD.bootSeconds + 1);
+  assert.ok(LEAD.pcs.every((i) => !p.pcBooting(i)));
+  assert.ok(p.canBurn());
 });
 
 console.log(`${n} passed`);

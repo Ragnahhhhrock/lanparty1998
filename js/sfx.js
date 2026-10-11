@@ -55,6 +55,34 @@ export function thud() {
   burst(t + 0.04, 0.12, 900, 1.2, 0.35);
 }
 
+// the light switch: a click, then the tubes ticking and catching (on) or going quiet (off)
+export function lightSwitch(on) {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  burst(t, 0.03, 2200, 2, 0.6);
+  if (on) for (let i = 0; i < 4; i++) burst(t + 0.12 + i * 0.07 + Math.random() * 0.03, 0.025, 3000 + i * 400, 3, 0.25);
+  else burst(t + 0.05, 0.12, 400, 1, 0.15, 'lowpass');
+}
+
+// the power going out of some of the boxes: a thump and everything winding down
+export function powerCut() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  burst(t, 0.1, 220, 1, 0.8, 'lowpass');
+  burst(t + 0.02, 0.5, 120, 1, 0.5, 'lowpass');
+}
+
+// the power coming back: the POST beep, once
+export function postBeep() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'square'; o.frequency.value = 1000;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t); o.stop(t + 0.2);
+}
+
 // a basement door: a long dry creak, then the latch
 export function door() {
   if (!ctx) return;

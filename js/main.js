@@ -172,6 +172,7 @@ function findTarget() {
     const t = hit.object.userData.interact;
     if (!t) continue;
     if (t.kind === 'buddy' && party.buddy.state === 'away') continue; // he's in Singapore
+    if (t.kind === 'lead' && party.leadIn) continue;                   // the lead only needs you when its plug is out
     return t;
   }
   return null;
@@ -180,10 +181,13 @@ function findTarget() {
 const PROMPTS = {
   sit: (t) => {
     const who = link.occupant(t.station.index);
+    if (!party.pcPowered(t.station.index)) return `${t.station.name} · No power  ·  F · Open the case`;
     const fiddle = party.pcs[t.station.index].linkDown ? 'F · Cable is out' : 'F · Open the case';
     return who ? `${t.station.name} · ${who.name}'s sitting here  ·  ${fiddle}` : `E · Sit down at ${t.station.name}  ·  ${fiddle}`;
   },
   buddy: () => (party.buddy.state === 'back' ? 'E · Macca is back. Ask about the RAM' : 'E · Talk to Macca'),
+  switch: () => `E · Turn the lights ${room.lightsOn ? 'off' : 'on'}`,
+  lead: () => 'E · Plug the extension lead back in',
   fan: () => `E · Turn the fan ${party.fan.on ? 'off' : 'on'}`,
   shop: () => 'E · Read the computer shop price list',
   phone: () => 'E · Use the phone',
@@ -199,7 +203,8 @@ const PROMPTS = {
 function interact(t) {
   if (t.kind === 'sit') {
     const who = link.occupant(t.station.index);
-    if (who) toast(`${who.name} is on that one. Find a free PC.`);
+    if (!party.pcPowered(t.station.index)) toast(`${t.station.name} has no power. Somebody should look at the extension lead.`);
+    else if (who) toast(`${who.name} is on that one. Find a free PC.`);
     else sitDown(t.station);
   } else if (t.kind === 'drink') drink();
   else if (t.kind === 'soda') soda();
@@ -207,11 +212,22 @@ function interact(t) {
   else if (t.kind === 'burner') openBurner();
   else if (t.kind === 'shop') openShop();
   else if (t.kind === 'buddy') openMacca();
+  else if (t.kind === 'switch') flipLights();
+  else if (t.kind === 'lead') party.plugLead();
   else if (t.kind === 'fan') party.setFan(!party.fan.on, 'switch');
   else if (t.kind === 'phone') openPhone();
   else if (t.kind === 'pizza') eatPizza(t.box);
   else if (t.kind === 'taped') talkToTaped();
   else if (t.kind === 'door') useDoor();
+}
+
+// The light switch by the stairs door. In the dark the CRTs are most of the light in the room.
+function flipLights() {
+  const on = room.toggleLights();
+  sfx.lightSwitch(on);
+  analytics.lightSwitch(on);
+  banter.react('lights', myName);
+  chatLine(on ? 'The lights are back on.' : 'The lights are off. The monitors are the only light in the room.', true);
 }
 
 // The door to the stairs. Mum is upstairs, and she can hear everything.
@@ -252,6 +268,13 @@ function openPcMenu(station) {
       const pc = party.pcs[i];
       const who = link.occupant(i);
       if (who) return { lines: [`${who.name} is sitting at this PC. Leave the case alone.`], progress: null, buttons: [{ label: 'Close' }] };
+      if (!party.pcPowered(i)) { // the extension lead's out of the wall
+        return {
+          lines: [party.leadIn ? 'No power yet. It is going through POST.' : 'Dead. The power board behind this table is not getting anything. The extension lead has come out of the wall.'],
+          progress: null,
+          buttons: party.leadIn ? [{ label: 'Close' }] : [{ label: 'Plug the lead back in', run: () => party.plugLead() }, { label: 'Close' }],
+        };
+      }
 
       // the cable
       if (pc.linkDown) {
@@ -412,6 +435,7 @@ function openBurner() {
     title: 'CDWRITE.EXE',
     render: () => {
       const job = party.job;
+      if (!party.pcPowered(BURNER.pc)) return { lines: ['PC-04 has no power. The drive is dead and so is the write.'], progress: null, buttons: [{ label: 'Close' }] };
       if (job) {
         return {
           lines: [
@@ -716,7 +740,7 @@ const trip = { t: 0, cool: 0, on: false, dir: new THREE.Vector3() };
 
 function cableUnderfoot() {
   for (const c of room.floorCables) {
-    const gone = c.kind === 'fan' ? false : c.kind === 'coax'
+    const gone = c.kind === 'fan' || c.kind === 'lead' ? false : c.kind === 'coax'
       ? party.net !== 'coax' || party.pcs[PC_COUNT - 1].linkDown  // the coax across the floor is the cable to PC-06
       : party.net === 'coax' || party.pcs[c.pc].linkDown;         // an unplugged lead isn't lying there any more
     if (gone) continue;
@@ -831,6 +855,8 @@ function frame() {
 
   crowd.update(dt, link.players, now);
   room.updateFan(dt, party.fan.on, party.fanSweep());
+  room.updatePower(dt);
+  room.stations.forEach((st, i) => { st.screen.rebooting = party.rebooting(i) || party.pcBooting(i); });
   room.updateTv(dt);
   room.door.update(dt);
   if (mode !== 'intro') for (const m of banter.tick(dt)) ircSpeak(m);
@@ -869,10 +895,10 @@ function frame() {
 
   // blinkenlights
   const playing = (mode === 'seated' && pc.running) || [...link.players.values()].some((p) => p.pc !== null);
-  for (const led of room.hddLeds) if (Math.random() < 0.15) led.material.color.setHex(Math.random() < 0.4 ? 0xff2a1a : 0x400000);
+  room.hddLeds.forEach((led, i) => { if (!party.pcPowered(i)) led.material.color.setHex(0x100000); else if (Math.random() < 0.15) led.material.color.setHex(Math.random() < 0.4 ? 0xff2a1a : 0x400000); });
   room.netLeds.forEach((led, i) => {
     const used = i < 6; // one port per PC; the rest are spare
-    const up = !used || party.pcLinkUp(i);
+    const up = !used || (party.pcLinkUp(i) && party.pcPowered(i));
     const busy = used && up && Math.random() < (playing ? 0.5 : 0.12);
     led.material.color.setHex(busy ? 0x4dff5a : (used && up ? 0x1b6e1b : 0x0a2a0a));
   });
@@ -929,14 +955,16 @@ function scheduleText() {
 function refreshLinks() {
   room.stations.forEach((st, i) => {
     room.setLoose(i, party.pcs[i].linkDown);
+    room.setPower(i, party.pcPowered(i));
     st.screen.linkDown = !party.pcLinkUp(i);
     st.screen.crashed = party.pcs[i].crashed;
     st.screen.oc = party.pcs[i].oc;
     st.screen.ram = party.pcs[i].ram;
     st.screen.share = party.pcs[i].share === 'ok';
-    st.screen.rebooting = party.rebooting(i);
+    st.screen.rebooting = party.rebooting(i) || party.pcBooting(i);
     st.screen.rts = party.phase() === 'rts' ? (party.canRunStarcraft(i) ? 'starcraft' : 'nomem') : null;
   });
+  room.setLead(party.leadIn);
   setNetStatus();
 }
 
@@ -1025,6 +1053,13 @@ party.addEventListener('dad-warning', () => chatLine("Dazza's dad: \"I need that
 const TRIP_LINES = ['You trip over the cat5.', 'Your foot finds the cable. Of course it does.', 'Cable. Floor. Face.'];
 party.addEventListener('trip', (e) => {
   const st = room.stations[e.detail.pc ?? 0];
+  if (e.detail.kind === 'lead') {
+    const line = e.detail.dropped ? 'You trip over the yellow extension lead. The plug comes out of the wall and PC-04, PC-05 and PC-06 go dark.' : 'You trip over the yellow extension lead again. It is already out of the wall.';
+    banter.react(e.detail.dropped ? 'power' : 'trip', myName);
+    toast(line); chatLine(line, true);
+    analytics.tripCable('lead', party.tripped);
+    return;
+  }
   const out = e.detail.kind === 'fan' ? "The fan's plug comes out of the wall." : e.detail.kind === 'coax' ? `The coax pops off ${st.name}. Everybody is offline.` : `${st.name} has lost its link.`;
   const line = `${TRIP_LINES[party.tripped % TRIP_LINES.length]} ${out}`;
   banter.react('trip', myName);
@@ -1047,13 +1082,25 @@ party.addEventListener('pizza-arrive', () => {
   box.fresh = true;
 });
 
+party.addEventListener('power-down', () => {
+  sfx.powerCut();
+  if (seatedAt && !party.pcPowered(seatedAt.index)) { toast(`${seatedAt.name} goes black.`); standUp(); }
+  refreshLinks();
+  if (!party.leadIn && mode !== 'seated') chatLine('PC-04, PC-05 and PC-06 have lost power. The extension lead is out of the wall, somewhere across the aisle.', true);
+});
+party.addEventListener('power-up', () => {
+  sfx.postBeep();
+  toast('Power is back. PC-04 to PC-06 are in POST.');
+  chatLine('The extension lead is back in. The three boxes are running memory tests. Shares will need fixing again.', true);
+  refreshLinks();
+});
 party.addEventListener('burn-start', () => toast('CDWRITE: writing at 2x. Hands off PC-04.'));
 party.addEventListener('burn-done', (e) => {
   toast(`Disc done. Mates pay $${e.detail.pays}.`);
   chatLine(`The CD-R finally spat out a ${DISCS[e.detail.kind].name}. +$${e.detail.pays}.`, true);
 });
 party.addEventListener('coaster', (e) => {
-  const why = { underrun: 'Buffer underrun. That one is a coaster.', crash: 'PC-04 blue screened mid-write. Coaster.', reboot: 'Windows restarted on PC-04 mid-write. Coaster.' }[e.detail.reason] ?? 'Write cancelled. That disc is a coaster now.';
+  const why = { underrun: 'Buffer underrun. That one is a coaster.', crash: 'PC-04 blue screened mid-write. Coaster.', reboot: 'Windows restarted on PC-04 mid-write. Coaster.', power: 'PC-04 lost power mid-write. Coaster.' }[e.detail.reason] ?? 'Write cancelled. That disc is a coaster now.';
   toast(why);
   chatLine(why, true);
 });
