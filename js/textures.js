@@ -397,6 +397,44 @@ const SCRIPT = [
   'Waiting for 1 more player...',
 ];
 
+// a free PC nobody has touched for this long (seconds) starts its screen saver
+export const SAVER_AFTER = 5 * 60;
+
+// 7x7 pixel suits for the solitaire cards: drawn, so no font has to supply them
+const SUITS = {
+  H: ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...', '.......'],
+  D: ['...#...', '..###..', '.#####.', '#######', '.#####.', '..###..', '...#...'],
+  S: ['...#...', '..###..', '.#####.', '#######', '#######', '...#...', '..###..'],
+  C: ['..###..', '..###..', '#######', '#######', '#.###.#', '...#...', '..###..'],
+};
+const CARD = { w: 34, h: 44 };
+// the game on the solitaire PC, some way in: [face-down cards, face-up run] per column
+const KLONDIKE = [
+  [0, ['KD']],
+  [1, ['9S', '8H']],
+  [2, ['QC', 'JH', '10S', '9D', '8C']],
+  [2, ['5D']],
+  [3, ['7C', '6D']],
+  [1, ['3H']],
+  [4, ['JS']],
+];
+const colX = (i) => 13 + i * 43;
+const TABLEAU_Y = 84, DOWN_STEP = 3, UP_STEP = 11;
+
+let backSprite;
+function cardBack() { // drawn once and shared
+  if (!backSprite) {
+    const [c, g] = canvas(CARD.w, CARD.h);
+    g.fillStyle = '#0a0a0a'; g.fillRect(0, 0, CARD.w, CARD.h);               // --w98-dark
+    g.fillStyle = '#ffffff'; g.fillRect(1, 1, CARD.w - 2, CARD.h - 2);       // --w98-light
+    g.fillStyle = '#000080'; g.fillRect(3, 3, CARD.w - 6, CARD.h - 6);       // --w98-title
+    g.fillStyle = '#1084d0';                                                  // --w98-title2: the lattice
+    for (let y = 4; y < CARD.h - 5; y += 4) for (let x = 4 + ((y / 4) % 2) * 2; x < CARD.w - 5; x += 4) g.fillRect(x, y, 2, 2);
+    backSprite = c;
+  }
+  return backSprite;
+}
+
 export class Screen {
   constructor(mode, seed = 1) {
     [this.canvas, this.g] = canvas(W, H);
@@ -404,8 +442,8 @@ export class Screen {
     this.mode = mode;
     this.idle = mode;
     this.free = true;
+    this.lastUsed = performance.now() / 1000; // the screen saver counts from here
     this.t0 = seed * 3.7;
-    this.stars = Array.from({ length: 90 }, (_, i) => { const r = rand(seed * 100 + i); return [r() - 0.5, r() - 0.5, r()]; });
     this.message = '';
     this.draw(0);
   }
@@ -421,8 +459,11 @@ export class Screen {
   draw(time) {
     const g = this.g, t = time + this.t0;
     g.save();
+    // somebody sitting here (you or another player) counts as use; the clock starts when they stand up
+    if (!this.free || this.mode === 'mine') this.lastUsed = time;
+    const asleep = this.free && this.mode === this.idle && time - this.lastUsed > SAVER_AFTER;
     // the burner PC shows its write progress while nobody is sitting at it
-    this[this.crashed ? 'bsod' : this.burn && this.free ? 'burning' : this.rts && this.free ? this.rts : this.rebooting ? 'bios' : this.mode]?.(g, t);
+    this[this.crashed ? 'bsod' : this.burn && this.free ? 'burning' : this.rts && this.free ? this.rts : this.rebooting ? 'bios' : asleep ? 'saver' : this.mode]?.(g, t);
     if (this.linkDown) { // the Win98 tray balloon, big enough to read from across the room
       g.fillStyle = '#ffcc00'; g.fillRect(0, 0, W, 26);                      // --amber
       this.text(g, 'NETWORK CABLE DISCONNECTED', 8, 20, '#000000', 20);
@@ -470,13 +511,154 @@ export class Screen {
     }
   }
 
-  stars3d(g, t) {
-    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(0, 0, W, H);
-    for (const s of this.stars) {
-      const z = 1 - ((s[2] + t * 0.25) % 1);
-      const x = W / 2 + (s[0] / z) * 140, y = H / 2 + (s[1] / z) * 140;
-      const sz = (1 - z) * 3;
-      g.fillStyle = '#fff'; g.fillRect(x, y, sz, sz);
+  // the Win98 taskbar along the bottom of a desktop screen, with one pressed button for the open window
+  taskbar(g, label) {
+    g.fillStyle = '#c0c0c0'; g.fillRect(0, H - 22, W, 22);                       // --w98-face
+    g.fillStyle = '#ffffff'; g.fillRect(0, H - 22, W, 1);                        // --w98-light
+    g.fillStyle = '#c0c0c0'; g.fillRect(3, H - 19, 48, 16);
+    g.font = 'bold 11px Tahoma, sans-serif'; g.fillStyle = '#000000'; g.fillText('Start', 12, H - 7);
+    g.fillStyle = '#dfdfdf'; g.fillRect(56, H - 19, 130, 16);                    // --w98-hilite: pressed
+    g.fillStyle = '#808080'; g.fillRect(56, H - 19, 130, 1); g.fillRect(56, H - 19, 1, 16); // --w98-shadow
+    g.fillStyle = '#ffffff'; g.fillRect(56, H - 4, 130, 1); g.fillRect(185, H - 19, 1, 16);
+    g.font = 'bold 10px Tahoma, sans-serif'; g.fillStyle = '#000000'; g.fillText(label, 62, H - 8, 118);
+    g.font = '11px Tahoma, sans-serif'; g.fillText(this.clock || '11:42 PM', W - 52, H - 7);
+  }
+
+  // a raised or sunken Win98 face from x,y: white and grey edges, nothing blurred. Sunken ones are white fields.
+  bevel(g, x, y, w, h, sunken = false) {
+    const [outerTL, outerBR, innerTL, innerBR] = sunken
+      ? ['#808080', '#ffffff', '#0a0a0a', '#dfdfdf']                              // --w98-shadow, light, dark, hilite
+      : ['#ffffff', '#0a0a0a', '#dfdfdf', '#808080'];                             // --w98-light, dark, hilite, shadow
+    g.fillStyle = outerBR; g.fillRect(x, y, w, h);
+    g.fillStyle = outerTL; g.fillRect(x, y, w - 1, h - 1);
+    g.fillStyle = innerBR; g.fillRect(x + 1, y + 1, w - 2, h - 2);
+    g.fillStyle = innerTL; g.fillRect(x + 1, y + 1, w - 3, h - 3);
+    g.fillStyle = sunken ? '#ffffff' : '#c0c0c0'; g.fillRect(x + 2, y + 2, w - 4, h - 4); // --w98-light field, --w98-face
+  }
+
+  // Disk Defragmenter's progress window: the bar, the percentage and the block map, sweeping the whole disk and starting again
+  defrag(g, t) {
+    g.fillStyle = '#008080'; g.fillRect(0, 0, W, H);                              // --w98-desktop
+    const COLS = 44, ROWS = 9, N = COLS * ROWS;
+    this.dfUsed ??= (() => { const r = rand(41 + Math.floor(this.t0)); return Array.from({ length: N }, () => r() > 0.42); })();
+    const p = (t * 0.0035) % 1, pct = Math.floor(p * 100), cur = Math.floor(p * N);
+
+    this.bevel(g, 14, 14, 292, 178);
+    g.fillStyle = '#000080'; g.fillRect(17, 17, 286, 14);                         // --w98-title
+    g.font = 'bold 10px Tahoma, sans-serif'; g.fillStyle = '#ffffff'; g.fillText('Defragmenting Drive C', 22, 28);
+    g.fillStyle = '#c0c0c0'; g.fillRect(288, 19, 12, 10);                         // the close box, nothing on it
+    g.font = '11px Tahoma, sans-serif'; g.fillStyle = '#000000'; g.fillText('Moving files to the front of the disk.', 24, 48);
+
+    this.bevel(g, 24, 54, 272, 16, true);
+    g.fillStyle = '#000080';
+    for (let x = 27; x < 27 + 266 * p; x += 10) g.fillRect(x, 57, 8, 10);         // the blue progress blocks
+    g.font = '11px Tahoma, sans-serif'; g.fillStyle = '#000000'; g.textAlign = 'center';
+    g.fillText(`${pct}% Complete`, W / 2, 88);
+    g.textAlign = 'left';
+    [['Stop', 52], ['Pause', 118], ['Hide Details', 184]].forEach(([label, x]) => {
+      this.bevel(g, x, 96, label === 'Hide Details' ? 84 : 60, 18);
+      g.font = '11px Tahoma, sans-serif'; g.fillStyle = '#000000'; g.textAlign = 'center';
+      g.fillText(label, x + (label === 'Hide Details' ? 42 : 30), 109);
+      g.textAlign = 'left';
+    });
+
+    this.bevel(g, 24, 122, 272, 62, true);
+    const flick = Math.floor(t * 9);
+    for (let k = 0; k < N; k++) {
+      let c;
+      if (k < cur) c = '#000080';                                                 // --w98-title: already in place
+      else if (k < cur + 3) c = (flick + k) % 3 === 0 ? '#e2231a' : '#1fbf3a';    // --volt reading, --link-led writing
+      else c = this.dfUsed[k] ? '#1084d0' : '#ffffff';                            // --w98-title2: still fragmented; --w98-light: free
+      g.fillStyle = c;
+      g.fillRect(27 + (k % COLS) * 6, 125 + Math.floor(k / COLS) * 6, 5, 5);
+    }
+    this.taskbar(g, 'Defragmenting Drive C');
+  }
+
+  // everything about the solitaire window that never moves, drawn once and kept
+  solitaireStatic() {
+    const [c, g] = canvas(W, H);
+    g.fillStyle = '#008080'; g.fillRect(0, 0, W, H);                              // --w98-desktop
+    this.bevel(g, 2, 2, 316, 202);
+    g.fillStyle = '#000080'; g.fillRect(5, 5, 310, 14);                           // --w98-title
+    g.font = 'bold 10px Tahoma, sans-serif'; g.fillStyle = '#ffffff'; g.fillText('Solitaire', 22, 16);
+    g.fillStyle = '#ffffff'; g.fillRect(8, 7, 8, 10);                             // the little card in the title bar
+    g.fillStyle = '#c4161c'; g.fillRect(10, 9, 3, 3);                             // --card-red
+    for (const x of [270, 284, 298]) { g.fillStyle = '#c0c0c0'; g.fillRect(x, 7, 12, 10); }
+    g.font = '10px Tahoma, sans-serif'; g.fillStyle = '#000000';
+    g.fillText('Game', 8, 29); g.fillText('Help', 42, 29);
+    g.fillStyle = '#008000'; g.fillRect(5, 32, 310, 156);                         // --felt
+    this.bevel(g, 5, 189, 310, 13, true);
+    g.fillStyle = '#c0c0c0'; g.fillRect(7, 191, 306, 9);
+
+    const slot = (x, y) => { g.strokeStyle = '#005000'; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, CARD.w - 1, CARD.h - 1); }; // --mine-2: a darker felt
+    const top = 36;
+    g.drawImage(cardBack(), colX(0), top);                                        // the stock
+    this.card(g, colX(1), top, '9', 'C');                                         // under the waste pile's top card
+    [['2', 'H'], ['A', 'S'], ['A', 'D'], null].forEach((f, i) => (f ? this.card(g, colX(3 + i), top, f[0], f[1]) : slot(colX(3 + i), top)));
+    this.solTops = KLONDIKE.map(([down, up], i) => {
+      let y = TABLEAU_Y;
+      for (let k = 0; k < down; k++) { g.drawImage(cardBack(), colX(i), y); y += DOWN_STEP; }
+      up.forEach((r, k) => { this.card(g, colX(i), y, r.slice(0, -1), r.slice(-1), k === up.length - 1); y += UP_STEP; });
+      return y; // where a card dropped on this column would sit
+    });
+    return c;
+  }
+
+  suit(g, s, x, y, px = 1) {
+    g.fillStyle = s === 'H' || s === 'D' ? '#c4161c' : '#000000';                // --card-red, --w98-text
+    SUITS[s].forEach((row, j) => { for (let i = 0; i < 7; i++) if (row[i] === '#') g.fillRect(x + i * px, y + j * px, px, px); });
+  }
+
+  // one card face; `full` also draws the big suit in the middle (a covered card shows only its corner)
+  card(g, x, y, rank, s, full = true) {
+    g.fillStyle = '#0a0a0a'; g.fillRect(x, y, CARD.w, CARD.h);                   // --w98-dark
+    g.fillStyle = '#ffffff'; g.fillRect(x + 1, y + 1, CARD.w - 2, CARD.h - 2);    // --w98-light
+    g.font = 'bold 10px Tahoma, sans-serif';
+    g.fillStyle = s === 'H' || s === 'D' ? '#c4161c' : '#000000';
+    g.fillText(rank, x + 3, y + 10);
+    this.suit(g, s, x + (rank.length > 1 ? 16 : 12), y + 3);
+    if (full) this.suit(g, s, x + 10, y + 22, 2);
+  }
+
+  // Solitaire in a window on the Win98 desktop. A card gets picked up from the waste pile, dragged over a column,
+  // isn't allowed there and slides back; the clock in the status bar runs.
+  solitaire(g, t) {
+    this.solStatic ??= this.solitaireStatic();
+    g.drawImage(this.solStatic, 0, 0);
+    g.font = '10px Tahoma, sans-serif'; g.fillStyle = '#000000';
+    g.fillText('Score: 285', 10, 198);
+    g.textAlign = 'right'; g.fillText(`Time: ${Math.floor(t) % 1000}`, 312, 198); g.textAlign = 'left';
+
+    const CYCLE = 7, u = t % CYCLE, n = Math.floor(t / CYCLE);
+    const col = 2 + (n % 4);
+    const fx = colX(1), fy = 36, tx = colX(col), ty = this.solTops[col];
+    const ease = (k) => (k < 0.5 ? 2 * k * k : 1 - 2 * (1 - k) * (1 - k));
+    const k = u < 2 ? 0 : u < 3.2 ? ease((u - 2) / 1.2) : u < 4.4 ? 1 : u < 5.6 ? 1 - ease((u - 4.4) / 1.2) : 0;
+    const x = fx + (tx - fx) * k, y = fy + (ty - fy) * k;
+    this.card(g, x, y, '4', 'S');
+    if (u > 1.5 && u < 6) { // the pointer, holding the card
+      const px = x + 20, py = y + 26;
+      g.beginPath();
+      [[0, 0], [0, 12], [3, 9], [5, 13], [7, 12], [5, 8], [9, 8]].forEach(([a, b], i) => (i ? g.lineTo(px + a, py + b) : g.moveTo(px + a, py + b)));
+      g.closePath();
+      g.fillStyle = '#ffffff'; g.fill();                                          // --w98-light
+      g.strokeStyle = '#000000'; g.lineWidth = 1; g.stroke();
+    }
+    this.taskbar(g, 'Solitaire');
+  }
+
+  // the starfield: what a free PC does once nobody has touched it for SAVER_AFTER seconds
+  saver(g, t) {
+    g.fillStyle = '#000000'; g.fillRect(0, 0, W, H);
+    this.saverStars ??= (() => { const r = rand(97 + Math.floor(this.t0)); return Array.from({ length: 160 }, () => [r() - 0.5, r() - 0.5, r()]); })();
+    for (const s of this.saverStars) {
+      const z = 1 - ((s[2] + t * 0.1) % 1);                                       // 1 far away, 0 flying past
+      const x = W / 2 + (s[0] / z) * 70, y = H / 2 + (s[1] / z) * 70;
+      if (x < 0 || x > W || y < 0 || y > H) continue;
+      const size = z < 0.25 ? 3 : z < 0.55 ? 2 : 1;
+      g.fillStyle = z < 0.25 ? '#ffffff' : z < 0.55 ? '#dfdfdf' : '#808080';      // --w98-light, --w98-hilite, --w98-shadow
+      g.fillRect(Math.round(x), Math.round(y), size, size);
     }
   }
 

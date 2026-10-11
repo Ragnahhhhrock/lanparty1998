@@ -142,13 +142,13 @@ function chipBag(label) {
 // whatever the last person left running.
 const STATIONS = [
   // row along the back wall, monitors facing the room
-  { x: -2.8, z: -4.25, face: 0, idle: 'dos' },
-  { x: 0, z: -4.25, face: 0, idle: 'stars3d' },
+  { x: -2.8, z: -4.25, face: 0, idle: 'defrag' },
+  { x: 0, z: -4.25, face: 0, idle: 'dos' },
   { x: 2.8, z: -4.25, face: 0, idle: 'waiting' },
   // row along the front wall
   { x: -2.8, z: 4.25, face: Math.PI, idle: 'win98' },
   { x: 0, z: 4.25, face: Math.PI, idle: 'bios' },
-  { x: 2.8, z: 4.25, face: Math.PI, idle: 'dos' },
+  { x: 2.8, z: 4.25, face: Math.PI, idle: 'solitaire' },
 ];
 
 // The network, in three generations. Only one is visible at a time (out.setNetwork).

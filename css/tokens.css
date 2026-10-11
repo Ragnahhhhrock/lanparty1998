@@ -82,6 +82,9 @@
   --mine-6: #005050;
   --mine-8: #505050;
   --mine-face: #ffff00;     /* the smiley button */
+  /* Solitaire on the in-room PCs: the felt and the red suits (black suits use --w98-text) */
+  --felt: #008000;
+  --card-red: #c4161c;
 
   /* ---- People: the other players in the room ---- */
   --link-led: #1fbf3a;      /* "plugged into the hub" status LED */

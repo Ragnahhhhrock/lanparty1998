@@ -62,7 +62,7 @@ Use tokens by name. Never introduce a raw hex value in CSS, canvas code or a tem
 `--volt #e2231a` (caffeine, UI red) · `--volt-can #c4161c` · `--volt-yellow #ffd400` · `--nacho #f28a1c` (snacks) · `--nacho-navy #1d1a5c` · `--cheese #ffcc00`
 
 ### Apps
-`--mine-1 #0000ff` · `--mine-2 #005000` · `--mine-3 #a00000` · `--mine-5 #800000` · `--mine-6 #005050` · `--mine-8 #505050` (Minesweeper numbers: the classic hues, darkened where the originals fail AA on grey; 4 and 7 reuse `--w98-title` and `--w98-text`) · `--mine-face #ffff00` (the smiley button)
+`--mine-1 #0000ff` · `--mine-2 #005000` · `--mine-3 #a00000` · `--mine-5 #800000` · `--mine-6 #005050` · `--mine-8 #505050` (Minesweeper numbers: the classic hues, darkened where the originals fail AA on grey; 4 and 7 reuse `--w98-title` and `--w98-text`) · `--mine-face #ffff00` (the smiley button) · `--felt #008000` and `--card-red #c4161c` (Solitaire on the in-room PCs; black suits use `--w98-text`)
 
 **Rules**
 - Accents (Volt/Nacho) cover **under 10%** of any composition.
