@@ -106,6 +106,7 @@ export class Desktop {
     this.cascade = 0;
     this.msgCount = 0;
     this.onStart = () => {};
+    this.startWith = []; // [{ id, arg? }] opened after IRC and LANamp when you walk in
 
     this.startBtn.querySelector('.start-icon').innerHTML = icon('crt');
     this.startBtn.addEventListener('click', () => (this.menu.hidden ? this.openMenu() : this.closeMenu()));
@@ -131,6 +132,7 @@ export class Desktop {
     if (innerWidth < 700) return; // not enough room beside the 3D view
     this.open('irc');
     this.open('lanamp');
+    for (const { id, arg } of this.startWith) this.open(id, arg); // last, so they are on top
   }
 
   define(app) { this.apps.set(app.id, app); return this; }

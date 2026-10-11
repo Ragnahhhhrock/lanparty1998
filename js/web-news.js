@@ -12,6 +12,10 @@ export const NEWS = [
     text: 'The player now opens with the volume at zero so the room is quiet when you walk in. Drag the volume slider up to hear the playlist.',
   },
   {
+    date: '1998-02-06', kind: 'new', title: 'The browser opens on the news',
+    text: 'Walk in and Internet Explorer is already on this page. Close it with the x, and bring it back with H or from the Start menu.',
+  },
+  {
     date: '1998-02-06', kind: 'new', title: 'Internet Explorer, and this site',
     text: 'The basement has a web browser. Start > Programs > Internet Explorer, or press H. Back, Forward, Favorites, History and Search all work. You are reading this in it.',
   },

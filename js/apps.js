@@ -7,7 +7,7 @@ import * as calc from './calc.js';
 import { solitaire } from './app-solitaire.js';
 import { downhill } from './app-ski.js';
 import { ie } from './app-browser.js';
-import { PAGE_LIST, parseUrl } from './web-pages.js';
+import { PAGE_LIST, parseUrl, HOME } from './web-pages.js';
 
 const el = (tag, cls, html) => {
   const e = document.createElement(tag);
@@ -634,5 +634,6 @@ export function registerApps(desktop, { irc, lanamp, gameTime }) {
   desktop.adopt('irc', irc, { title: 'mIRC32 - [#lanparty98]', icon: 'irc', resize: true, min: [260, 140] });
   desktop.adopt('lanamp', lanamp, { title: 'LANamp 2.0', icon: 'amp' });
   for (const app of [ie, minesweeper, solitaire, downhill, calculator, notepad, paint, dosPrompt, defrag, help, run, shutdown]) desktop.define(app);
+  desktop.startWith = [{ id: 'ie', arg: `${HOME}news.htm` }]; // walk in and the browser is already on the news
   desktop.setMenu(MENU);
 }
