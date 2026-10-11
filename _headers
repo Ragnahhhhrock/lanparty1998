@@ -1,0 +1,8 @@
+# Game code changes often and the modules import each other, so a stale cached file
+# breaks the whole room. Always revalidate (a 304 is cheap); big static data stays cached.
+/index.html
+  Cache-Control: no-cache
+/js/*
+  Cache-Control: no-cache
+/css/*
+  Cache-Control: no-cache
