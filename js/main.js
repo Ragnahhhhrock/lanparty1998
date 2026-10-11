@@ -483,19 +483,23 @@ function eatPizza(box) {
 const PIZZA_LINES = ['Cold pepperoni. Still good.', 'A string of cheese reaches the box. You follow it.', 'Grease, salt and regret.', 'You eat the pizza like a man with a frag limit.'];
 stats.pizzaSlices = 0;
 
-// the regulars eat too, from whichever box has a slice left, and the man on the ceiling has his own
+// the regulars eat and drink too: pizza from whichever box has a slice left, handfuls of Nachoz, cans of Volt.
+// The man on the ceiling has his own pizza.
 const eaters = [macca, ...regulars];
-let nextEat = 20;
+const SNACKING = ['pizza', 'snack', 'drink', 'snack', 'drink']; // cans and chips come round more often than pizza
+let nextEat = 5;
 function stepEaters(dt, now) {
   nextEat -= dt;
   if (nextEat > 0) return;
-  nextEat = 25 + Math.random() * 40;
+  nextEat = 8 + Math.random() * 12;
   const who = eaters[Math.floor(Math.random() * eaters.length)];
   if (!who.group.visible || who.eatT >= 0) return;
-  const box = room.pizzaBoxes.find((b) => b.slices > 0 && Math.random() < 0.6) ?? room.pizzaBoxes.find((b) => b.slices > 0);
-  if (!box) return;
-  box.setSlices(box.slices - 1);
-  who.eat();
+  let kind = SNACKING[Math.floor(Math.random() * SNACKING.length)];
+  if (kind === 'pizza') {
+    const box = room.pizzaBoxes.find((b) => b.slices > 0 && Math.random() < 0.6) ?? room.pizzaBoxes.find((b) => b.slices > 0);
+    if (box) box.setSlices(box.slices - 1); else kind = 'snack'; // box is empty: reach for the chips
+  }
+  who.eat(kind);
 }
 
 const TAPED_LINES = [
@@ -772,11 +776,11 @@ function frame() {
   updateTrayHint();
   const now = performance.now() / 1000;
 
-  crowd.update(dt, link.players);
+  const groove = music?.level() ?? 0, bpm = music?.track.bpm ?? 120;
+  crowd.update(dt, link.players, groove, bpm, now);
   room.updateFan(dt, party.fan.on, party.fanSweep());
   room.door.update(dt);
   if (mode !== 'intro') for (const m of banter.tick(dt)) ircSpeak(m);
-  const groove = music?.level() ?? 0, bpm = music?.track.bpm ?? 120;
   amp?.update(dt);
   stepHandSlice(dt);
   stepEaters(dt, now);
