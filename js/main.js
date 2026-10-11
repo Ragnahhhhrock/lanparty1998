@@ -728,6 +728,7 @@ const ircStamp = () => { const t = ui.clock.textContent.split(' ')[0]; return t;
 const ircSay = (nick, text) => irc.add(nick, text, ircStamp());
 const ircNote = (text) => irc.note(text, ircStamp());
 ircNote('Now talking in #lanparty98');
+for (const m of banter.prefill(14)) ircSay(m.nick, m.text); // the window starts full, mid-argument
 function ircMe(name) { // you picked a handle: you're in the channel too
   banter.me = name;
   irc.setNicks([...REGULARS, ...[...link.players.values()].map((p) => p.name), name]);

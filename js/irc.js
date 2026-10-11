@@ -98,6 +98,56 @@ const REACT = {
   ],
 };
 
+// the regulars go at each other: one roasts, the target hits back, a third cackles.
+// ROASTS {t} = the target. COMEBACKS {t} = whoever just roasted. LAUGHS {t} = the one who got it.
+const ROASTS = [
+  '{t}: 2 frags, 19 deaths. that is not a score. that is a cry for help',
+  '{t} just got fragged by a bot. on easy. the bot was embarrassed for you',
+  '{t}: you ate the same rocket 4 times. it was not even moving',
+  '{t}: your kill/death ratio is a rounding error',
+  '{t} just ran into a wall for 30 seconds. the wall has been there the whole game',
+  '{t}: you lost a game of pong. there is one button',
+  '{t}: that was the worst base I have ever seen. you built it out of hope',
+  '{t} got rushed by a guy who was afk. he was afk. he was making a sandwich',
+  '{t}: I have seen better aim from a screensaver',
+  '{t}: you died in the spawn room. you were not even playing yet',
+  '{t} dropped a grenade at their own feet. again. the team is taking up a collection',
+  '{t}: there is a spot on the scoreboard with your name on it. it is the bottom. it is nicely carpeted',
+  '{t} is so bad the game gave them a pity medal. it is a participation floppy',
+  '{t}: nice lag. oh wait. that is just you',
+  '{t}: you got fragged by the door. the door is not even a player',
+  '{t} has been in the red for 40 minutes. that is not a game. that is a hostage situation',
+  '{t}: does your monitor work or is that the screensaver you are playing on',
+];
+const COMEBACKS = [
+  '{t}: says the guy who lost to a toaster',
+  '{t}: at least I do not play with the monitor off',
+  'oh look. {t} found the keyboard. 4 years of practice and look at you go',
+  '{t}: lag. it was lag. shut up. it was lag',
+  'I let you win {t}. I always let you win. it is a kindness',
+  '{t} you are the reason the hub has a fire warning',
+  '{t}: your mum plays better than you. she was here earlier',
+  'no u {t}',
+  '{t}: sit down. you are on 3 frags and one was a teammate',
+  '{t}: I will see you on the next map. bring a bucket for the tears',
+  'ur so dumb {t}. ur dumber than a floppy drive',
+  '{t}: wow. big words from a guy who got camped by a potted plant',
+];
+const LAUGHS = [
+  'LOLOLOLOLOL',
+  'hahahahaha {t} is so bad',
+  'I am crying. {t} please stop. my stomach',
+  'ROFL. {t} did you see that. everyone saw that',
+  'ahahaha 2 frags. TWO',
+  '*wheeze* {t}',
+  'ok but {t} deserved that',
+  'kekeke. oh {t}. oh no',
+  'someone screenshot that. {t} just got deleted',
+  'rekt. {t} is so rekt. rekt rekt rekt',
+  'LMAO {t} is a walking lag spike',
+  'hehehe poor {t}. no really. so poor',
+];
+
 const pick = (arr, rng) => arr[Math.floor(rng() * arr.length)];
 const fill = (s, vars) => s.replace(/\{(\w)\}/g, (_, k) => vars[k] ?? '');
 
@@ -109,7 +159,7 @@ export class Banter {
     this.queue = [];      // { at, nick, text }
     this.now = 0;
     this.last = null;
-    this.next = 4 + rng() * 6;
+    this.next = 2 + rng() * 3;
   }
 
   others(except) { return this.nicks.filter((n) => n !== except); }
@@ -118,8 +168,32 @@ export class Banter {
 
   say(nick, text, delay = 0) { this.queue.push({ at: this.now + delay, nick, text }); }
 
-  // a line from a regular; maybe a mock at somebody, maybe followed by a reply
+  // a regular roasts another regular's play, the target hits back, a third laughs
+  duel() {
+    const a = pick(this.others(this.last), this.rng);
+    const b = pick(this.others(a), this.rng);
+    const c = pick(this.others(a).filter((n) => n !== b), this.rng);
+    this.last = a;
+    this.say(a, fill(pick(ROASTS, this.rng), { t: b }));
+    this.say(b, fill(pick(COMEBACKS, this.rng), { t: a }), 1.5 + this.rng() * 2);
+    this.say(c, fill(pick(LAUGHS, this.rng), { t: b }), 3.5 + this.rng() * 2);
+    if (this.rng() < 0.5) this.say(a, fill(pick(LAUGHS, this.rng), { t: b }), 5.5 + this.rng() * 2);
+    if (this.rng() < 0.4) this.say(b, fill(pick(COMEBACKS, this.rng), { t: c }), 6 + this.rng() * 2);
+  }
+
+  // enough lines to fill the window on load, oldest first
+  prefill(count = 14) {
+    const out = [];
+    while (out.length < count) {
+      this.line();
+      out.push(...this.queue.splice(0).sort((x, y) => x.at - y.at));
+    }
+    return out.slice(-count);
+  }
+
+  // a line from a regular; mostly a duel, sometimes a mock at somebody, maybe followed by a reply
   line() {
+    if (this.rng() < 0.7) return this.duel();
     const nick = pick(this.others(this.last), this.rng);
     this.last = nick;
     const mock = this.rng() < 0.4;
@@ -155,7 +229,7 @@ export class Banter {
   // advance time; returns the messages due now
   tick(dt) {
     this.now += dt;
-    if ((this.next -= dt) <= 0) { this.line(); this.next = 7 + this.rng() * 13; }
+    if ((this.next -= dt) <= 0) { this.line(); this.next = 4 + this.rng() * 5; }
     const due = this.queue.filter((m) => m.at <= this.now).sort((x, y) => x.at - y.at);
     this.queue = this.queue.filter((m) => m.at > this.now);
     return due;

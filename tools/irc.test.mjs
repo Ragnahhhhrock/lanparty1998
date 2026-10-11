@@ -27,6 +27,20 @@ test('every reaction kind fills its template', () => {
     assert.ok(b.tick(10).every((m) => !/\{\w\}/.test(m.text)), kind);
   }
 });
+test('the regulars roast each other and laugh at the play', () => {
+  const b = new Banter({ rng: seeded(7) });
+  b.duel();
+  const msgs = b.tick(20);
+  assert.ok(msgs.length >= 3);
+  assert.ok(msgs.every((m) => REGULARS.includes(m.nick) && !/\{\w\}/.test(m.text)));
+  assert.ok(new Set(msgs.map((m) => m.nick)).size >= 3); // attacker, target and a laugher
+});
+test('the window starts full', () => {
+  const b = new Banter({ rng: seeded(9) });
+  const lines = b.prefill(14);
+  assert.equal(lines.length, 14);
+  assert.ok(lines.every((m) => REGULARS.includes(m.nick) && m.text.length > 1 && !/\{\w\}/.test(m.text)));
+});
 test('shouting gets a complaint', () => {
   const b = new Banter({ rng: () => 0.1 });
   b.heard('YOU', 'HELLO EVERYONE');
