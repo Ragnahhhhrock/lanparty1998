@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-06', kind: 'new', title: 'Snapster, the file-sharing beta',
+    text: 'Start > Programs > Snapster. Search the regulars for songs, double click one to get it, and watch it crawl in on your 56K line. Every band and title is made up, and nothing is really downloaded. File > Disconnect if the hub gets crowded.',
+  },
+  {
     date: '1998-02-06', kind: 'fix', title: 'The regulars stop talking out loud',
     text: 'Their lines are now text only, in the channel and the bubbles. The burps and snickers are still audible. N turns those off.',
   },

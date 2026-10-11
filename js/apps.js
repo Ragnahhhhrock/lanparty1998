@@ -6,6 +6,7 @@ import { Board, LEVELS, MARK } from './minesweeper.js';
 import * as calc from './calc.js';
 import { solitaire } from './app-solitaire.js';
 import { downhill } from './app-ski.js';
+import { snapster } from './app-snapster.js';
 import { ie } from './app-browser.js';
 import { PAGE_LIST, parseUrl, HOME } from './web-pages.js';
 
@@ -521,7 +522,7 @@ const help = {
 /* ------------------------------------------------------------------- Run, Shut Down */
 
 const RUN = {
-  calc: 'calc', calculator: 'calc', notepad: 'notepad', mspaint: 'paint', paint: 'paint', winmine: 'mine', minesweeper: 'mine', sol: 'sol', solitaire: 'sol', ski: 'ski', downhill: 'ski',
+  calc: 'calc', calculator: 'calc', notepad: 'notepad', mspaint: 'paint', paint: 'paint', winmine: 'mine', minesweeper: 'mine', sol: 'sol', solitaire: 'sol', ski: 'ski', downhill: 'ski', snapster: 'snap', snap: 'snap',
   command: 'dos', 'command.com': 'dos', defrag: 'defrag', mirc: 'irc', mirc32: 'irc', lanamp: 'lanamp', help: 'help',
   iexplore: 'ie', ie: 'ie', 'internet explorer': 'ie',
 };
@@ -601,6 +602,7 @@ const MENU = [
       { sep: true },
       { app: 'irc', label: 'mIRC' },
       { app: 'lanamp', label: 'LANamp' },
+      { app: 'snap', label: 'Snapster' },
     ],
   },
   {
@@ -633,7 +635,7 @@ export function registerApps(desktop, { irc, lanamp, gameTime }) {
   desktop.gameTime = gameTime;
   desktop.adopt('irc', irc, { title: 'mIRC32 - [#lanparty98]', icon: 'irc', resize: true, min: [260, 140] });
   desktop.adopt('lanamp', lanamp, { title: 'LANamp 2.0', icon: 'amp' });
-  for (const app of [ie, minesweeper, solitaire, downhill, calculator, notepad, paint, dosPrompt, defrag, help, run, shutdown]) desktop.define(app);
+  for (const app of [ie, minesweeper, solitaire, downhill, snapster, calculator, notepad, paint, dosPrompt, defrag, help, run, shutdown]) desktop.define(app);
   desktop.startWith = [{ id: 'ie', arg: `${HOME}news.htm` }]; // walk in and the browser is already on the news
   desktop.setMenu(MENU);
 }

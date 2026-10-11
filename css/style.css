@@ -284,6 +284,43 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 .ski-view { display: block; width: 480px; height: 320px; background: var(--snow); box-shadow: var(--bevel-sunken); outline: none; image-rendering: pixelated; }
 .ski-view:focus-visible { outline: 1px dotted var(--w98-text); outline-offset: -4px; }
 
+/* ---- Snapster: the file-sharing client ---- */
+.dwin .dwin-body.snap { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-1); overflow: hidden; }
+.snap-head { display: flex; flex: none; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-1) var(--space-2); background: var(--crt-black); box-shadow: var(--bevel-sunken); }
+.snap-logo { color: var(--amber); font: var(--text-crt-md)/1 var(--font-crt); letter-spacing: .04em; }
+.snap-hub { color: var(--phosphor); font: var(--text-crt)/1 var(--font-crt); text-align: right; }
+.snap-tabs { display: flex; flex: none; gap: var(--space-0); }
+.snap-tab { padding: var(--space-1) var(--space-3); border: 0; background: var(--w98-face); color: var(--w98-text); font: var(--text-ui)/1.2 var(--font-ui); box-shadow: var(--bevel-raised); cursor: default; }
+.snap-tab[aria-selected="true"] { font-weight: bold; box-shadow: var(--bevel-pressed); }
+.snap-tab:focus-visible { outline: 1px dotted var(--w98-text); outline-offset: -4px; }
+.snap-pane { display: flex; flex: 1; flex-direction: column; gap: var(--space-1); min-height: 0; }
+.snap-pane[hidden] { display: none; }
+.snap-find { display: grid; flex: none; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); align-items: end; gap: var(--space-1h) var(--space-2); }
+.snap-find label { display: grid; gap: var(--space-0); font: var(--text-ui-sm)/1.2 var(--font-ui); }
+.snap-find input, .snap-find select { box-sizing: border-box; width: 100%; padding: var(--space-1); border: 0; background: var(--w98-light); color: var(--w98-text); font: var(--text-ui-sm)/1.2 var(--font-ui); box-shadow: var(--bevel-sunken); }
+.snap-find .w98-btn { min-width: 0; padding: var(--space-1) var(--space-3); }
+.snap-grid { flex: 1; min-height: 96px; overflow: auto; background: var(--w98-light); outline: none; box-shadow: var(--bevel-sunken); scrollbar-color: var(--w98-face) var(--w98-shadow); }
+.snap-grid:focus-visible { outline: 1px dotted var(--w98-text); outline-offset: -3px; }
+.snap-tbl { width: 100%; border-collapse: collapse; white-space: nowrap; font: var(--text-ui-sm)/1.3 var(--font-ui); }
+.snap-tbl th { position: sticky; top: 0; padding: 0; background: var(--w98-face); font-weight: normal; text-align: left; }
+.snap-th { display: block; box-sizing: border-box; width: 100%; padding: var(--space-0) var(--space-1h); border: 0; background: var(--w98-face); color: var(--w98-text); font: inherit; text-align: left; box-shadow: var(--bevel-raised); cursor: default; }
+button.snap-th:active { box-shadow: var(--bevel-pressed); }
+button.snap-th:focus-visible { outline: 1px dotted var(--w98-text); outline-offset: -3px; }
+.snap-tbl td { padding: 0 var(--space-1h); }
+.snap-tbl td.name { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.snap-tbl td.num { text-align: right; }
+.snap-tbl tr.sel td { background: var(--w98-title); color: var(--w98-light); }
+.snap-none td { padding: var(--space-3); }
+.snap-actions { display: flex; flex: none; align-items: center; gap: var(--space-2); }
+.snap-actions .w98-btn { min-width: 0; padding: var(--space-1) var(--space-3); }
+.snap-count { margin-left: auto; font: var(--text-ui-sm)/1.2 var(--font-ui); }
+.snap-prog { box-sizing: border-box; width: 120px; height: 14px; padding: var(--space-0); background: var(--w98-light); box-shadow: var(--bevel-sunken); }
+.snap-prog i { display: block; width: 0; height: 100%; background: repeating-linear-gradient(90deg, var(--w98-title) 0 7px, transparent 7px 9px); }
+.snap-tbl tr.sel .snap-prog { box-shadow: none; }
+.snap-status { flex: none; justify-content: space-between; }
+.snap-st-msg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.snap-st-me { flex: none; }
+
 /* ---- Calculator ---- */
 .calc { display: grid; gap: var(--space-1h); padding: var(--space-1h) var(--space-1h) var(--space-2); }
 .calc-screen { display: block; min-height: 24px; padding: var(--space-1h) var(--space-2); overflow: hidden; background: var(--w98-light); color: var(--w98-text); white-space: nowrap;
