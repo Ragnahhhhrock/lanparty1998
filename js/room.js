@@ -498,7 +498,7 @@ function buildDoor(scene, out, wallTex) {
 
 // The lounge corner, against the right wall: a plaid couch, a big CRT TV on a stand with a four-player
 // console under it, and a coffee table somebody has been living off. Nothing here is a trip hazard:
-// the pad leads are decoration. Colours are tokens: --couch*, --oak, --tv-case, --console-*, --wood-dark.
+// the pad leads are decoration. Colours are tokens: --couch*, --beanbag*, --oak, --tv-case, --console-*, --wood-dark.
 const COUCH = { x: 2.9, z: -1.0, w: 2.0, d: 0.9 };                       // faces +x, toward the TV
 const COFFEE = { x: 4.15, z: -1.0, top: 0.44, w: 0.62, l: 1.3 };          // long side along z
 const TV = { x: 5.7, z: -1.0, stand: 0.42 };                              // against the wall, faces -x
@@ -518,6 +518,49 @@ function gamePad(color) {
   const btn = (x, z, c) => { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.0065, 0.0065, 0.005, 10), new THREE.MeshStandardMaterial({ color: c, roughness: 0.5 })); b.position.set(x, 0.024, z); g.add(b); };
   btn(0.046, -0.01, 0xc4161c); btn(0.034, 0.004, 0xffd400); btn(0.058, 0.004, 0x44474b); btn(0.046, 0.018, 0x44474b); // --volt-can, --volt-yellow, --console-dark
   g.add(box(0.014, 0.006, 0.006, dark, 0, 0.024, 0.004));                                                              // start
+  return g;
+}
+
+// A bean bag slumped in the back-left corner, dented where somebody has been sitting in it. Six vinyl panels
+// alternate between --beanbag and --beanbag-dark, with a carry handle at the back. Colours are tokens.
+const BEAN = { x: -5.1, z: -3.35, r: 0.45 };
+function beanBag() {
+  const R = BEAN.r;
+  const geo = new THREE.SphereGeometry(R, 28, 18);
+  const pos = geo.attributes.position;
+  const hash = (a, b) => { const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return v - Math.floor(v); };
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const up = y > 0;
+    y *= up ? 0.85 : 0.32;                                   // squashed: a flat-ish bottom, a domed top
+    if (up) {
+      y += 0.14 * Math.max(0, -z / R) * (y / R);              // the back slumps higher than the front
+      y -= 0.17 * Math.exp(-((x * x) + (z - 0.1) * (z - 0.1)) / 0.05); // the seat dent
+    }
+    const lump = 1 + (hash(Math.round(x * 40), Math.round(z * 40)) - 0.5) * 0.04;
+    pos.setXYZ(i, x * lump, y * lump, z * lump);
+  }
+  let minY = Infinity;
+  for (let i = 0; i < pos.count; i++) minY = Math.min(minY, pos.getY(i));
+  for (let i = 0; i < pos.count; i++) pos.setY(i, pos.getY(i) - minY);
+  geo.computeVertexNormals();
+  const flat = geo.toNonIndexed();                            // keep the smooth normals, colour each face by panel
+  const fp = flat.attributes.position;
+  const light = new THREE.Color(0x2f5d6e), dark = new THREE.Color(0x204452);   // --beanbag, --beanbag-dark
+  const colours = new Float32Array(fp.count * 3);
+  for (let t = 0; t < fp.count; t += 3) {
+    const cx = (fp.getX(t) + fp.getX(t + 1) + fp.getX(t + 2)) / 3, cz = (fp.getZ(t) + fp.getZ(t + 1) + fp.getZ(t + 2)) / 3;
+    const panel = Math.floor(((Math.atan2(cz, cx) + Math.PI) / (Math.PI * 2)) * 6) % 6;
+    const c = panel % 2 ? dark : light;
+    for (let k = 0; k < 3; k++) colours.set([c.r, c.g, c.b], (t + k) * 3);
+  }
+  flat.setAttribute('color', new THREE.BufferAttribute(colours, 3));
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(flat, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4, metalness: 0.05 }))); // vinyl
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.012, 6, 14, Math.PI), new THREE.MeshStandardMaterial({ color: 0x204452, roughness: 0.5 }));
+  handle.position.set(0, 0.36, -R * 0.78);
+  handle.rotation.set(0.4, 0, 0);
+  g.add(handle);
   return g;
 }
 
@@ -555,6 +598,10 @@ function buildLounge(scene, out, labelVolt, labelNachoz, labelCurlz) {
   couch.add(pillow);
   place(couch, COUCH.x, 0, COUCH.z, Math.PI / 2);
   out.colliders.push({ minX: COUCH.x - COUCH.d / 2, maxX: COUCH.x + COUCH.d / 2, minZ: COUCH.z - COUCH.w / 2, maxZ: COUCH.z + COUCH.w / 2 });
+
+  // ---- bean bag in the back-left corner, dent toward the room
+  place(beanBag(), BEAN.x, 0, BEAN.z, Math.PI / 2 + 0.3);
+  out.colliders.push({ minX: BEAN.x - BEAN.r * 0.9, maxX: BEAN.x + BEAN.r * 0.9, minZ: BEAN.z - BEAN.r * 0.9, maxZ: BEAN.z + BEAN.r * 0.9 });
 
   // ---- TV stand, TV and console: one group, front toward -x
   const set = new THREE.Group();

@@ -53,6 +53,8 @@
   --couch-dark: #3f4f38;    /* its base, seams and the cloth under the cushions */
   --couch-line: #a3483b;    /* rust stripe in the plaid, the throw pillow */
   --oak: #8a5a2e;           /* coffee table top */
+  --beanbag: #2f5d6e;       /* the bean bag: faded teal vinyl, light panels */
+  --beanbag-dark: #204452;  /* its alternate panels, handle and base */
   --tv-case: #2b2b2f;       /* the big CRT TV */
   --console-body: #9a9da1;  /* the games console and its pads */
   --console-dark: #44474b;  /* console ports, d-pads, cables, cartridge */
