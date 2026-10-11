@@ -85,6 +85,7 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
   background: var(--bar-bg); padding: 6px 10px; }
 #seated-status { font: var(--text-crt-sm)/1 var(--font-crt); color: var(--phosphor); min-width: 22ch; }
 
+#schedule { font-size: var(--text-ui-xs); color: var(--w98-text); }
 #netstatus { font-size: var(--text-ui-xs); color: var(--w98-text); border-top: 1px solid var(--w98-shadow); padding-top: var(--space-1); }
 #netstatus.online::before { content: ""; display: inline-block; width: var(--space-2); height: var(--space-2); margin-right: var(--space-1h); vertical-align: -1px; background: var(--link-led); box-shadow: var(--bevel-sunken); }
 

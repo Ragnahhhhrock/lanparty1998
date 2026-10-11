@@ -33,7 +33,18 @@ export const HEAT = { crash: 100, warn: 75, ok: 60, afterReboot: 70 };
 export const celsius = (heat) => Math.round(28 + heat * 0.5);
 
 // RAM: 72-pin SIMMs. Macca is off to Singapore, where it's a lot cheaper than the shop here.
-export const RAM = { start: 16, stick: 16, max: 64, shopPrice: 75, sgPrice: 35, maxOrder: 4, tripMinutes: 90 };
+export const RAM = { start: 16, stick: 16, max: 64, shopPrice: 75, sgPrice: 35, maxOrder: 4, tripMinutes: 90, starcraft: 32 }; // StarCraft wants 32MB
+
+// The night. The doors open at 7:30 PM and the room wants first-person shooters. At midnight somebody
+// kicks off a StarCraft game, and only the PCs with enough memory can join it.
+export const NIGHT = { doors: 19 * 60 + 30, midnight: 24 * 60 };
+export const ANNOUNCEMENTS = [
+  { id: 'doors', at: NIGHT.doors },
+  { id: 'fps', at: 20 * 60 + 30 },
+  { id: 'soon', at: NIGHT.midnight - 15 },
+  { id: 'midnight', at: NIGHT.midnight },
+  { id: 'late', at: NIGHT.midnight + 2 * 60 },
+];
 
 export const DISCS = {
   MIX: { name: 'MIX CD', pays: 10 },
@@ -41,7 +52,7 @@ export const DISCS = {
 
 export class Party extends EventTarget {
   // startMinutes: the wall-clock minute (since midnight) the doors open. rng is injectable for tests.
-  constructor({ startMinutes = 23 * 60 + 42, rng = Math.random } = {}) {
+  constructor({ startMinutes = NIGHT.doors, rng = Math.random } = {}) {
     super();
     this.start = startMinutes;
     this.rng = rng;
@@ -60,8 +71,24 @@ export class Party extends EventTarget {
     this.orders = [];      // things on their way: { what: 'hub' | 'switch', at }
     this.dadLent = false;  // the switch only goes on loan once
     this.warned = false;
+    this.said = new Set(ANNOUNCEMENTS.filter((a) => a.at < startMinutes).map((a) => a.id)); // announcements already made (or already missed)
     this.tripped = 0;      // times somebody has gone over a cable
     this.nextFault = this.now + this.faultGap();
+  }
+
+  // 'fps' until midnight, then 'rts'
+  phase() { return this.clockMinutes() < NIGHT.midnight ? 'fps' : 'rts'; }
+
+  // PCs with the memory to run StarCraft
+  canRunStarcraft(i) { return this.pcs[i].ram >= RAM.starcraft; }
+  starcraftBoxes() { return this.pcs.filter((pc) => pc.ram >= RAM.starcraft).length; }
+
+  tickNight() {
+    for (const a of ANNOUNCEMENTS) {
+      if (this.said.has(a.id) || this.clockMinutes() < a.at) continue;
+      this.said.add(a.id);
+      this.emit('announce', { id: a.id });
+    }
   }
 
   // minutes since midnight of the party day, continuing past 24:00
@@ -291,6 +318,7 @@ export class Party extends EventTarget {
   // dt in real seconds. ctx: { seatedPc } the PC the player is sitting at, or null.
   tick(dt, ctx = {}) {
     this.now += dt / SEC_PER_GAME_MIN;
+    this.tickNight();
     this.tickNetwork();
     this.tickHeat(dt);
     if (this.buddy.state === 'away' && this.now >= this.buddy.back) {

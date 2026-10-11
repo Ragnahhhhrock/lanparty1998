@@ -222,7 +222,7 @@ export class Screen {
     const g = this.g, t = time + this.t0;
     g.save();
     // the burner PC shows its write progress while nobody is sitting at it
-    this[this.crashed ? 'bsod' : this.burn && this.free ? 'burning' : this.mode]?.(g, t);
+    this[this.crashed ? 'bsod' : this.burn && this.free ? 'burning' : this.rts && this.free ? this.rts : this.mode]?.(g, t);
     if (this.linkDown) { // the Win98 tray balloon, big enough to read from across the room
       g.fillStyle = '#ffcc00'; g.fillRect(0, 0, W, 26);                      // --amber
       this.text(g, 'NETWORK CABLE DISCONNECTED', 8, 20, '#000000', 20);
@@ -256,7 +256,7 @@ export class Screen {
     g.fillStyle = '#fff'; g.fillRect(0, H - 22, W, 1);
     g.fillStyle = '#c0c0c0'; g.fillRect(3, H - 19, 48, 16);
     g.font = 'bold 11px Tahoma, sans-serif'; g.fillStyle = '#000'; g.fillText('Start', 12, H - 7);
-    g.font = '11px Tahoma, sans-serif'; g.fillText('11:42 PM', W - 52, H - 7);
+    g.font = '11px Tahoma, sans-serif'; g.fillText(this.clock || '11:42 PM', W - 52, H - 7);
     // a dialog that never stops appearing
     if ((t % 8) > 3) {
       g.fillStyle = '#c0c0c0'; g.fillRect(70, 80, 190, 70);
@@ -321,6 +321,40 @@ export class Screen {
     this.text(g, `${Math.floor(b.pct * 100)}%  ·  ${Math.floor(b.secondsLeft / 60)}:${String(Math.floor(b.secondsLeft % 60)).padStart(2, '0')} left`, 10, 128, '#9dff7a', 22);
     if (Math.floor(t * 1.5) % 2) this.text(g, 'DO NOT USE THIS PC WHILE WRITING', 10, 170, '#ffcc00', 20);
     this.text(g, 'Buffer: OK', 10, H - 14, '#777777', 16);
+  }
+
+  // After midnight a free PC is somebody's StarCraft game, if it has the memory for it. Flat and generic on
+  // purpose: a game being played, not the game's artwork.
+  starcraft(g, t) {
+    g.fillStyle = '#000000'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#24150b'; g.fillRect(0, 0, W, 190);                         // --wood-dark: the map
+    g.fillStyle = '#4a2c17';                                                    // --wood: high ground
+    for (let i = 0; i < 9; i++) g.fillRect((i * 83) % W, 20 + ((i * 47) % 130), 56, 24);
+    g.fillStyle = '#20b2aa';                                                    // --shirt-7: mineral field
+    for (let i = 0; i < 5; i++) g.fillRect(36 + i * 9, 44 + (i % 2) * 7, 6, 6);
+    g.fillStyle = '#e8e1cc'; g.fillRect(24, 70, 30, 22);                        // --paper: a base
+    g.fillStyle = '#f28a1c'; g.fillRect(250, 120, 30, 22);                      // --nacho: the other base
+    for (let i = 0; i < 7; i++) { // units walking between them
+      const k = (t * 0.12 + i * 0.13) % 1;
+      g.fillStyle = i % 3 ? '#9dff7a' : '#e2231a';                              // --phosphor, --volt
+      g.fillRect(60 + k * 190 + Math.sin(t + i) * 4, 92 + k * 30 + Math.cos(t * 1.3 + i) * 6, 5, 5);
+    }
+    g.fillStyle = '#808080'; g.fillRect(0, 190, W, 50);                         // --w98-shadow: the command panel
+    g.fillStyle = '#000000'; g.fillRect(6, 196, 54, 38);
+    this.text(g, 'MINERALS 450   GAS 120   SUPPLY 12/18', 70, 214, '#ffcc00', 18);
+    this.text(g, 'STARCRAFT  ·  MIDNITE', 70, 232, '#ffffff', 18);
+  }
+
+  // not enough memory to join: a DOS error, as it would have been
+  nomem(g, t) {
+    g.fillStyle = '#000000'; g.fillRect(0, 0, W, H);
+    this.text(g, 'C:\\>cd \\STARCRFT', 8, 20);
+    this.text(g, 'C:\\STARCRFT>STARCRFT.EXE', 8, 38);
+    this.text(g, 'Not enough memory.', 8, 66, '#ffcc00', 20);
+    this.text(g, `StarCraft needs 32MB.`, 8, 86);
+    this.text(g, `This PC has ${this.ram || 16}MB.`, 8, 104);
+    this.text(g, 'C:\\STARCRFT>', 8, 134);
+    if (Math.floor(t * 2) % 2) this.text(g, '_', 118, 134);
   }
 
   bsod(g, t) {

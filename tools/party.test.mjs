@@ -1,6 +1,6 @@
 // Logic tests for js/party.js. Run: node tools/party.test.mjs
 import assert from 'node:assert/strict';
-import { Party, BURNER, DISCS, SEC_PER_GAME_MIN, SHOP, DAD, PC_COUNT, OC, HEAT, FAN, RAM } from '../js/party.js';
+import { Party, BURNER, DISCS, SEC_PER_GAME_MIN, SHOP, DAD, PC_COUNT, OC, HEAT, FAN, RAM, NIGHT, ANNOUNCEMENTS } from '../js/party.js';
 
 const run = (p, seconds, ctx = {}) => { for (let i = 0; i < seconds * 10; i++) p.tick(0.1, ctx); };
 let n = 0;
@@ -341,6 +341,53 @@ test('fitting a stick takes one from your pocket and adds 16MB, up to 64MB', () 
 
 test('no sticks, no upgrade', () => {
   assert.equal(new Party().fitRam(0), false);
+});
+
+// ---- the night: FPS first, StarCraft at midnight ----
+test('the doors open at 7:30 PM and the room is on FPS', () => {
+  const p = new Party();
+  assert.equal(p.clockMinutes(), 19 * 60 + 30);
+  assert.equal(p.phase(), 'fps');
+});
+
+test('at midnight it is StarCraft', () => {
+  const p = new Party();
+  while (p.clockMinutes() < NIGHT.midnight - 1) p.tick(1);
+  assert.equal(p.phase(), 'fps');
+  while (p.clockMinutes() < NIGHT.midnight + 1) p.tick(1);
+  assert.equal(p.phase(), 'rts');
+});
+
+test('announcements come in order, once each, as the clock reaches them', () => {
+  const p = new Party({ rng: () => 0.99 });
+  const said = [];
+  p.addEventListener('announce', (e) => said.push(e.detail.id));
+  p.tick(0.1);
+  assert.deepEqual(said, ['doors']);
+  while (p.clockMinutes() < NIGHT.midnight + 2 * 60 + 1) p.tick(1);
+  assert.deepEqual(said, ANNOUNCEMENTS.map((a) => a.id));
+});
+
+test('a night that starts after midnight does not replay the evening', () => {
+  const p = new Party({ startMinutes: NIGHT.midnight + 30 });
+  const said = [];
+  p.addEventListener('announce', (e) => said.push(e.detail.id));
+  p.tick(0.1);
+  assert.equal(p.phase(), 'rts');
+  assert.deepEqual(said, [], 'nothing to announce yet');
+  while (p.clockMinutes() < NIGHT.midnight + 2 * 60 + 1) p.tick(1);
+  assert.deepEqual(said, ['late']);
+});
+
+test('only PCs with 32MB can run StarCraft, so RAM matters by midnight', () => {
+  const p = new Party();
+  assert.equal(p.starcraftBoxes(), 0);
+  p.sticks = 3;
+  p.fitRam(0); p.fitRam(0); p.fitRam(2);
+  assert.equal(p.canRunStarcraft(0), true);   // 48MB
+  assert.equal(p.canRunStarcraft(2), true);   // 32MB
+  assert.equal(p.canRunStarcraft(1), false);  // still 16MB
+  assert.equal(p.starcraftBoxes(), 2);
 });
 
 console.log(`${n} passed`);

@@ -7,13 +7,13 @@ import { RoomLink, ROOM_NAME } from './net.js';
 import { Crowd, spawnNpc } from './avatars.js';
 import * as sfx from './sfx.js';
 import { analytics } from './analytics.js';
-import { Party, BURNER, DISCS, NET, SHOP, PC_COUNT, OC, HEAT, RAM, SEC_PER_GAME_MIN, celsius } from './party.js';
+import { Party, BURNER, DISCS, NET, SHOP, PC_COUNT, OC, HEAT, RAM, NIGHT, SEC_PER_GAME_MIN, celsius } from './party.js';
 import * as dialog from './dialog.js';
 
 const $ = (id) => document.getElementById(id);
 const ui = {
   intro: $('intro'), enter: $('enter-btn'), hud: $('hud'), prompt: $('prompt'), toast: $('toast'),
-  caffeine: $('m-caffeine'), snacks: $('m-snacks'), cash: $('m-cash'), clock: $('clock'),
+  caffeine: $('m-caffeine'), snacks: $('m-snacks'), cash: $('m-cash'), clock: $('clock'), schedule: $('schedule'),
   monitor: $('monitor'), dos: $('dos'), dust: $('dust'), bsod: $('bsod'),
   seatedBar: $('seated-bar'), stand: $('stand-btn'), drink: $('drink-btn'), eat: $('eat-btn'), seatedStatus: $('seated-status'),
   handle: $('handle'), netstatus: $('netstatus'),
@@ -42,7 +42,7 @@ const room = buildRoom(scene);
 const pc = new DosPC(ui.dos);
 const link = new RoomLink();
 const crowd = new Crowd(scene, room.stations);
-const GAME_START = 23 * 60 + 42; // the clock when the doors open
+const GAME_START = NIGHT.doors; // 7:30 PM
 const party = new Party({ startMinutes: GAME_START });
 
 // Macca: off to Singapore for work, and happy to bring RAM back if you give him cash first
@@ -61,6 +61,7 @@ const stats = { caffeine: 15, snacks: 40, dust: 0, cans: 0, handfuls: 0 };
 let target = null;
 let tween = null;
 let myName = 'YOU';
+let seatHintShown = false;
 let seatedAt = null; // station I'm sitting at (or walking to sit at)
 
 /* ---------- input ---------- */
@@ -382,6 +383,10 @@ function sitDown(station) {
       analytics.gameStart(pc.kind === 'solo' ? 'DOOM' : 'DOOM deathmatch');
       if (mode === 'seated') ui.seatedStatus.textContent = seatedStatusText();
     };
+    if (party.phase() === 'rts' && !seatHintShown) { // the room moved on to StarCraft; this box still runs what it runs
+      seatHintShown = true;
+      toast('StarCraft is on across the room. This box has DOOM.');
+    }
     if (party.pcs[station.index].crashed) showCrash(); // somebody left it blue screened
     else {
       bootForMatch();
@@ -587,6 +592,8 @@ function frame() {
     const gameMinutes = GAME_START + party.now;
     const h = Math.floor(gameMinutes / 60) % 24, m = Math.floor(gameMinutes % 60);
     ui.clock.textContent = `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+    for (const s of room.screens) s.clock = ui.clock.textContent;
+    ui.schedule.textContent = scheduleText();
     ui.caffeine.style.width = `${stats.caffeine}%`;
     ui.snacks.style.width = `${stats.snacks}%`;
     ui.dust.style.opacity = (stats.dust * 0.9).toFixed(2);
@@ -616,6 +623,12 @@ frame();
 ui.cash.textContent = `$${party.cash}`;
 room.setNetwork(party.net);
 party.addEventListener('cash', (e) => { ui.cash.textContent = `$${e.detail}`; });
+// shooters until midnight, then StarCraft, which wants memory
+function scheduleText() {
+  if (party.phase() === 'fps') return 'ON TONIGHT: DOOM now, StarCraft at midnight';
+  return `ON TONIGHT: StarCraft. ${party.starcraftBoxes()} of ${PC_COUNT} PCs have the 32MB for it`;
+}
+
 // what the cables are doing, shown on the gear and on the screens
 function refreshLinks() {
   room.stations.forEach((st, i) => {
@@ -624,6 +637,7 @@ function refreshLinks() {
     st.screen.crashed = party.pcs[i].crashed;
     st.screen.oc = party.pcs[i].oc;
     st.screen.ram = party.pcs[i].ram;
+    st.screen.rts = party.phase() === 'rts' ? (party.canRunStarcraft(i) ? 'starcraft' : 'nomem') : null;
   });
   setNetStatus();
 }
@@ -663,6 +677,21 @@ party.addEventListener('fan-off', (e) => {
   if (e.detail.why === 'tripped') { chatLine('The fan has lost its power.', true); return; }
   const msg = e.detail.why === 'knocked' ? "Somebody kicked the fan's plug out." : 'Fan off.';
   toast(msg); chatLine(msg, true);
+});
+const ANNOUNCE_LINES = {
+  doors: 'Doors open, 7:30 PM. Everyone wants shooters first.',
+  fps: "8:30 PM. DOOM deathmatch is the only thing anyone wants to play.",
+  soon: 'Quarter to midnight. Somebody is hunting through a CD case for StarCraft.',
+  midnight: "Midnight. Somebody's kicking off a StarCraft game.",
+  late: '2:00 AM. The StarCraft game is still going. Somebody has built a second base.',
+};
+party.addEventListener('announce', (e) => {
+  chatLine(ANNOUNCE_LINES[e.detail.id], true);
+  if (e.detail.id === 'midnight') {
+    const n = party.starcraftBoxes();
+    toast(n ? `StarCraft is on. ${n} PC${n > 1 ? 's have' : ' has'} the memory.` : 'StarCraft is on. Nobody has the 32MB for it.');
+    refreshLinks();
+  }
 });
 party.addEventListener('buddy-away', (e) => {
   macca.group.visible = false;
