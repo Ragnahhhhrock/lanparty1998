@@ -21,7 +21,7 @@ GROUPS = {
     "font": ("font-",),
     "text": ("text-", "leading-"),
     "space": ("space-", "gutter"),
-    "desktop": ("taskbar-", "startmenu-"),
+    "desktop": ("taskbar-", "startmenu-", "grip"),
     "bevel": ("bevel-", "title-gradient"),
     "overlay": ("scrim", "hud-bg", "bar-bg", "scanlines", "vignette"),
     "z": ("z-",),

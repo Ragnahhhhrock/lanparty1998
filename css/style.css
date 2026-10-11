@@ -70,7 +70,7 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 /* ---- #lanparty98: the IRC window ---- */
 #irc { position: absolute; top: var(--space-4); right: var(--space-4); width: 360px; max-width: calc(100vw - 2 * var(--gutter)); }
 #irc.off { display: none; }
-#irc-body { display: flex; height: 168px; margin: 2px; gap: 2px; }
+#irc-body { display: flex; flex: 1 1 168px; min-height: 0; margin: 2px; gap: 2px; }
 #irc-log { flex: 1; min-width: 0; overflow: hidden; background: var(--w98-light); color: var(--w98-text); box-shadow: var(--bevel-sunken);
   padding: var(--space-1); font: var(--text-crt-sm)/1.1 var(--font-crt); display: flex; flex-direction: column; justify-content: flex-end; overflow-wrap: anywhere; }
 #irc-log b { font-weight: normal; }
@@ -169,15 +169,32 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 .dwin:not(.active) .w98-title { background: var(--w98-title-off); }
 .dwin.moving { user-select: none; }
 .dwin-body { flex: 1; min-height: 0; }
+#desktop .dwin.sized { max-width: none; } /* once you've sized it, only the desktop limits it */
+.dwin.sized .dwin-body { overflow: auto; scrollbar-color: var(--w98-face) var(--w98-shadow); }
+
+/* sizing borders: an invisible frame around the window, thick as the bevel, with bigger corner zones */
+.w98-grip { position: absolute; touch-action: none; }
+.g-n, .g-s { left: var(--grip-corner); right: var(--grip-corner); height: var(--grip); cursor: ns-resize; }
+.g-e, .g-w { top: var(--grip-corner); bottom: var(--grip-corner); width: var(--grip); cursor: ew-resize; }
+.g-n { top: 0; } .g-s { bottom: 0; } .g-e { right: 0; } .g-w { left: 0; }
+.g-ne, .g-nw, .g-se, .g-sw { width: var(--grip-corner); height: var(--grip-corner); }
+.g-ne { top: 0; right: 0; cursor: nesw-resize; } .g-sw { bottom: 0; left: 0; cursor: nesw-resize; }
+.g-nw { top: 0; left: 0; cursor: nwse-resize; } .g-se { bottom: 0; right: 0; cursor: nwse-resize; }
+.dwin.maxed .w98-grip { display: none; }
+.dwin.maxed { box-shadow: none; }
 .w98-title { user-select: none; touch-action: none; }
 .w98-ticon { display: inline-flex; margin-right: var(--space-1); }
 .w98-ttext { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.w98-tbtns { display: flex; gap: var(--space-0); margin-left: var(--space-1); }
+.w98-tbtns { position: relative; z-index: 1; display: flex; gap: var(--space-0); margin-left: var(--space-1); } /* above the corner grips */
+.w98-tbtn[data-act="close"] { margin-left: var(--space-0); }
 .w98-tbtn { display: grid; place-items: center; width: 16px; height: 14px; padding: 0; border: 0; background: var(--w98-face); color: var(--w98-text);
   font: bold var(--text-ui-sm)/1 var(--font-ui); box-shadow: var(--bevel-small); cursor: default; }
 .w98-tbtn:active { box-shadow: var(--bevel-pressed); }
 .w98-tbtn:focus-visible { outline: 1px dotted var(--w98-text); outline-offset: -3px; }
 .tb-min { display: block; width: 6px; height: 2px; margin-top: 6px; background: var(--w98-text); }
+.tb-max { position: relative; display: block; box-sizing: border-box; width: 9px; height: 8px; border: 1px solid var(--w98-text); border-top-width: 2px; }
+.dwin.maxed .tb-max { width: 7px; height: 6px; margin: 3px 0 0 -2px; } /* Restore: two overlapping frames */
+.dwin.maxed .tb-max::after { content: ""; position: absolute; left: 1px; top: -4px; width: 6px; height: 3px; border: solid var(--w98-text); border-width: 1px 1px 0 0; }
 .px-icon { display: block; flex: none; image-rendering: pixelated; }
 
 /* menu bars and pop-up menus (windows and the Start menu share the item style) */

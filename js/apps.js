@@ -194,7 +194,7 @@ const calculator = {
 /* --------------------------------------------------------------------- Notepad */
 
 const notepad = {
-  id: 'notepad', title: 'Untitled - Notepad', icon: 'notepad', size: [420, 300], pos: [180, 110],
+  id: 'notepad', title: 'Untitled - Notepad', icon: 'notepad', size: [420, 300], pos: [180, 110], resize: true,
   menus: (ctx) => [
     withExit(ctx, [{ label: 'New', run: () => { ctx.text.value = ''; ctx.text.focus(); } }]),
     {
@@ -231,7 +231,7 @@ const PAINT_TOOLS = { pen: { label: 'Pencil', size: 1 }, brush: { label: 'Brush'
 const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 
 const paint = {
-  id: 'paint', title: 'untitled - Paint', icon: 'paint', size: [452], pos: [210, 70],
+  id: 'paint', title: 'untitled - Paint', icon: 'paint', size: [452], pos: [210, 70], resize: true, min: [240, 200],
   menus: (ctx) => [
     withExit(ctx, [{ label: 'New', run: () => ctx.paint.clear() }]),
     helpMenu('Paint', 'Draw something. The Fill tool paints a closed shape. Nothing is saved when you close it.')(ctx),
@@ -365,7 +365,7 @@ const FILES = {
 const BANNER = 'LAN PARTY OS [Version 4.10.1998]\n(C)Copyright nobody 1981-1998.\n\nType HELP for a list of commands.\n';
 
 const dosPrompt = {
-  id: 'dos', title: 'MS-DOS Prompt', icon: 'dos', size: [560, 340], pos: [120, 80],
+  id: 'dos', title: 'MS-DOS Prompt', icon: 'dos', size: [560, 340], pos: [120, 80], resize: true, min: [240, 120],
   build(ctx) {
     ctx.body.classList.add('dos');
     ctx.body.innerHTML = '<pre class="dos-out"></pre><div class="dos-line"><span class="dos-prompt"></span><input class="dos-in" data-autofocus maxlength="80" autocomplete="off" spellcheck="false" aria-label="Command line"></div>';
@@ -499,7 +499,7 @@ const defrag = {
 /* ------------------------------------------------------------------------ Help */
 
 const help = {
-  id: 'help', title: 'LAN Party Help', icon: 'help', size: [440], pos: [150, 70],
+  id: 'help', title: 'LAN Party Help', icon: 'help', size: [440], pos: [150, 70], resize: true, min: [240, 140],
   build(ctx) {
     ctx.body.classList.add('help');
     ctx.body.innerHTML = `<h2>Getting around</h2>
@@ -618,7 +618,7 @@ const MENU = [
 
 export function registerApps(desktop, { irc, lanamp, gameTime }) {
   desktop.gameTime = gameTime;
-  desktop.adopt('irc', irc, { title: 'mIRC32 - [#lanparty98]', icon: 'irc' });
+  desktop.adopt('irc', irc, { title: 'mIRC32 - [#lanparty98]', icon: 'irc', resize: true, min: [260, 140] });
   desktop.adopt('lanamp', lanamp, { title: 'LANamp 2.0', icon: 'amp' });
   for (const app of [minesweeper, solitaire, downhill, calculator, notepad, paint, dosPrompt, defrag, help, run, shutdown]) desktop.define(app);
   desktop.setMenu(MENU);

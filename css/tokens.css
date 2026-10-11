@@ -201,6 +201,8 @@
   /* ---- Desktop ---- */
   --taskbar-h: 28px;
   --startmenu-banner-w: 24px;
+  --grip: 4px;         /* window resize border, as thick as the frame */
+  --grip-corner: 12px; /* the corner zones of that border */
 
   /* ---- Layers ---- */
   --z-scene: 0;

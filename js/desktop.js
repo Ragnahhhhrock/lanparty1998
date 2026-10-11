@@ -2,7 +2,8 @@
 // drag, minimise, close and open again. The IRC channel and LANamp are windows on it, and so
 // are the little programs in apps.js.
 //
-// An app is { id, title, icon, size: [w, h?], pos: [x, y]?, center?, build(ctx), menus(ctx)?, keep? }.
+// An app is { id, title, icon, size: [w, h?], pos: [x, y]?, center?, resize?, min: [w, h]?, build(ctx), menus(ctx)?, keep? }.
+// `resize: true` gives the window sizing borders and a Maximise button; `min` is its smallest size.
 // build() fills ctx.body and may return { dispose() }. Apps are destroyed when closed unless
 // `keep` is set; windows adopted from the page (IRC, LANamp) are only hidden.
 import { icon } from './icons.js';
@@ -16,9 +17,14 @@ const make = (tag, cls, html) => {
 };
 const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
 
-const TITLE_BUTTONS = `<span class="w98-tbtns">
+// Minimise, (Maximise,) Close. Only windows you can resize get the middle button, as in Win95.
+const titleButtons = (resizable) => `<span class="w98-tbtns">
   <button type="button" class="w98-tbtn" data-act="min" aria-label="Minimise"><span class="tb-min"></span></button>
+  ${resizable ? '<button type="button" class="w98-tbtn" data-act="max" aria-label="Maximise"><span class="tb-max"></span></button>' : ''}
   <button type="button" class="w98-tbtn" data-act="close" aria-label="Close">×</button></span>`;
+
+const GRIPS = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+const MIN_SIZE = [200, 120]; // the smallest a resizable window goes, unless its app says otherwise
 
 // A row of drop-down menus under a title bar: [{ label, items: [{ label, key?, run?, checked?(), disabled? } | { sep: true }] }]
 export function menuBar(defs) {
@@ -132,7 +138,7 @@ export class Desktop {
     this.apps.set(id, { ...app, id, keep: true });
     const title = root.querySelector('.w98-title');
     title.insertAdjacentHTML('afterbegin', `<span class="w98-ticon">${icon(app.icon)}</span>`);
-    title.insertAdjacentHTML('beforeend', TITLE_BUTTONS);
+    title.insertAdjacentHTML('beforeend', titleButtons(!!app.resize));
     root.classList.add('dwin', 'off');
     root.dataset.app = id;
     this.register(id, root);
@@ -145,7 +151,7 @@ export class Desktop {
     root.dataset.ownsKeys = ''; // typing in here must not walk the player around
     root.setAttribute('role', 'group');
     root.setAttribute('aria-label', app.title);
-    root.innerHTML = `<div class="w98-title"><span class="w98-ticon">${icon(app.icon)}</span><span class="w98-ttext"></span>${TITLE_BUTTONS}</div>`;
+    root.innerHTML = `<div class="w98-title"><span class="w98-ticon">${icon(app.icon)}</span><span class="w98-ttext"></span>${titleButtons(!!app.resize)}</div>`;
     root.querySelector('.w98-ttext').textContent = app.title;
     const body = make('div', 'dwin-body');
     const win = { menus: null };
@@ -171,6 +177,19 @@ export class Desktop {
     root.addEventListener('pointerdown', () => this.focus(id), true);
     root.querySelector('[data-act="min"]').addEventListener('click', () => this.minimise(id));
     root.querySelector('[data-act="close"]').addEventListener('click', () => this.close(id));
+    const app = this.apps.get(id);
+    win.min = app?.min ?? MIN_SIZE;
+    if (app?.resize) {
+      win.resizable = true;
+      for (const dir of GRIPS) {
+        const grip = make('div', `w98-grip g-${dir}`);
+        grip.addEventListener('pointerdown', (e) => this.startResize(win, dir, e));
+        root.append(grip);
+      }
+      win.maxBtn = root.querySelector('[data-act="max"]');
+      win.maxBtn.addEventListener('click', () => this.toggleMax(id));
+      win.title.addEventListener('dblclick', (e) => { if (!e.target.closest('.w98-tbtns')) this.toggleMax(id); });
+    }
     this.wins.set(id, win);
     return win;
   }
@@ -290,7 +309,7 @@ export class Desktop {
   }
 
   startDrag(win, e) {
-    if (e.button !== 0 || e.target.closest('.w98-tbtns')) return;
+    if (e.button !== 0 || e.target.closest('.w98-tbtns') || win.maxed) return; // a maximised window stays put
     const r = win.root.getBoundingClientRect();
     const dx = e.clientX - r.left, dy = e.clientY - r.top;
     this.place(win, r.left, r.top); // pin it with left/top, whatever it was anchored to
@@ -309,9 +328,76 @@ export class Desktop {
     e.preventDefault();
   }
 
+  // drag a border or corner: the opposite edge stays where it is, and the window stays on the desktop
+  startResize(win, dir, e) {
+    if (e.button !== 0 || win.maxed) return;
+    const r = win.root.getBoundingClientRect();
+    const W = this.layer.clientWidth, H = this.layer.clientHeight;
+    const [minW, minH] = win.min;
+    const x0 = e.clientX, y0 = e.clientY;
+    const s = win.root.style;
+    s.left = `${Math.round(r.left)}px`; s.top = `${Math.round(r.top)}px`; s.right = 'auto'; s.bottom = 'auto';
+    s.width = `${Math.round(r.width)}px`; s.height = `${Math.round(r.height)}px`;
+    win.root.classList.add('sized', 'moving');
+    const grip = e.currentTarget;
+    grip.setPointerCapture(e.pointerId);
+    const move = (ev) => {
+      const dx = ev.clientX - x0, dy = ev.clientY - y0;
+      let { left, top, right, bottom } = r;
+      if (dir.includes('e')) right = Math.max(left + minW, Math.min(r.right + dx, W));
+      if (dir.includes('w')) left = Math.min(right - minW, Math.max(r.left + dx, 0));
+      if (dir.includes('s')) bottom = Math.max(top + minH, Math.min(r.bottom + dy, H));
+      if (dir.includes('n')) top = Math.min(bottom - minH, Math.max(r.top + dy, 0));
+      s.left = `${Math.round(left)}px`; s.top = `${Math.round(top)}px`;
+      s.width = `${Math.round(right - left)}px`; s.height = `${Math.round(bottom - top)}px`;
+    };
+    const up = () => {
+      win.root.classList.remove('moving');
+      grip.removeEventListener('pointermove', move);
+      grip.removeEventListener('pointerup', up);
+      grip.removeEventListener('pointercancel', up);
+    };
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', up);
+    grip.addEventListener('pointercancel', up);
+    e.preventDefault();
+  }
+
+  toggleMax(id) {
+    const win = this.wins.get(id);
+    if (!win?.resizable) return;
+    const s = win.root.style;
+    if (!win.maxed) {
+      win.restore = { left: s.left, top: s.top, right: s.right, bottom: s.bottom, width: s.width, height: s.height, sized: win.root.classList.contains('sized') };
+      win.maxed = true;
+      win.root.classList.add('maxed', 'sized');
+      this.fitMaxed(win);
+    } else {
+      const { sized, ...was } = win.restore;
+      Object.assign(s, was);
+      win.maxed = false;
+      win.root.classList.remove('maxed');
+      win.root.classList.toggle('sized', sized);
+    }
+    win.maxBtn.setAttribute('aria-label', win.maxed ? 'Restore' : 'Maximise');
+    this.focus(id);
+  }
+
+  fitMaxed(win) {
+    const s = win.root.style;
+    s.left = '0px'; s.top = '0px'; s.right = 'auto'; s.bottom = 'auto';
+    s.width = `${this.layer.clientWidth}px`; s.height = `${this.layer.clientHeight}px`;
+  }
+
   clampAll() {
     for (const w of this.wins.values()) {
+      if (w.state === 'closed') continue;
+      if (w.maxed) { this.fitMaxed(w); continue; }
       if (w.state !== 'open' || !w.root.style.left) continue;
+      if (w.root.classList.contains('sized')) { // the screen got smaller: don't leave a window bigger than it
+        w.root.style.width = `${Math.min(w.root.getBoundingClientRect().width, this.layer.clientWidth)}px`;
+        w.root.style.height = `${Math.min(w.root.getBoundingClientRect().height, this.layer.clientHeight)}px`;
+      }
       const r = w.root.getBoundingClientRect();
       this.place(w, r.left, r.top);
     }
