@@ -189,6 +189,37 @@ function cupSleeve(n = 10) {
   return g;
 }
 
+// One PC on a table, in the table's own space (the monitor faces -z, the chair is at +z): monitor, tower, keyboard,
+// mouse and pad, a name tag on the tube, and a folding chair. Returns the pieces the caller wires up.
+function pcSetup(g, screen, tagText, chairYaw, burner = false) {
+  const mon = crt(screen.texture);
+  mon.group.position.set(0, TABLE_Y, -0.12);
+  g.add(mon.group);
+
+  const tw = tower(burner);
+  tw.group.position.set(0.52, TABLE_Y, -0.1);
+  g.add(tw.group);
+
+  const kb = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.025, 0.17), [beige, beige,
+    new THREE.MeshStandardMaterial({ map: T.keyboardTop(), roughness: 0.7 }), beige, beige, beige]);
+  kb.position.set(-0.02, TABLE_Y + 0.013, 0.24);
+  kb.rotation.x = 0.05;
+  g.add(kb);
+  g.add(box(0.06, 0.03, 0.1, beige, 0.33, TABLE_Y + 0.015, 0.26)); // mouse
+  g.add(box(0.2, 0.004, 0.18, new THREE.MeshStandardMaterial({ color: 0x1c3b6e }), 0.34, TABLE_Y + 0.002, 0.25)); // mousepad
+
+  const tagTex = T.nameTag(tagText);
+  const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.04), new THREE.MeshBasicMaterial({ map: tagTex }));
+  tag.position.set(0, 0.39, 0.152);
+  mon.group.add(tag);
+
+  const chair = foldingChair();
+  chair.position.set(0, 0, 0.82);
+  chair.rotation.y = chairYaw;
+  g.add(chair);
+  return { mon, tw, tagTex, chair };
+}
+
 // Six PCs. Nobody owns one any more: whoever sits down first gets it. The idle screens are
 // whatever the last person left running.
 const STATIONS = [
@@ -714,8 +745,11 @@ function buildLounge(scene, out, labelVolt, labelNachoz, labelCurlz) {
   ];
   set.updateMatrixWorld(true);
   const wire = new THREE.MeshStandardMaterial({ color: 0x44474b, roughness: 0.7 }); // --console-dark
+  out.lyingPads = [];
+  out.padColors = pads.map((P) => P.color);
   pads.forEach((P, i) => {
     const g = gamePad(P.color);
+    out.lyingPads.push(g);
     place(g, P.x, P.y, P.z, P.yaw);
     g.updateMatrixWorld(true);
     const exit = g.localToWorld(new THREE.Vector3(0, 0.012, -0.03));
@@ -734,6 +768,59 @@ function buildLounge(scene, out, labelVolt, labelNachoz, labelCurlz) {
     pts.push(exit);
     scene.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.3), 70, 0.0035, 5), wire));
   });
+}
+
+// Where the regulars sit. They don't wander: each has a PC of their own or a cushion on the couch, and plays all
+// night. The desks are scenery: not in out.stations, nothing on them can be used (no sit prompt, no cans to
+// drink), so only the six real PCs are for visitors. Each runs a game of its own on its screen.
+//   out.seats[name]     where that regular sits (see seatFor in avatars.js)
+//   out.gamerScreens    the screens to redraw each frame, with out.screens
+const GAMER_DESKS = [
+  // right wall, two PCs facing the wall. Players face +x.
+  { x: 5.45, z: 2.0, segments: 2, yaw: -Math.PI / 2, pcs: [['K-Rad', 1.25, 'DEATHMATCH'], ['n00bslayer', 2.75, 'FRAGGING']] },
+  // front-left corner, where the snack table leaves off. Players face -x.
+  { x: -5.45, z: 1.838 + TABLE_LEN / 2, segments: 1, yaw: Math.PI / 2, pcs: [['xX_Ghoul_Xx', 1.838 + TABLE_LEN / 2, 'DEATHMATCH']] },
+];
+const COUCH_SEATS = [['MACCA', 0], ['PhatBass', 2]]; // [who, cushion]: 0 is the near end, 1 the middle, 2 the far end
+
+function buildGamers(scene, out, labelVolt) {
+  out.seats = {};
+  out.gamerScreens = [];
+  GAMER_DESKS.forEach((d, di) => {
+    const t = foldingTable(d.segments);
+    t.rotation.y = Math.PI / 2;
+    t.position.set(d.x, 0, d.z);
+    scene.add(t);
+    const half = (d.segments * TABLE_LEN) / 2;
+    out.colliders.push({ minX: d.x - TABLE_DEPTH / 2, maxX: d.x + TABLE_DEPTH / 2, minZ: d.z - half, maxZ: d.z + half });
+
+    d.pcs.forEach(([who, z, what], pi) => {
+      const g = new THREE.Group();
+      g.position.set(d.x, 0, z);
+      g.rotation.y = d.yaw;
+      scene.add(g);
+      const screen = new T.Screen('remote', 20 + di * 3 + pi);
+      screen.setFree(false, who.toUpperCase(), what);
+      out.gamerScreens.push(screen);
+      const { chair } = pcSetup(g, screen, who.toUpperCase(), 0.1 * (pi + 1) - 0.15);
+      const can = voltCan(labelVolt);
+      can.position.set(-0.36, TABLE_Y, 0.12);
+      g.add(can);
+      g.updateMatrixWorld(true);
+      out.seats[who] = { chair, group: g };
+      const at = chair.getWorldPosition(new THREE.Vector3());
+      out.colliders.push({ minX: at.x - 0.25, maxX: at.x + 0.25, minZ: at.z - 0.25, maxZ: at.z + 0.25 });
+    });
+  });
+
+  // the couch: two of the three cushions are taken. A taken cushion's pad is in its player's hands, so the one that was
+  // lying there goes (its lead still runs to the console, which is where it would end up anyway).
+  for (const [who, cushion] of COUCH_SEATS) {
+    const z = COUCH.z + 0.54 - cushion * 0.54;
+    out.lyingPads[cushion].visible = false;
+    out.seats[who] = { pose: 'couch', x: COUCH.x + 0.05, z, yaw: -Math.PI / 2, pad: gamePad(out.padColors[cushion]) };
+    out.colliders.push({ minX: COUCH.x + 0.4, maxX: COUCH.x + 0.8, minZ: z - 0.16, maxZ: z + 0.16 }); // their legs
+  }
 }
 
 // A pizza box with a pepperoni pizza cut in eight. setSlices(n) leaves n slices in the box.
@@ -1126,32 +1213,9 @@ export function buildRoom(scene) {
     const screen = new T.Screen(s.idle, i + 1);
     screen.pcNumber = i + 1;
     out.screens.push(screen);
-    const mon = crt(screen.texture);
-    mon.group.position.set(0, TABLE_Y, -0.12);
-    g.add(mon.group);
 
-    const tw = tower(i === BURNER.pc);
-    tw.group.position.set(0.52, TABLE_Y, -0.1);
-    g.add(tw.group);
+    const { mon, tw, tagTex, chair } = pcSetup(g, screen, `PC-0${i + 1}`, (i * 0.37) % 0.5 - 0.25, i === BURNER.pc); // nobody pushes their chair in straight
     out.hddLeds.push(tw.hdd);
-
-    const kb = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.025, 0.17), [beige, beige,
-      new THREE.MeshStandardMaterial({ map: T.keyboardTop(), roughness: 0.7 }), beige, beige, beige]);
-    kb.position.set(-0.02, TABLE_Y + 0.013, 0.24);
-    kb.rotation.x = 0.05;
-    g.add(kb);
-    g.add(box(0.06, 0.03, 0.1, beige, 0.33, TABLE_Y + 0.015, 0.26)); // mouse
-    g.add(box(0.2, 0.004, 0.18, new THREE.MeshStandardMaterial({ color: 0x1c3b6e }), 0.34, TABLE_Y + 0.002, 0.25)); // mousepad
-
-    const tagTex = T.nameTag(`PC-0${i + 1}`);
-    const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.04), new THREE.MeshBasicMaterial({ map: tagTex }));
-    tag.position.set(0, 0.39, 0.152);
-    mon.group.add(tag);
-
-    const chair = foldingChair();
-    chair.position.set(0, 0, 0.82);
-    chair.rotation.y = (i * 0.37) % 0.5 - 0.25; // nobody pushes their chair in straight
-    g.add(chair);
 
     // every station gets a can, every other one a bag of Nachoz
     const can = voltCan(labelVolt);
@@ -1255,6 +1319,7 @@ export function buildRoom(scene) {
   buildFan(scene, out);
   buildDoor(scene, out, wallMat.map);
   buildLounge(scene, out, labelVolt, labelNachoz, labelCurlz);
+  buildGamers(scene, out, labelVolt);
   buildPizza(scene, out);
   buildCeilingGamer(scene, out);
   buildMedia(scene, out);

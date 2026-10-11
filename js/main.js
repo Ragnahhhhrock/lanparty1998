@@ -5,7 +5,7 @@ import { buildRoom, ROOM } from './room.js';
 import { DosPC } from './emulator.js';
 import { GAMES, DEFAULT_GAME, MAX_PLAYERS, gameOf, nextGame, netHint, pilotName } from './games.js';
 import { RoomLink, ROOM_NAME } from './net.js';
-import { Crowd, spawnNpc, spawnTaped, setEye } from './avatars.js';
+import { Crowd, spawnNpc, spawnTaped, seatFor, setEye } from './avatars.js';
 import * as sfx from './sfx.js';
 import * as voices from './voices.js';
 import { analytics } from './analytics.js';
@@ -59,27 +59,24 @@ setEye(camera.position); // speech bubbles grow with distance so they stay reada
 const GAME_START = NIGHT.doors; // 7:30 PM
 const party = new Party({ startMinutes: GAME_START });
 
+// The regulars from #lanparty98 sit and play: at their own PCs on the tables, or on the couch with the console.
+// Where each one sits is in buildGamers (js/room.js). Nobody else can use those PCs.
+const sit = (name) => seatFor(room.seats[name]);
 // Macca: off to Singapore for work, and happy to bring RAM back if you give him cash first
-const macca = spawnNpc(scene, { name: 'MACCA', color: '#20b2aa', x: -4.4, z: -1.9, yaw: -Math.PI / 2, arch: 'surfer' }); // --shirt-7
-const maccaHit = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.9, 0.7), new THREE.MeshBasicMaterial({ visible: false }));
-maccaHit.position.set(-4.4, 0.95, -1.9);
+const macca = spawnNpc(scene, { name: 'MACCA', color: '#20b2aa', yaw: -Math.PI / 2, arch: 'surfer', seat: sit('MACCA') }); // --shirt-7
+const maccaHit = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.5, 0.7), new THREE.MeshBasicMaterial({ visible: false }));
+maccaHit.position.set(macca.group.position.x, 0.75, macca.group.position.z);
 maccaHit.userData.interact = { kind: 'buddy' };
 scene.add(maccaHit);
 room.interactables.push(maccaHit);
 
-// The rest of the regulars from #lanparty98 standing around the room
 const regulars = [
-  { name: 'xX_Ghoul_Xx', color: '#9b4dca', x: -4.6, z: 2.3, yaw: -Math.PI / 2, arch: 'goth' },     // --shirt-5
-  { name: 'PhatBass', color: '#d94f8a', x: -4.5, z: 0.5, yaw: -Math.PI / 2, arch: 'raver' },        // --shirt-8
-  { name: 'K-Rad', color: '#2b6fd6', x: 5.2, z: 1.9, yaw: Math.PI / 2, arch: 'hiphop' },           // --shirt-2
-  { name: 'n00bslayer', color: '#3aa35a', x: 5.2, z: -2.4, yaw: Math.PI / 2, arch: 'nerd' },       // --shirt-4
-].map((r) => {
-  const a = spawnNpc(scene, r);
-  room.colliders.push({ minX: r.x - 0.22, maxX: r.x + 0.22, minZ: r.z - 0.22, maxZ: r.z + 0.22 });
-  return a;
-});
-room.colliders.push({ minX: -4.65, maxX: -4.15, minZ: -2.15, maxZ: -1.65 });
-// who is standing where, by IRC nick, so what they say in the channel comes out of their mouths
+  { name: 'xX_Ghoul_Xx', color: '#9b4dca', arch: 'goth' },     // --shirt-5
+  { name: 'PhatBass', color: '#d94f8a', arch: 'raver' },        // --shirt-8
+  { name: 'K-Rad', color: '#2b6fd6', arch: 'hiphop' },           // --shirt-2
+  { name: 'n00bslayer', color: '#3aa35a', arch: 'nerd' },       // --shirt-4
+].map((r) => spawnNpc(scene, { ...r, seat: sit(r.name) }));
+// who is sitting where, by IRC nick, so what they say in the channel comes out of their mouths
 const speakers = new Map([macca, ...regulars].map((a) => [a.name.toLowerCase(), a]));
 
 /* ---------- state ---------- */
@@ -815,8 +812,7 @@ function frame() {
   updateTrayHint();
   const now = performance.now() / 1000;
 
-  const groove = music?.level() ?? 0, bpm = music?.track.bpm ?? 120;
-  crowd.update(dt, link.players, groove, bpm, now);
+  crowd.update(dt, link.players, now);
   room.updateFan(dt, party.fan.on, party.fanSweep());
   room.updateTv(dt);
   room.door.update(dt);
@@ -826,8 +822,8 @@ function frame() {
   stepEaters(dt, now);
   taped.idle(now);
   if ((tapedNext -= dt) < 0) { tapedNext = 12 + Math.random() * 10; if (taped.eatT < 0) taped.eat(); }
-  if (macca.group.visible) macca.idle(now, groove, bpm);
-  for (const r of regulars) r.idle(now, groove, bpm);
+  if (macca.group.visible) macca.idle(now);
+  for (const r of regulars) r.idle(now);
   if (mode !== 'intro') party.tick(dt, { seatedPc: seatedAt?.index ?? null });
   if (link.online && mode === 'walk' && (sendTimer += dt) > 0.1) { sendTimer = 0; link.pos(player.pos.x, player.pos.z, player.yaw); }
 
@@ -850,6 +846,7 @@ function frame() {
   if (screenTimer > 0.08) {
     screenTimer = 0;
     for (const s of room.screens) s.draw(now);
+    for (const s of room.gamerScreens) s.draw(now);
   }
 
   // blinkenlights

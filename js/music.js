@@ -269,7 +269,7 @@ export function playStep(track, bar, step, t, kit) {
 
 /* ---------- the player ---------- */
 // Plays the synthesised tape and, once the visitor adds a folder, their own MP3 files (tracks with a `file`).
-// Both go through the same mixer, so the spectrum and the room's dancing work for either.
+// Both go through the same mixer, so the spectrum works for either.
 export class Player extends EventTarget {
   constructor(ctx) {
     super();
@@ -397,7 +397,7 @@ export class Player extends EventTarget {
       this.next += sps; this.step++;
     }
   }
-  // 0..1 loudness of the low end, for the visualiser and for the room to dance to
+  // 0..1 loudness of the low end, for the visualiser
   level() {
     if (this.state !== 'playing') return 0;
     this.analyser.getByteFrequencyData(this.freq);

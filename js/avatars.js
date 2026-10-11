@@ -2,7 +2,8 @@
 // hip hop kids, ravers, grunge kids and nerds), each with their own height, hair and face
 // (eyes that blink, brows, nose, lips, ears), rounded limbs and hands,
 // with their handle floating overhead. They glide toward the latest position the
-// server sent and drop into the chair when they sit at a PC.
+// server sent and drop into the chair when they sit at a PC. The regulars don't walk:
+// they sit at their own PCs or on the couch, playing.
 import * as THREE from 'three';
 
 // colours are tokens from css/tokens.css (--skin-N, --hair-*, --eye-white, --iris-*, --lip, --clothes-*, --neon-*, --denim, --shoe, --shirt-N)
@@ -645,8 +646,15 @@ function curlMesh() {
 }
 const ITEMS = { pizza: sliceMesh, snack: snackMesh, curl: curlMesh, drink: canMesh };
 
-// How hard each tribe dances (ravers go for it, goths barely sway)
-const DANCE = { raver: 1, hiphop: 0.85, surfer: 0.8, grunge: 0.75, nerd: 0.5, goth: 0.35 };
+// How a seated body holds itself. lean tips the torso (negative is forward, toward the screen); lock is how much
+// further forward they go when they lock in on a fight. legs is how far the legs swing forward (PI/2 is straight
+// out under a desk; less puts the feet on the floor, for the couch). arms are [left, right] as the shoulder swing
+// a, the shoulder's sideways angle z and the elbow b, solved so the hands land on the keyboard and the mouse
+// (desk) or on a pad held in the lap (couch).
+const POSES = {
+  desk: { lean: -0.14, lock: 0.07, legs: Math.PI / 2, arms: [{ a: 0.603, z: 0.393, b: 1.046 }, { a: 0.456, z: 0.073, b: 1.261 }] },
+  couch: { lean: 0.1, lock: 0.1, legs: 0.95, arms: [{ a: 0.185, z: 0.442, b: 0.737 }, { a: 0.185, z: -0.442, b: 0.737 }] },
+};
 
 class Avatar extends EventTarget {
   constructor(player, force, override) {
@@ -670,9 +678,10 @@ class Avatar extends EventTarget {
     this.eatT = -1; // seconds into eating/drinking, or -1
     this.eatKind = 'pizza';
     this.items = {};
-    this.danceK = 0; // 0..1: how far into a dance they are
-    this.dancing = false;
     this.lean = 0;   // extra tip of the torso (head back for a swig)
+    this.pose = null; // POSES entry while sitting down
+    this.armRest = [{ u: 0, z: 0, f: 0 }, { u: 0, z: 0, f: 0 }]; // where each arm settles: shoulder swing, shoulder sideways, elbow
+    this.focusT = 0; this.focusGoal = 0; this.focusK = 0; // gaming: 0 slouched and casual, 1 locked in on the screen
     this.tagY = b.headTop + 0.25;
     this.tag = label(player.name, player.color);
     this.tag.position.y = this.tagY;
@@ -747,75 +756,49 @@ class Avatar extends EventTarget {
     // (the man taped to the ceiling keeps his arm out: armBase is not 0 for him)
     const reach = this.armBase === 0;
     const swing = reach ? 0.9 : 1.0, fold = reach ? 1.9 : 3.3, across = reach ? 1.3 * upper.position.x : 0, wrist = reach ? 0.9 : 0;
-    upper.rotation.set(this.armBase + (swing - this.armBase) * lift, 0, -across * lift);
+    const rest = this.armRest[1], u0 = this.armBase + rest.u, f0 = rest.f, z0 = rest.z; // the arm leaves its rest pose (on the mouse, say) and comes back to it
+    upper.rotation.set(u0 + (swing - u0) * lift, 0, z0 + (-across - z0) * lift);
     if (this.eatKind === 'drink') {
-      fore.rotation.set(fold * lift, 0, -wrist * lift);
+      fore.rotation.set(f0 + (fold - f0) * lift, 0, -wrist * lift);
       item.rotation.x = pulse * 0.9;       // tip the can up
       this.lean = pulse * 0.16;            // and the head back
       this.setMouth(pulse * 0.25);
     } else {
       const nibble = pulse * 0.12;
-      fore.rotation.set(fold * lift - nibble, 0, -wrist * lift);
+      fore.rotation.set(f0 + (fold - f0) * lift - nibble, 0, -wrist * lift);
       this.setMouth(nibble > 0 ? Math.min(1, nibble / 0.1) : 0);
       if (this.eatKind === 'snack' || this.eatKind === 'curl') item.userData.chips.forEach((c, i) => { c.visible = i >= bites; });
       else item.scale.setScalar(1 - bites * 0.3);
     }
-    if (T >= D) { this.eatT = -1; this.lean = 0; upper.rotation.set(this.armBase, 0, 0); fore.rotation.set(0, 0, 0); item.visible = false; this.setMouth(0); this.dispatchEvent?.(new Event('ate')); }
+    if (T >= D) { this.eatT = -1; this.lean = 0; upper.rotation.set(u0, 0, z0); fore.rotation.set(f0, 0, 0); item.visible = false; this.setMouth(0); this.dispatchEvent?.(new Event('ate')); }
   }
 
-  // Dance to the music: everyone bounces on the beat, each tribe in its own way. k fades the dance in and out
-  // as the music starts and stops. The arm that is eating or drinking is left alone.
-  dance(t, dt, groove = 0, bpm = 120) {
-    this.danceK += ((groove > 0.02 ? 1 : 0) - this.danceK) * Math.min(1, dt * 4);
+  // What the body does between things: nods along as they talk, and when they're sat down playing, tips toward
+  // the screen and works the keys and the mouse (or the pad) a little, harder when something kicks off. The arm
+  // that is eating or drinking is left alone.
+  stepPose(t, dt) {
     const talk = this.bubble ? Math.sin(t * 11 + (this.phase ?? 0)) * 0.05 : 0; // nods along as they talk
-    const K = this.danceK;
-    if (K < 0.004) {
-      if (this.dancing) this.stopDance();
-      this.torso.rotation.x = talk + this.lean;
-      return;
-    }
-    this.dancing = true;
-    const arch = this.look.arch;
-    const e = 0.6 + 0.4 * Math.min(1, groove * 1.5);                       // how big the moves are: louder is bigger
-    const mv = DANCE[arch] * K * e;
-    const a = (t * bpm / 60) * Math.PI * (arch === 'goth' ? 0.5 : 1);      // goths sway at half time
-    const step = Math.sin(a), hop = Math.abs(step);                        // step: side to side; hop: once per beat
-    const y = 0.84 + hop * 0.05 * mv;
-    this.torso.position.y = y;
-    this.torso.rotation.z = step * 0.1 * mv;                                // hips rock
-    this.torso.rotation.y = step * 0.18 * mv;                               // and twist
-    const nod = arch === 'grunge' ? (0.5 - 0.5 * Math.cos(2 * a)) * 0.34 * mv : Math.abs(Math.sin(a)) * 0.07 * mv; // headbang
-    this.torso.rotation.x = talk + this.lean - nod;
-    this.legs.forEach((leg, i) => {
-      const sx = i === 0 ? -1 : 1, out = Math.max(0, sx * step);         // step-touch: the foot swings out and back
-      leg.position.y = y;
-      leg.rotation.z = sx * out * 0.22 * mv;
-    });
+    const P = this.pose;
+    if (!P) { this.torso.rotation.x = talk + this.lean; return; }
+    if ((this.focusT -= dt) <= 0) { this.focusT = 2 + Math.random() * 6; this.focusGoal = Math.random() < 0.4 ? 1 : 0; }
+    this.focusK += (this.focusGoal - this.focusK) * Math.min(1, dt * 4);
+    const f = this.focusK, w = t + (this.phase ?? 0), couch = P === POSES.couch;
+    this.torso.rotation.x = talk + this.lean + P.lean - f * P.lock + Math.sin(w * 0.5) * 0.01;
+    this.torso.rotation.z = Math.sin(w * 0.37) * 0.012 + (couch ? f * Math.sin(w * 1.7) * 0.05 : 0); // on the couch they lean into the turns
     for (let i = 0; i < 2; i++) {
-      const { upper: U, fore: F } = this.arms[i];
-      if (i === 1 && this.eatT >= 0) { U.rotation.z = 0; continue; }
-      const sx = i ? 1 : -1, s = Math.sin(a + i * Math.PI), s2 = Math.sin(2 * a + i * Math.PI); // the arms move out of step
-      if (arch === 'raver') { U.rotation.set(K * 0.3, 0, sx * K * (2.1 + 0.3 * e * s2)); F.rotation.x = K * (0.5 + 0.4 * e * s); }               // hands in the air
-      else if (arch === 'hiphop') { U.rotation.set(K * (0.45 + 0.3 * e * s), 0, sx * K * 0.2); F.rotation.x = K * (1.4 + 0.35 * e * s2); }         // pumping fists
-      else if (arch === 'surfer') { U.rotation.set(K * 0.15 * e * s, 0, sx * K * (i === 1 ? 2.0 + 0.4 * e * s2 : 0.45 + 0.35 * e * s)); F.rotation.x = K * (i === 1 ? 0.7 : 0.4); } // one hand up, shaka
-      else if (arch === 'grunge') { U.rotation.set(K * 0.45 * e * s, 0, sx * K * 0.12); F.rotation.x = K * 0.5; }                                    // loose, hair flying
-      else if (arch === 'nerd') { U.rotation.set(K * 0.1, 0, sx * K * 0.3); F.rotation.x = K * (1.45 + 0.2 * e * s2); }                               // elbows in, awkward
-      else { // goth: one hand drifts up near the face, the other floats
-        if (i === 0) { U.rotation.set(K * (0.9 + 0.5 * e * Math.sin(a)), 0, 0); F.rotation.x = K * (1.9 + 0.3 * e * s); }
-        else { U.rotation.set(0, 0, sx * K * (0.5 + 0.4 * e * s)); F.rotation.x = K * 0.3; }
+      if (i === 1 && this.eatT >= 0) continue;
+      const R = P.arms[i], { upper, fore } = this.arms[i], k = 0.012 + 0.04 * f;
+      if (couch) { // thumbs and wrists on the pad
+        upper.rotation.set(R.a + Math.sin(w * 9 + i * 2) * k * 0.4, 0, R.z);
+        fore.rotation.set(R.b + Math.sin(w * 13 + i) * k, 0, 0);
+      } else if (i === 0) { // left hand on the keys
+        upper.rotation.set(R.a, 0, R.z);
+        fore.rotation.set(R.b + Math.sin(w * 11) * Math.sin(w * 3.1) * k, 0, 0);
+      } else { // right hand pushes the mouse about
+        upper.rotation.set(R.a + Math.sin(w * 1.9) * 0.02 * (1 + f * 2), 0, R.z + Math.sin(w * 1.3 + 1) * 0.03 * (1 + f * 2));
+        fore.rotation.set(R.b + Math.sin(w * 6) * k * 0.5, 0, 0);
       }
     }
-  }
-  // back to standing still
-  stopDance() {
-    this.dancing = false; this.danceK = 0;
-    this.torso.position.y = 0.84; this.torso.rotation.set(0, 0, 0);
-    for (const leg of this.legs) { leg.position.y = 0.84; leg.rotation.z = 0; }
-    this.arms.forEach(({ upper, fore }, i) => {
-      upper.rotation.z = 0;
-      if (i === 1 && this.eatT >= 0) return;
-      upper.rotation.x = this.armBase; fore.rotation.x = 0;
-    });
   }
 
   // Say something out loud: a speech bubble over the name tag for a few seconds.
@@ -854,21 +837,30 @@ class Avatar extends EventTarget {
     b.mat.opacity = Math.min(1, (b.life - b.t) / 0.4);
   }
 
+  // seat: { pos: Vector3 (on the floor, under the hips), yaw, pose: 'desk' | 'couch', pad?: Object3D to hold } or null to stand
   setSeat(seat) {
-    this.stopDance(); // sitting down ends the dance
-    this.seat = seat; // { pos: Vector3 (chair, floor level), yaw } or null
-    const sitting = !!seat;
-    for (const leg of this.legs) leg.rotation.x = sitting ? Math.PI / 2 : 0;
-    this.torso.position.y = sitting ? 0.5 : 0.84;
-    for (const leg of this.legs) leg.position.y = sitting ? 0.5 : 0.84;
-    this.tag.position.y = sitting ? this.tagY - 0.35 : this.tagY;
+    this.seat = seat;
+    const P = seat ? POSES[seat.pose ?? 'desk'] : null;
+    this.pose = P;
+    for (const leg of this.legs) { leg.rotation.x = P ? P.legs : 0; leg.position.y = P ? 0.5 : 0.84; }
+    this.torso.position.y = P ? 0.5 : 0.84;
+    this.torso.rotation.set(0, 0, 0);
+    this.tag.position.y = P ? this.tagY - 0.35 : this.tagY;
+    this.armRest = [0, 1].map((i) => (P ? { u: P.arms[i].a, z: P.arms[i].z, f: P.arms[i].b } : { u: 0, z: 0, f: 0 }));
+    this.arms.forEach(({ upper, fore }, i) => {
+      if (i === 1 && this.eatT >= 0) return;
+      upper.rotation.set(this.armBase + this.armRest[i].u, 0, this.armRest[i].z); fore.rotation.set(this.armRest[i].f, 0, 0);
+    });
+    if (this.pad) { this.group.remove(this.pad); this.pad = null; }
+    if (seat?.pad) { this.pad = seat.pad; this.pad.position.set(0, 0.7, -0.25); this.pad.rotation.set(-0.25, 0, 0); this.group.add(this.pad); } // held in both hands
     if (seat) { this.group.position.copy(seat.pos); this.group.rotation.y = seat.yaw; }
   }
 
-  update(dt, player, groove = 0, bpm = 120, t = 0) {
+  update(dt, player, t = 0) {
     this.stepEat(dt);
     this.stepFace(dt);
     this.stepBubble(dt);
+    this.stepPose(t, dt);
     if (this.seat) return;
     this.target.set(player.x, 0, player.z);
     const before = this.group.position.clone();
@@ -879,28 +871,38 @@ class Avatar extends EventTarget {
     if (d < -Math.PI) d += Math.PI * 2;
     this.group.rotation.y += d * Math.min(1, dt * 10);
     const speed = before.distanceTo(this.group.position) / Math.max(dt, 1e-3);
-    if (speed > 0.2) { this.walkT += dt * 9; if (this.dancing) this.stopDance(); } else this.walkT *= 0.8;
+    if (speed > 0.2) this.walkT += dt * 9; else this.walkT *= 0.8;
     const swing = Math.sin(this.walkT) * Math.min(1, speed / 1.5) * 0.5;
     this.legs[0].rotation.x = swing;
     this.legs[1].rotation.x = -swing;
-    if (speed <= 0.2) this.dance(t, dt, groove, bpm); // standing around with music on: dance
   }
 }
 
-// A regular who isn't another player: stands where you put him, dances when the music is on, and eats and drinks.
+// Where a seated body goes. A desk seat is a station (or anything with a chair and a group): the hips sit a little
+// forward of the chair's middle, toward the keyboard. A couch seat is { pose: 'couch', x, z, yaw, pad }.
+export function seatFor(spot) {
+  if (spot.pose === 'couch') return { pos: new THREE.Vector3(spot.x, 0, spot.z), yaw: spot.yaw, pose: 'couch', pad: spot.pad };
+  const pos = spot.chair.getWorldPosition(new THREE.Vector3());
+  const yaw = spot.group.rotation.y;
+  // the chair faces the desk; the avatar's front is -z, the station's front (toward the chair) is +z
+  pos.x -= Math.sin(yaw) * 0.1; pos.z -= Math.cos(yaw) * 0.1;
+  return { pos, yaw, pose: 'desk' };
+}
+
+// A regular who isn't another player: sits where you put him (at a PC or on the couch), plays, and eats and drinks.
 const t0 = () => performance.now() / 1000;
-export function spawnNpc(scene, { name, color, x, z, yaw, arch, look }) {
+export function spawnNpc(scene, { name, color, x, z, yaw, arch, look, seat }) {
   const a = new Avatar({ id: `npc-${name}`, name, color, x, z, yaw }, arch, look);
   scene.add(a.group);
   a.rest = yaw;
   a.phase = (name.length * 1.7) % 6;
-  // groove is 0..1 loudness from the music, bpm the tempo: everyone dances to it, ravers hardest and goths least
+  if (seat) a.setSeat(seat);
   let lastT = t0();
-  a.idle = (t, groove = 0, bpm = 120) => {
+  a.idle = (t) => {
     const dt = Math.min(0.1, Math.max(0, t - lastT)); lastT = t;
     a.stepEat(dt); a.stepFace(dt); a.stepBubble(dt);
-    a.group.rotation.y = a.rest + Math.sin(t * 0.7 + a.phase) * 0.08;
-    a.dance(t, dt, groove, bpm);
+    if (!a.seat) a.group.rotation.y = a.rest + Math.sin(t * 0.7 + a.phase) * 0.08;
+    a.stepPose(t, dt);
   };
   return a;
 }
@@ -937,16 +939,13 @@ export class Crowd {
     const a = this.avatars.get(player.id);
     if (!a) return;
     if (player.pc === null || player.pc === undefined) { a.setSeat(null); return; }
-    const st = this.stations[player.pc];
-    const pos = st.chair.getWorldPosition(new THREE.Vector3());
-    // chairs face the desk; the avatar's front is -z, the station's front (toward the chair) is +z
-    a.setSeat({ pos, yaw: st.group.rotation.y });
+    a.setSeat(seatFor(this.stations[player.pc]));
   }
 
-  update(dt, players, groove = 0, bpm = 120, t = 0) {
+  update(dt, players, t = 0) {
     for (const [id, a] of this.avatars) {
       const p = players.get(id);
-      if (p) a.update(dt, p, groove, bpm, t);
+      if (p) a.update(dt, p, t);
     }
   }
 }
