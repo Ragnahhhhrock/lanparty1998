@@ -70,7 +70,7 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
   padding: var(--space-1); font: var(--text-crt-sm)/1.1 var(--font-crt); display: flex; flex-direction: column; justify-content: flex-end; overflow-wrap: anywhere; }
 #irc-log b { font-weight: normal; }
 .irc-time, .irc-note { color: var(--w98-shadow); }
-#irc-nicks { width: 84px; margin: 0; padding: var(--space-1); list-style: none; overflow: hidden; background: var(--w98-light); box-shadow: var(--bevel-sunken);
+#irc-nicks { width: 100px; margin: 0; padding: var(--space-1); list-style: none; overflow: hidden; background: var(--w98-light); box-shadow: var(--bevel-sunken);
   font: var(--text-crt-sm)/1.1 var(--font-crt); }
 @media (max-width: 700px) { #irc { display: none; } }
 
@@ -107,7 +107,7 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 .handle input:focus-visible { outline: 1px dotted var(--w98-text); outline-offset: -4px; }
 
 /* ---- Chat: in-world text over the basement, typed on a phosphor line ---- */
-#chat { position: fixed; left: var(--gutter); bottom: 140px; z-index: var(--z-seated); width: min(420px, calc(100vw - 2 * var(--gutter))); pointer-events: none; }
+#chat { position: fixed; left: 300px; bottom: 140px; z-index: var(--z-seated); width: min(420px, calc(100vw - 300px - var(--gutter))); pointer-events: none; }
 #chat-log { display: flex; flex-direction: column; gap: var(--space-0); font: var(--text-crt)/1.15 var(--font-crt); color: var(--paper); text-shadow: var(--text-shadow-hard); }
 #chat-log div { transition: opacity var(--dur-slow); overflow-wrap: anywhere; }
 #chat-log div.old { opacity: 0; }
