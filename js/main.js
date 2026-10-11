@@ -14,6 +14,8 @@ import { Banter, IrcView, REGULARS } from './irc.js';
 import { Player } from './music.js';
 import { initLanamp } from './lanamp.js';
 import { initShare } from './share.js';
+import { Desktop } from './desktop.js';
+import { registerApps } from './apps.js';
 
 const $ = (id) => document.getElementById(id);
 initShare();
@@ -26,6 +28,10 @@ const ui = {
   chat: $('chat'), chatLog: $('chat-log'), chatForm: $('chat-form'), chatInput: $('chat-input'),
   dm: $('dm'), dmText: $('dm-text'), dmBtn: $('dm-btn'), dmBtn2: $('dm-btn2'),
 };
+
+/* ---------- the desktop: taskbar, Start menu and windows over the room ---------- */
+const desktop = new Desktop();
+registerApps(desktop, { irc: $('irc'), lanamp: $('lanamp'), gameTime: () => ui.clock.textContent });
 
 /* ---------- renderer, scene, camera ---------- */
 const renderer = new THREE.WebGLRenderer({ canvas: $('scene'), antialias: true });
@@ -98,6 +104,7 @@ ui.enter.addEventListener('click', () => {
   ui.intro.hidden = true;
   ui.hud.hidden = false;
   ui.chat.hidden = false;
+  desktop.start();
   mode = 'walk';
   sfx.startAudio();
   startMusic();
@@ -109,8 +116,15 @@ ui.enter.addEventListener('click', () => {
 (savedHandle ? ui.enter : ui.handle).focus();
 
 function lockPointer() {
+  if (document.activeElement?.closest?.('#desktop, #taskbar')) document.activeElement.blur(); // the keyboard goes back to the room
   const p = canvas.requestPointerLock?.();
   if (p && p.catch) p.catch(() => {}); // pointer lock is optional; clicking again retries
+}
+// the taskbar says how to get the mouse back for the desktop (it's hidden while you're seated)
+const trayHint = $('tray-hint');
+function updateTrayHint() {
+  const want = mode !== 'walk' ? '' : document.pointerLockElement ? 'Tab: use the desktop' : 'Click the room to walk';
+  if (trayHint.textContent !== want) trayHint.textContent = want;
 }
 canvas.addEventListener('click', () => { if (mode === 'walk' && document.pointerLockElement !== canvas) lockPointer(); });
 
@@ -122,6 +136,7 @@ document.addEventListener('mousemove', (e) => {
 
 window.addEventListener('keydown', (e) => {
   if (e.target === ui.chatInput || e.target === ui.handle) return;
+  if (e.target.closest?.('[data-owns-keys]')) return; // typing into Notepad, the DOS prompt, Minesweeper...
   if (dialog.isOpen()) return; // the message box owns the keyboard
   if (mode === 'seated') {
     if (e.code === 'Backquote') { e.preventDefault(); e.stopPropagation(); standUp(); }
@@ -130,8 +145,9 @@ window.addEventListener('keydown', (e) => {
   }
   if (mode !== 'walk') return;
   if (e.code === 'KeyT') { e.preventDefault(); openChat(); return; }
-  if (e.code === 'KeyI') { ircBox.classList.toggle('off'); return; }
-  if (e.code === 'KeyM') { $('lanamp').classList.toggle('off'); return; }
+  if (e.code === 'Tab' && document.pointerLockElement) { e.preventDefault(); document.exitPointerLock(); return; } // free the mouse for the desktop
+  if (e.code === 'KeyI') { desktop.toggle('irc'); return; }
+  if (e.code === 'KeyM') { desktop.toggle('lanamp'); return; }
   if (e.code === 'KeyN') { toast(voices.toggle() ? 'Voices on.' : 'Voices off.'); return; }
   if (amp?.keys[e.code]) { amp.keys[e.code](); return; }
   keys.add(e.code);
@@ -753,6 +769,7 @@ let screenTimer = 0, statTimer = 0, sendTimer = 0;
 
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
+  updateTrayHint();
   const now = performance.now() / 1000;
 
   crowd.update(dt, link.players);

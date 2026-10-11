@@ -108,7 +108,7 @@
         <div class="w98-panel demo-meters">
           <div class="meter"><span>CAFFEINE</span><div class="bar"><i id="m-caffeine" style="width:72%"></i></div></div>
           <div class="meter"><span>SNACKS</span><div class="bar"><i id="m-snacks" style="width:48%"></i></div></div>
-          <div id="clock" style="font:var(--text-crt)/1 var(--font-crt);text-align:right">11:42 PM</div>
+          <div style="font:var(--text-crt)/1 var(--font-crt);text-align:right">11:42 PM</div>
         </div>
         <div style="display:grid;gap:12px">
           <span class="demo-prompt">Press E to sit down</span>
@@ -123,6 +123,44 @@
         <div class="g">Waiting for PC-04…</div>
         <div>Bad command or file name.</div>
       </div>
+    </div>
+  </section>
+
+  <section class="w98-window">
+    <div class="w98-title"><span>DESKTOP.SYS</span><b>×</b></div>
+    <div class="w98-body">
+      <h2>Desktop</h2>
+      <h3>Window with a menu bar</h3>
+      <div class="stage">
+        <div class="w98-window dwin active" style="position:static;width:340px">
+          <div class="w98-title"><span class="w98-ticon" data-icon="notepad"></span><span class="w98-ttext">Untitled - Notepad</span><span class="w98-tbtns"><button class="w98-tbtn" type="button" aria-label="Minimise"><span class="tb-min"></span></button><button class="w98-tbtn" type="button" aria-label="Close">×</button></span></div>
+          <div class="w98-menubar"><div class="mb-top"><button class="mb-btn" type="button">File</button></div><div class="mb-top"><button class="mb-btn open" type="button">Edit</button><ul class="w98-popup"><li><button class="sm-item" type="button"><span class="sm-check"></span><span class="sm-label">Select All</span><span class="sm-key"></span></button></li><li class="sm-sep"></li><li><button class="sm-item on" type="button"><span class="sm-check"></span><span class="sm-label">Word Wrap</span><span class="sm-key">F5</span></button></li></ul></div><div class="mb-top"><button class="mb-btn" type="button">Help</button></div></div>
+          <div class="dwin-body np" style="height:120px"><textarea class="np-text" aria-label="Sample text" readonly>It's 7:30 and the hub is warm.</textarea></div>
+        </div>
+      </div>
+      <h3>Taskbar and Start menu</h3>
+      <div class="stage" style="display:grid;gap:12px">
+        <div style="display:flex;align-items:flex-end">
+          <div id="startmenu" style="position:static;display:flex">
+            <div class="sm-banner"><span><b>LAN Party</b> 98</span></div>
+            <ul class="sm-list sm-top">
+              <li><button class="sm-item has-sub" type="button" style="background:var(--w98-title);color:var(--w98-light)"><span data-icon="programs" data-size="32"></span><span class="sm-label">Programs</span></button></li>
+              <li><button class="sm-item has-sub" type="button"><span data-icon="doc" data-size="32"></span><span class="sm-label">Documents</span></button></li>
+              <li><button class="sm-item" type="button"><span data-icon="help" data-size="32"></span><span class="sm-label">Help</span></button></li>
+              <li class="sm-sep"></li>
+              <li><button class="sm-item" type="button"><span data-icon="crt" data-size="32"></span><span class="sm-label">Shut Down...</span></button></li>
+            </ul>
+          </div>
+          <ul class="sm-list sm-sub" style="position:static;display:block"><li><button class="sm-item has-sub" type="button"><span data-icon="folder"></span><span class="sm-label">Accessories</span></button></li><li><button class="sm-item" type="button"><span data-icon="irc"></span><span class="sm-label">mIRC</span></button></li><li><button class="sm-item" type="button"><span data-icon="amp"></span><span class="sm-label">LANamp</span></button></li></ul>
+        </div>
+        <nav id="taskbar" style="position:relative" aria-label="Taskbar demo">
+          <button class="w98-btn" id="start-btn" type="button"><span class="start-icon" data-icon="crt"></span><b>Start</b></button>
+          <div id="tasks"><button class="w98-task" type="button"><span data-icon="irc"></span><span class="task-text">mIRC32 - [#lanparty98]</span></button><button class="w98-task" type="button" aria-pressed="true"><span data-icon="mine"></span><span class="task-text">Minesweeper</span></button></div>
+          <div id="tray"><span id="tray-hint">Tab: use the desktop</span><div id="clock">7:30 PM</div></div>
+        </nav>
+      </div>
+      <h3>Pixel icons</h3>
+      <div class="row" id="icon-grid"></div>
     </div>
   </section>
 
@@ -153,10 +191,11 @@
 </main>
 <script>
   const groups = {
-    Shell: ['w98-face','w98-light','w98-hilite','w98-shadow','w98-dark','w98-title','w98-title2','w98-desktop','w98-key'],
+    Shell: ['w98-face','w98-light','w98-hilite','w98-shadow','w98-dark','w98-title','w98-title2','w98-title-off','w98-desktop','w98-key'],
     Phosphor: ['crt-black','phosphor','phosphor-link','dos-grey','amber','toast','bsod'],
     Basement: ['basement','wood','wood-dark','carpet','ceiling','beige','beige-light','paper'],
     Brand: ['volt','volt-can','volt-yellow','nacho','nacho-navy','cheese'],
+    Apps: ['mine-1','mine-2','mine-3','mine-5','mine-6','mine-8','mine-face'],
   };
   const css = getComputedStyle(document.documentElement);
   const host = document.getElementById('colours');
@@ -172,6 +211,12 @@
     }
     host.append(grid);
   }
+</script>
+<script type="module">
+  import { icon, ICONS } from './js/icons.js';
+  document.querySelectorAll('[data-icon]').forEach((e) => { e.insertAdjacentHTML('afterbegin', icon(e.dataset.icon, Number(e.dataset.size) || 16)); e.style.display = 'inline-flex'; });
+  const grid = document.getElementById('icon-grid');
+  for (const name of Object.keys(ICONS)) grid.insertAdjacentHTML('beforeend', `<figure style="margin:0;text-align:center;font-size:var(--text-ui-xs)">${icon(name, 32)}<figcaption>${name}</figcaption></figure>`);
 </script>
 </body>
 </html>

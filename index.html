@@ -82,14 +82,24 @@
       <div class="meter"><span>SNACKS</span><div class="bar"><i id="m-snacks"></i></div></div>
       <div class="meter"><span>CASH</span><b id="m-cash" class="val">$150</b></div>
       <div class="meter"><span>SHARES</span><b id="m-shares" class="val">0/6 · 0MB</b></div>
-      <div id="clock">7:30 PM</div>
       <div id="schedule"></div>
       <div id="netstatus">Connecting to the hub...</div>
     </div>
     <div id="toast" hidden></div>
+  </div>
+
+  <!-- chat feed, visible walking or seated -->
+  <div id="chat" hidden>
+    <div id="chat-log"></div>
+    <form id="chat-form" hidden><input id="chat-input" maxlength="120" autocomplete="off" placeholder="Say something, then Enter"></form>
+  </div>
+
+  <!-- The desktop: draggable windows (IRC, LANamp and the Start menu programs) over the room.
+       Tab frees the mouse so you can use them; clicking the room takes it back. -->
+  <div id="desktop" aria-label="Desktop">
     <!-- LANamp: the music player. M shows or hides it; Z X C V B work like the real thing. -->
     <div id="lanamp" aria-label="LANamp music player">
-      <div class="amp-title"><span>LANAMP 2.0</span><b>_</b></div>
+      <div class="w98-title amp-title"><span class="w98-ttext">LANAMP 2.0</span></div>
       <div class="amp-main">
         <div class="amp-screen"><canvas id="amp-vis" width="76" height="28"></canvas><div id="amp-time">0:00</div></div>
         <div id="amp-marquee"><span id="amp-song"></span></div>
@@ -104,16 +114,21 @@
     </div>
     <!-- #lanparty98: the group's IRC channel. I toggles it. -->
     <div id="irc" class="w98-window" aria-label="IRC channel #lanparty98">
-      <div class="w98-title"><span>mIRC32 - [#lanparty98]</span><b>_</b></div>
+      <div class="w98-title"><span class="w98-ttext">mIRC32 - [#lanparty98]</span></div>
       <div id="irc-body"><div id="irc-log"></div><ul id="irc-nicks"></ul></div>
     </div>
   </div>
 
-  <!-- chat feed, visible walking or seated -->
-  <div id="chat" hidden>
-    <div id="chat-log"></div>
-    <form id="chat-form" hidden><input id="chat-input" maxlength="120" autocomplete="off" placeholder="Say something, then Enter"></form>
-  </div>
+  <div id="startmenu" role="menu" aria-label="Start menu" hidden></div>
+  <nav id="taskbar" aria-label="Taskbar">
+    <button id="start-btn" class="w98-btn" type="button" aria-haspopup="true" aria-expanded="false"><span class="start-icon"></span><b>Start</b></button>
+    <div id="tasks" role="group" aria-label="Open windows"></div>
+    <div id="tray">
+      <span id="tray-hint"></span>
+      <button id="tray-amp" type="button" aria-label="Show or hide LANamp" title="LANamp"></button>
+      <div id="clock">7:30 PM</div>
+    </div>
+  </nav>
 
   <!-- The DOS screen, laid exactly over your CRT when seated -->
   <div id="monitor" hidden>
@@ -168,6 +183,7 @@ Press any key to continue _</div>
           <tr><td><kbd>N</kbd></td><td>Voices on or off (the regulars talking and burping)</td></tr>
           <tr><td><kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd><kbd>V</kbd><kbd>B</kbd></td><td>Music: previous · play · pause · stop · next</td></tr>
           <tr><td><kbd>`</kbd></td><td>Stand up from your PC (leaves any deathmatch)</td></tr>
+          <tr><td><kbd>Tab</kbd></td><td>Free the mouse for the taskbar, Start menu and windows (click the room to get it back)</td></tr>
           <tr><td><kbd>Esc</kbd></td><td>Release the mouse</td></tr>
         </table>
         <div id="share" class="share" role="group" aria-label="Share LAN Party '98">

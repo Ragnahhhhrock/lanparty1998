@@ -36,6 +36,7 @@ Use tokens by name. Never introduce a raw hex value in CSS, canvas code or a tem
 | `--w98-title` → `--w98-title2` | `#000080` → `#1084d0` | Active title bar gradient; headline colour on grey |
 | `--w98-desktop` | `#008080` | Desktop teal (on in-world screens only) |
 | `--w98-text` | `#000000` | Text on grey |
+| `--w98-title-off` | `#5a5a5a` | Inactive title bar (white text) |
 
 ### Phosphor
 | Token | Hex | Use |
@@ -59,6 +60,9 @@ Use tokens by name. Never introduce a raw hex value in CSS, canvas code or a tem
 
 ### Brand accents
 `--volt #e2231a` (caffeine, UI red) · `--volt-can #c4161c` · `--volt-yellow #ffd400` · `--nacho #f28a1c` (snacks) · `--nacho-navy #1d1a5c` · `--cheese #ffcc00`
+
+### Apps
+`--mine-1 #0000ff` · `--mine-2 #005000` · `--mine-3 #a00000` · `--mine-5 #800000` · `--mine-6 #005050` · `--mine-8 #505050` (Minesweeper numbers: the classic hues, darkened where the originals fail AA on grey; 4 and 7 reuse `--w98-title` and `--w98-text`) · `--mine-face #ffff00` (the smiley button)
 
 **Rules**
 - Accents (Volt/Nacho) cover **under 10%** of any composition.
@@ -98,11 +102,22 @@ All defined in `css/style.css` and shown on `/styleguide.html`.
 | Meter | `.meter` > `span` + `.bar > i` | Segmented fill (7px block, 2px gap). Caffeine red, snacks orange. |
 | Share row | `.share` > `.share-label` + `.w98-btn.share-btn` | Text labels only, no network logos. Links are plain anchors with `rel="noopener noreferrer"`; status text speaks DOS ("Bad command or file name."). |
 | Support row | `.share` > `.share-label` (`SUPPORT`) + `.w98-btn.share-btn` + `.share-status` | The "Shout me a Volt Cola" donation link to Stripe Checkout. Same bevelled button as the share row: no Stripe or card logos, no red fill. Plain anchor, `rel="noopener noreferrer"`, opens in a new tab. |
+| Desktop window | `.w98-window.dwin` > `.w98-title` (`.w98-ticon`, `.w98-ttext`, `.w98-tbtns`) + `.w98-menubar` + `.dwin-body` | Windows for programs on the desktop. Programs use their Win95 captions in title case (`Minesweeper`, `Notepad`), game windows keep their own (`mIRC32 - [#lanparty98]`). Active title is the navy gradient, inactive is flat `--w98-title-off`. Minimise `_` and close `×` are real buttons. Dragged by the title bar, never resized. |
+| Menu bar and pop-ups | `.w98-menubar` > `.mb-top` > `.mb-btn` + `.w98-popup` > `.sm-item` | Raised pop-up, navy highlight with white text, a tick for checked items, key hints on the right. |
+| Taskbar | `#taskbar` (`#start-btn`, `#tasks` > `.w98-task`, `#tray`) | 28px (`--taskbar-h`) bar along the bottom. Start button, one raised button per open window (the active one pressed and bold), sunken tray with the speaker, a VT323 hint and the party clock. |
+| Start menu | `#startmenu` > `.sm-banner` + `.sm-list` | Navy banner with the VT323 words LAN Party 98, 32px icons at the top level, 16px in sub-menus, separators, a right-pointing triangle on sub-menus. |
+| Pixel icon | `icon(name, size)` in `js/icons.js` | 16x16 grids drawn in tokens only, scaled to 16 or 32 with `crispEdges`. Add new icons to that file, never as image files. |
 | Keycap | `kbd` | Name keys as they appear on a 1998 keyboard: `Esc`, `` ` ``, `W`. |
 | Prompt | `#prompt` | VT323 24px phosphor on `--hud-bg`. Verb first: "Press E to sit down". |
 | Toast | `#toast` | VT323 26px `--toast` with hard black shadow. Short, in-world. |
 | Speech bubble | in `js/avatars.js` | In-world balloon over a person's name tag: `--w98-face` with the raised bevel, black VT323 text, stepped tail pointing down. Max five lines of about 22 characters. Spoken lines only, in the voice below; noises are written as `*actions*`. |
 | CRT surface | `#monitor`, `#crt-fx` | Black glass, scanlines, vignette, faint green inner glow. |
+
+### Desktop notes
+- Layers: windows sit at `--z-window`, above the CRT but under the seated bar's controls, the taskbar at `--z-taskbar`, the Start menu at `--z-startmenu`, message boxes and the intro at `--z-dialog`.
+- The HUD, seated bar and chat clear the taskbar by `--taskbar-h`.
+- Programs never use a real brand's logo. Icons are the party's own pixel art.
+- Opened menus use the same item style everywhere (`.sm-item`). Don't add a second menu look.
 
 ## 6. Voice
 
