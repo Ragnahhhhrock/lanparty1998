@@ -594,7 +594,22 @@ const MENU = [
       { app: 'lanamp', label: 'LANamp' },
     ],
   },
-  { label: 'Documents', icon: 'doc', items: [{ label: '(Empty)', disabled: true }] },
+  {
+    label: 'Documents', icon: 'doc',
+    // Decoys: they have no app and do nothing when clicked.
+    items: [
+      { label: 'definitely not homework.doc', icon: 'doc' },
+      { label: 'Dazza owes me $20.txt', icon: 'doc' },
+      { label: 'cheat codes (DO NOT SHARE).txt', icon: 'doc' },
+      { label: 'Resume_FINAL_v7_REAL.doc', icon: 'doc' },
+      { label: 'frag list - who to camp.xls', icon: 'doc' },
+      { label: 'love letter to Jenny (unsent).doc', icon: 'doc' },
+      { label: 'Volt Cola stash inventory.xls', icon: 'doc' },
+      { label: 'Mum says be home by 10.txt', icon: 'doc' },
+      { label: 'why is my modem screaming.txt', icon: 'doc' },
+      { label: 'New Text Document (47).txt', icon: 'doc' },
+    ],
+  },
   { app: 'help', label: 'Help', icon: 'help' },
   { open: 'run', label: 'Run...', icon: 'run' },
   { sep: true },

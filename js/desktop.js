@@ -344,7 +344,8 @@ export class Desktop {
         li.append(b, this.buildList(d.items));
       } else {
         li.append(b);
-        b.addEventListener('click', () => { this.closeMenu(); this.open(d.app ?? d.open); });
+        // Entries with no app/open target are decoys (e.g. the joke files in Documents): clicking does nothing.
+        if (d.app || d.open) b.addEventListener('click', () => { this.closeMenu(); this.open(d.app ?? d.open); });
       }
       ul.append(li);
     }
