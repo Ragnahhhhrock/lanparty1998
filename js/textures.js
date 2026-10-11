@@ -222,7 +222,7 @@ export class Screen {
     const g = this.g, t = time + this.t0;
     g.save();
     // the burner PC shows its write progress while nobody is sitting at it
-    this[this.crashed ? 'bsod' : this.burn && this.free ? 'burning' : this.rts && this.free ? this.rts : this.mode]?.(g, t);
+    this[this.crashed ? 'bsod' : this.burn && this.free ? 'burning' : this.rts && this.free ? this.rts : this.rebooting ? 'bios' : this.mode]?.(g, t);
     if (this.linkDown) { // the Win98 tray balloon, big enough to read from across the room
       g.fillStyle = '#ffcc00'; g.fillRect(0, 0, W, 26);                      // --amber
       this.text(g, 'NETWORK CABLE DISCONNECTED', 8, 20, '#000000', 20);
@@ -257,8 +257,12 @@ export class Screen {
     g.fillStyle = '#c0c0c0'; g.fillRect(3, H - 19, 48, 16);
     g.font = 'bold 11px Tahoma, sans-serif'; g.fillStyle = '#000'; g.fillText('Start', 12, H - 7);
     g.font = '11px Tahoma, sans-serif'; g.fillText(this.clock || '11:42 PM', W - 52, H - 7);
-    // a dialog that never stops appearing
-    if ((t % 8) > 3) {
+    if (this.share) { // somebody got file sharing working on this one
+      g.fillStyle = '#ffcc00'; g.fillRect(16, 12 + 4 * 46, 22, 20);
+      g.font = '10px Tahoma, sans-serif'; g.fillStyle = '#fff'; g.fillText('WAREZ (shared)', 4, 44 + 4 * 46);
+    }
+    // a dialog that never stops appearing, until somebody fixes it
+    if (!this.share && (t % 8) > 3) {
       g.fillStyle = '#c0c0c0'; g.fillRect(70, 80, 190, 70);
       g.fillStyle = '#000080'; g.fillRect(72, 82, 186, 14);
       g.font = 'bold 10px Tahoma, sans-serif'; g.fillStyle = '#fff'; g.fillText('Network Neighborhood', 76, 93);

@@ -46,6 +46,35 @@ export const ANNOUNCEMENTS = [
   { id: 'late', at: NIGHT.midnight + 2 * 60 },
 ];
 
+// File sharing. You are the one who has to go round every machine and get Windows to share a folder.
+// It is fiddly, it fails, it needs a reboot, and it comes undone again.
+export const SHARE_STEPS = [
+  { text: 'Installing Client for Microsoft Networks', secs: 3 },
+  { text: 'Adding the IPX/SPX-compatible protocol', secs: 3 },
+  { text: 'Turning on File and Printer Sharing', secs: 3 },
+  { text: 'Setting the workgroup to WORKGROUP', secs: 2 },
+  { text: 'Restarting Windows', secs: 6, reboot: true },
+  { text: 'Sharing C:\\WAREZ', secs: 2 },
+];
+export const SHARE_ERRORS = [
+  'The password is incorrect for the WAREZ share.',
+  'The network path was not found. Did somebody rename the workgroup?',
+  'Windows was unable to complete the network installation. NDIS.VXD could not be loaded.',
+  'Unable to browse network. Is IPX/SPX installed?',
+  'A computer with the same name already exists on the network.',
+  'The network adapter is not responding. Check that the cable is connected.',
+];
+export const SHARE_FAIL = { coax: 0.45, hub: 0.3, switch: 0.2 }; // chance an attempt falls over, by network
+export const SHARE_BREAKS = ['Somebody installed a mouse driver.', 'The workgroup changed itself to MSHOME.', 'Windows forgot the network password.', 'Somebody renamed the computer.'];
+export const SHARE_BREAK_EVERY = [4, 8];   // game minutes between shares coming undone somewhere
+export const SWAP_MB_PER_SEC = 0.08;       // per pair of PCs sharing, per unit of network speed
+export const WAREZ = [                      // the library fills up as files go round
+  { mb: 50, name: 'FRAGPACK.ZIP' },
+  { mb: 150, name: 'MAPS98.ZIP' },
+  { mb: 300, name: 'MODS.ZIP' },
+  { mb: 650, name: 'A WHOLE CD OF STUFF' },
+];
+
 export const DISCS = {
   MIX: { name: 'MIX CD', pays: 10 },
 };
@@ -63,7 +92,11 @@ export class Party extends EventTarget {
     this.job = null;       // the burn in progress: { kind, left, total, abused }
 
     this.net = 'coax';     // coax -> hub -> (borrowed) switch
-    this.pcs = Array.from({ length: PC_COUNT }, () => ({ linkDown: false, oc: 0, heat: 0, crashed: false, hot: false, ram: RAM.start }));
+    this.pcs = Array.from({ length: PC_COUNT }, () => ({ linkDown: false, oc: 0, heat: 0, crashed: false, hot: false, ram: RAM.start, share: 'broken' }));
+    this.fixes = new Map(); // pc -> the file sharing job in progress
+    this.swapped = 0;       // MB that have gone round the network
+    this.library = 0;       // milestones reached
+    this.nextBreak = this.now + this.breakGap();
     this.buddy = { state: 'home', sticks: 0, back: 0 }; // home -> away (in Singapore) -> back (with the RAM) -> home
     this.sticks = 0;       // SIMMs in your pocket
     this.fan = { on: true, phase: 0 };
@@ -93,6 +126,86 @@ export class Party extends EventTarget {
 
   // minutes since midnight of the party day, continuing past 24:00
   clockMinutes() { return this.start + this.now; }
+
+  breakGap() { const [a, b] = SHARE_BREAK_EVERY; return a + this.rng() * (b - a); }
+
+  /* ---- file sharing: the guy who goes around ---- */
+
+  sharingCount() { return this.pcs.filter((pc) => pc.share === 'ok').length; }
+  // a PC that is both sharing and reachable, which is what counts for swapping files
+  sharing(i) { const pc = this.pcs[i]; return pc.share === 'ok' && !pc.crashed && this.pcLinkUp(i); }
+  swapRate() { // MB per second across the whole room
+    const n = this.pcs.filter((_, i) => this.sharing(i)).length;
+    return (n * (n - 1) / 2) * SWAP_MB_PER_SEC * NET[this.net].speed;
+  }
+
+  canFixShare(i) { const pc = this.pcs[i]; return pc.share === 'broken' && !pc.crashed && this.pcLinkUp(i) && !this.fixes.has(i); }
+
+  startFix(i) {
+    if (!this.canFixShare(i)) return false;
+    const failAt = this.rng() < SHARE_FAIL[this.net] ? Math.floor(this.rng() * SHARE_STEPS.length) : -1;
+    this.fixes.set(i, { step: 0, t: 0, failAt, error: null, rebooted: false });
+    this.emit('fix-start', { pc: i });
+    return true;
+  }
+
+  fixProgress(i) {
+    const f = this.fixes.get(i);
+    return f ? (f.step + f.t / SHARE_STEPS[Math.min(f.step, SHARE_STEPS.length - 1)].secs) / SHARE_STEPS.length : 0;
+  }
+  rebooting(i) { const f = this.fixes.get(i); return !!f && !f.error && !!SHARE_STEPS[f.step]?.reboot; }
+  dismissFix(i) { return this.fixes.delete(i); }
+
+  breakShare(i, why) {
+    const pc = this.pcs[i];
+    if (pc.share !== 'ok') return false;
+    pc.share = 'broken';
+    this.emit('share-broken', { pc: i, why });
+    return true;
+  }
+
+  tickShares(dt) {
+    for (const [i, f] of [...this.fixes]) {
+      if (f.error) continue;
+      if (!this.pcLinkUp(i)) { f.error = SHARE_ERRORS[5]; this.emit('fix-failed', { pc: i, error: f.error }); continue; }
+      const step = SHARE_STEPS[f.step];
+      if (step.reboot && !f.rebooted) { // the PC goes down for a restart, burner or not
+        f.rebooted = true;
+        this.emit('pc-reboot', { pc: i });
+        if (i === BURNER.pc && this.job) {
+          this.job = null;
+          this.coasters++;
+          this.emit('coaster', { reason: 'reboot' });
+        }
+      }
+      f.t += dt;
+      if (f.step === f.failAt && f.t >= step.secs * 0.5) {
+        f.error = SHARE_ERRORS[Math.floor(this.rng() * (SHARE_ERRORS.length - 1))];
+        this.emit('fix-failed', { pc: i, error: f.error });
+        continue;
+      }
+      if (f.t >= step.secs) {
+        f.step++; f.t = 0; f.rebooted = false;
+        if (f.step >= SHARE_STEPS.length) {
+          this.pcs[i].share = 'ok';
+          this.fixes.delete(i);
+          this.emit('share-ok', { pc: i });
+        }
+      }
+    }
+    // shares come undone on their own
+    if (this.now >= this.nextBreak) {
+      const ok = this.pcs.map((pc, i) => i).filter((i) => this.pcs[i].share === 'ok');
+      if (ok.length) this.breakShare(ok[Math.floor(this.rng() * ok.length)], SHARE_BREAKS[Math.floor(this.rng() * SHARE_BREAKS.length)]);
+      this.nextBreak = this.now + this.breakGap();
+    }
+    // and while enough of them work, files go round
+    this.swapped += this.swapRate() * dt;
+    while (this.library < WAREZ.length && this.swapped >= WAREZ[this.library].mb) {
+      this.emit('warez', { ...WAREZ[this.library], total: this.swapped });
+      this.library++;
+    }
+  }
 
   knockGap() { const [a, b] = FAN.knockEvery; return a + this.rng() * (b - a); }
 
@@ -174,6 +287,7 @@ export class Party extends EventTarget {
         pc.crashed = true;
         pc.hot = false;
         this.emit('crash', { pc: i });
+        this.breakShare(i, 'crash');
         if (i === BURNER.pc && this.job) { // blue screen in the middle of a write
           this.job = null;
           this.coasters++;
@@ -318,6 +432,7 @@ export class Party extends EventTarget {
   // dt in real seconds. ctx: { seatedPc } the PC the player is sitting at, or null.
   tick(dt, ctx = {}) {
     this.now += dt / SEC_PER_GAME_MIN;
+    this.tickShares(dt);
     this.tickNight();
     this.tickNetwork();
     this.tickHeat(dt);

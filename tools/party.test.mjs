@@ -1,6 +1,6 @@
 // Logic tests for js/party.js. Run: node tools/party.test.mjs
 import assert from 'node:assert/strict';
-import { Party, BURNER, DISCS, SEC_PER_GAME_MIN, SHOP, DAD, PC_COUNT, OC, HEAT, FAN, RAM, NIGHT, ANNOUNCEMENTS } from '../js/party.js';
+import { Party, BURNER, DISCS, SEC_PER_GAME_MIN, SHOP, DAD, PC_COUNT, OC, HEAT, FAN, RAM, NIGHT, ANNOUNCEMENTS, SHARE_STEPS, SHARE_FAIL, SWAP_MB_PER_SEC, WAREZ } from '../js/party.js';
 
 const run = (p, seconds, ctx = {}) => { for (let i = 0; i < seconds * 10; i++) p.tick(0.1, ctx); };
 let n = 0;
@@ -388,6 +388,136 @@ test('only PCs with 32MB can run StarCraft, so RAM matters by midnight', () => {
   assert.equal(p.canRunStarcraft(2), true);   // 32MB
   assert.equal(p.canRunStarcraft(1), false);  // still 16MB
   assert.equal(p.starcraftBoxes(), 2);
+});
+
+// ---- file sharing and the warez swap ----
+const quiet = (opts = {}) => { const p = new Party({ rng: () => 0.99, ...opts }); p.nextBreak = Infinity; p.nextKnock = Infinity; p.nextFault = Infinity; return p; };
+const fixSeconds = SHARE_STEPS.reduce((a, st) => a + st.secs, 0);
+
+test('every PC starts with file sharing broken', () => {
+  assert.ok(new Party().pcs.every((pc) => pc.share === 'broken'));
+});
+
+test('fixing sharing walks through every step and takes about nineteen seconds', () => {
+  const p = quiet();
+  assert.equal(fixSeconds, 19);
+  assert.ok(p.startFix(2));
+  run(p, fixSeconds - 2);
+  assert.equal(p.pcs[2].share, 'broken');
+  run(p, 4);
+  assert.equal(p.pcs[2].share, 'ok');
+  assert.equal(p.fixes.size, 0);
+});
+
+test('an attempt can fall over part way, with a DOS-grade error, and you have to try again', () => {
+  const p = new Party({ rng: () => 0.01 });  // always fails, at the first step
+  p.nextBreak = Infinity;
+  p.startFix(1);
+  run(p, 5);
+  const f = p.fixes.get(1);
+  assert.ok(f.error, 'failed');
+  assert.equal(p.pcs[1].share, 'broken');
+  p.dismissFix(1);
+  assert.ok(p.canFixShare(1), 'try again');
+});
+
+test('coax falls over more often than a switch', () => {
+  assert.ok(SHARE_FAIL.coax > SHARE_FAIL.hub && SHARE_FAIL.hub > SHARE_FAIL.switch);
+});
+
+test('you cannot fix sharing on a PC with no link, or a blue screened one', () => {
+  const p = quiet();
+  p.dropLink(0, 'loose');
+  assert.equal(p.canFixShare(3), false, 'coax is down for everyone');
+  p.fixLink(0);
+  p.pcs[3].crashed = true;
+  assert.equal(p.canFixShare(3), false);
+  assert.equal(p.canFixShare(4), true);
+});
+
+test('the cable coming out in the middle of a fix fails it', () => {
+  const p = quiet();
+  p.setNet('hub');
+  p.startFix(2);
+  run(p, 4);
+  p.dropLink(2, 'tripped');
+  run(p, 1);
+  assert.ok(p.fixes.get(2).error);
+});
+
+test('restarting Windows on PC-04 while it is burning makes a coaster', () => {
+  const p = quiet();
+  p.startBurn();
+  p.startFix(BURNER.pc);
+  run(p, 3 + 3 + 3 + 2 + 1);
+  assert.equal(p.job, null);
+  assert.equal(p.coasters, 1);
+});
+
+test('fixing any other PC leaves the burn alone', () => {
+  const p = quiet();
+  p.startBurn();
+  p.startFix(0);
+  run(p, fixSeconds + 1);
+  assert.ok(p.job);
+});
+
+test('nothing swaps until two PCs are sharing', () => {
+  const p = quiet();
+  p.pcs[0].share = 'ok';
+  run(p, 100);
+  assert.equal(p.swapped, 0);
+  p.pcs[1].share = 'ok';
+  run(p, 100);
+  assert.ok(Math.abs(p.swapped - 100 * SWAP_MB_PER_SEC) < 1e-6, 'one pair on coax');
+});
+
+test('more PCs and a faster network swap much faster', () => {
+  const a = quiet(); const b = quiet(); b.setNet('switch');
+  for (const p of [a, b]) for (let i = 0; i < 6; i++) p.pcs[i].share = 'ok';
+  assert.equal(a.swapRate(), 15 * SWAP_MB_PER_SEC);
+  assert.equal(b.swapRate(), 15 * SWAP_MB_PER_SEC * 10);
+});
+
+test('a PC with its cable out stops swapping', () => {
+  const p = quiet();
+  p.setNet('hub');
+  for (let i = 0; i < 3; i++) p.pcs[i].share = 'ok';
+  const before = p.swapRate();
+  p.dropLink(0, 'tripped');
+  assert.ok(p.swapRate() < before);
+  assert.equal(p.swapRate(), 1 * SWAP_MB_PER_SEC * 3);
+});
+
+test('shares come undone on their own, one at a time', () => {
+  const p = new Party({ rng: () => 0.5 });
+  p.nextKnock = Infinity; p.nextFault = Infinity;
+  for (let i = 0; i < 6; i++) p.pcs[i].share = 'ok';
+  const gone = [];
+  p.addEventListener('share-broken', (e) => gone.push(e.detail.pc));
+  run(p, 400);
+  assert.ok(gone.length >= 3 && gone.length <= 6, `${gone.length} broke in 400s`);
+});
+
+test('a blue screen takes the share with it', () => {
+  const p = quiet();
+  p.nextKnock = Infinity;
+  p.pcs[0].share = 'ok';
+  p.setOverclock(0, 2);
+  p.setFan(false);
+  run(p, 140);
+  assert.equal(p.pcs[0].crashed, true);
+  assert.equal(p.pcs[0].share, 'broken');
+});
+
+test('the library fills up in milestones as files go round', () => {
+  const p = quiet();
+  p.setNet('switch');
+  for (let i = 0; i < 6; i++) p.pcs[i].share = 'ok';
+  const names = [];
+  p.addEventListener('warez', (e) => names.push(e.detail.name));
+  run(p, 400);
+  assert.deepEqual(names, WAREZ.map((w) => w.name));
 });
 
 console.log(`${n} passed`);

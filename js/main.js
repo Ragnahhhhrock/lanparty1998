@@ -7,13 +7,13 @@ import { RoomLink, ROOM_NAME } from './net.js';
 import { Crowd, spawnNpc } from './avatars.js';
 import * as sfx from './sfx.js';
 import { analytics } from './analytics.js';
-import { Party, BURNER, DISCS, NET, SHOP, PC_COUNT, OC, HEAT, RAM, NIGHT, SEC_PER_GAME_MIN, celsius } from './party.js';
+import { Party, BURNER, DISCS, NET, SHOP, PC_COUNT, OC, HEAT, RAM, NIGHT, SEC_PER_GAME_MIN, SHARE_STEPS, celsius } from './party.js';
 import * as dialog from './dialog.js';
 
 const $ = (id) => document.getElementById(id);
 const ui = {
   intro: $('intro'), enter: $('enter-btn'), hud: $('hud'), prompt: $('prompt'), toast: $('toast'),
-  caffeine: $('m-caffeine'), snacks: $('m-snacks'), cash: $('m-cash'), clock: $('clock'), schedule: $('schedule'),
+  caffeine: $('m-caffeine'), snacks: $('m-snacks'), cash: $('m-cash'), shares: $('m-shares'), clock: $('clock'), schedule: $('schedule'),
   monitor: $('monitor'), dos: $('dos'), dust: $('dust'), bsod: $('bsod'),
   seatedBar: $('seated-bar'), stand: $('stand-btn'), drink: $('drink-btn'), eat: $('eat-btn'), seatedStatus: $('seated-status'),
   handle: $('handle'), netstatus: $('netstatus'),
@@ -174,7 +174,7 @@ function openErrand(spec) {
 
 const clockText = (secs) => `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
 
-// F at a PC: the case comes off. The cable lives here for now; more goes in as the night goes on.
+// F at a PC: the case comes off. Cable, RAM, CPU, and the file sharing you keep having to fix.
 function openPcMenu(station) {
   const i = station.index;
   openErrand({
@@ -182,8 +182,12 @@ function openPcMenu(station) {
     render: () => {
       const buttons = [];
       const lines = [];
-      const culprit = party.pcs[i].linkDown;
-      if (culprit) {
+      const pc = party.pcs[i];
+      const who = link.occupant(i);
+      if (who) return { lines: [`${who.name} is sitting at this PC. Leave the case alone.`], progress: null, buttons: [{ label: 'Close' }] };
+
+      // the cable
+      if (pc.linkDown) {
         lines.push(party.net === 'coax' ? 'The T-connector on the back of this box has come loose.' : 'The network lead has been pulled out of the back of this box.');
         buttons.push({ label: party.net === 'coax' ? 'Re-seat the T-connector' : 'Plug the lead back in', run: () => party.fixLink(i), keep: true });
       } else if (!party.pcLinkUp(i)) {
@@ -191,15 +195,32 @@ function openPcMenu(station) {
       } else {
         lines.push(`${NET[party.net].label}: link light is on.`);
       }
-      const pc = party.pcs[i];
+
+      // file sharing: the job that never ends
+      const fix = party.fixes.get(i);
       let progress = null;
+      if (pc.share === 'ok') lines.push('File sharing: C:\\WAREZ is shared.');
+      else if (fix?.error) {
+        lines.push(`NETWORK.CPL: ${fix.error}`);
+        buttons.push({ label: 'Try again', run: () => { party.dismissFix(i); party.startFix(i); }, keep: true });
+      } else if (fix) {
+        lines.push(`NETWORK.CPL: ${SHARE_STEPS[fix.step].text}...`);
+        progress = party.fixProgress(i);
+      } else {
+        lines.push('File sharing: off. Network Neighborhood says "Unable to browse network."');
+        buttons.push({ label: 'Fix file sharing', disabled: !party.canFixShare(i), run: () => party.startFix(i), keep: true });
+      }
+
+      // memory
       lines.push(`RAM: ${pc.ram}MB.${pc.ram >= RAM.max ? ' Every slot is full.' : ''}`);
       if (party.canFitRam(i)) buttons.push({ label: `Fit a ${RAM.stick}MB SIMM (${party.sticks} in your pocket)`, run: () => party.fitRam(i), keep: true });
       else if (pc.ram < RAM.max && party.buddy.state === 'away') lines.push(`Macca's RAM lands in about ${clockText(party.buddySecondsLeft())}.`);
+
+      // processor and heat
       if (pc.crashed) lines.push('This box has blue screened. Sit down and press a key.');
       else {
         lines.push(`CPU: ${OC[pc.oc].label}. Case temperature ${celsius(pc.heat)}°C${party.fan.on ? '' : ', and the fan is off'}.`);
-        progress = pc.heat / HEAT.crash;
+        if (progress === null && (pc.oc > 0 || pc.heat > 0)) progress = pc.heat / HEAT.crash;
         const next = OC[(pc.oc + 1) % OC.length];
         buttons.push({ label: pc.oc === OC.length - 1 ? `Put the jumpers back (${next.mhz}MHz)` : `Move the jumpers (${next.mhz}MHz)`, run: () => party.cycleOverclock(i), keep: true });
       }
@@ -594,6 +615,7 @@ function frame() {
     ui.clock.textContent = `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
     for (const s of room.screens) s.clock = ui.clock.textContent;
     ui.schedule.textContent = scheduleText();
+    ui.shares.textContent = `${party.sharingCount()}/${PC_COUNT} · ${Math.floor(party.swapped)}MB`;
     ui.caffeine.style.width = `${stats.caffeine}%`;
     ui.snacks.style.width = `${stats.snacks}%`;
     ui.dust.style.opacity = (stats.dust * 0.9).toFixed(2);
@@ -637,6 +659,8 @@ function refreshLinks() {
     st.screen.crashed = party.pcs[i].crashed;
     st.screen.oc = party.pcs[i].oc;
     st.screen.ram = party.pcs[i].ram;
+    st.screen.share = party.pcs[i].share === 'ok';
+    st.screen.rebooting = party.rebooting(i);
     st.screen.rts = party.phase() === 'rts' ? (party.canRunStarcraft(i) ? 'starcraft' : 'nomem') : null;
   });
   setNetStatus();
@@ -693,6 +717,21 @@ party.addEventListener('announce', (e) => {
     refreshLinks();
   }
 });
+const SHARE_FAIL_QUIPS = ['Again.', 'Of course.', 'It worked on the other one.'];
+party.addEventListener('share-ok', (e) => {
+  const n = party.sharingCount();
+  const msg = `${room.stations[e.detail.pc].name}: C:\\WAREZ is shared. ${n} of ${PC_COUNT} PCs on the network.`;
+  toast(msg); chatLine(msg, true);
+  refreshLinks();
+});
+party.addEventListener('share-broken', (e) => { chatLine(`${room.stations[e.detail.pc].name} lost its share. ${e.detail.why === 'crash' ? 'The blue screen took it.' : e.detail.why}`, true); refreshLinks(); });
+party.addEventListener('fix-start', refreshLinks);
+party.addEventListener('pc-reboot', refreshLinks);
+party.addEventListener('fix-failed', (e) => {
+  if (dialog.isOpen()) { refreshLinks(); return; } // you can see it
+  chatLine(`${room.stations[e.detail.pc].name}: ${e.detail.error} ${SHARE_FAIL_QUIPS[party.tripped % SHARE_FAIL_QUIPS.length]}`, true);
+});
+party.addEventListener('warez', (e) => chatLine(`${e.detail.name}: ${Math.floor(e.detail.total)}MB has gone round the network.`, true));
 party.addEventListener('buddy-away', (e) => {
   macca.group.visible = false;
   toast("Macca's off to Singapore.");
@@ -729,7 +768,7 @@ party.addEventListener('burn-done', (e) => {
   chatLine(`The CD-R finally spat out a ${DISCS[e.detail.kind].name}. +$${e.detail.pays}.`, true);
 });
 party.addEventListener('coaster', (e) => {
-  const why = { underrun: 'Buffer underrun. That one is a coaster.', crash: 'PC-04 blue screened mid-write. Coaster.' }[e.detail.reason] ?? 'Write cancelled. That disc is a coaster now.';
+  const why = { underrun: 'Buffer underrun. That one is a coaster.', crash: 'PC-04 blue screened mid-write. Coaster.', reboot: 'Windows restarted on PC-04 mid-write. Coaster.' }[e.detail.reason] ?? 'Write cancelled. That disc is a coaster now.';
   toast(why);
   chatLine(why, true);
 });
