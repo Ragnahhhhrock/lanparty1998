@@ -4,8 +4,9 @@ import * as THREE from 'three';
 import { buildRoom, ROOM } from './room.js';
 import { DosPC } from './emulator.js';
 import { RoomLink, ROOM_NAME } from './net.js';
-import { Crowd, spawnNpc, spawnTaped } from './avatars.js';
+import { Crowd, spawnNpc, spawnTaped, setEye } from './avatars.js';
 import * as sfx from './sfx.js';
+import * as voices from './voices.js';
 import { analytics } from './analytics.js';
 import { Party, PIZZA, BURNER, DISCS, NET, SHOP, PC_COUNT, OC, HEAT, RAM, NIGHT, SEC_PER_GAME_MIN, SHARE_STEPS, celsius } from './party.js';
 import * as dialog from './dialog.js';
@@ -47,6 +48,7 @@ const room = buildRoom(scene);
 const pc = new DosPC(ui.dos);
 const link = new RoomLink();
 const crowd = new Crowd(scene, room.stations);
+setEye(camera.position); // speech bubbles grow with distance so they stay readable
 const GAME_START = NIGHT.doors; // 7:30 PM
 const party = new Party({ startMinutes: GAME_START });
 
@@ -70,6 +72,8 @@ const regulars = [
   return a;
 });
 room.colliders.push({ minX: -4.65, maxX: -4.15, minZ: -2.15, maxZ: -1.65 });
+// who is standing where, by IRC nick, so what they say in the channel comes out of their mouths
+const speakers = new Map([macca, ...regulars].map((a) => [a.name.toLowerCase(), a]));
 
 /* ---------- state ---------- */
 let mode = 'intro'; // intro | walk | tween | seated | dialog
@@ -128,6 +132,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyT') { e.preventDefault(); openChat(); return; }
   if (e.code === 'KeyI') { ircBox.classList.toggle('off'); return; }
   if (e.code === 'KeyM') { $('lanamp').classList.toggle('off'); return; }
+  if (e.code === 'KeyN') { toast(voices.toggle() ? 'Voices on.' : 'Voices off.'); return; }
   if (amp?.keys[e.code]) { amp.keys[e.code](); return; }
   keys.add(e.code);
   if (e.code === 'KeyE' && target) interact(target);
@@ -723,10 +728,18 @@ function startMusic() {
 /* ---------- #lanparty98: the group's IRC channel ---------- */
 const ircBox = $('irc');
 const irc = new IrcView(ircBox, [...REGULARS, 'YOU']);
-const banter = new Banter({ me: 'YOU' });
+const banter = new Banter({ me: 'YOU', bodies: [...speakers.values()].map((a) => a.name) });
 const ircStamp = () => { const t = ui.clock.textContent.split(' ')[0]; return t; };
 const ircSay = (nick, text) => irc.add(nick, text, ircStamp());
 const ircNote = (text) => irc.note(text, ircStamp());
+// a regular says something: it goes in the channel, in a bubble over their head, and sometimes out loud
+function ircSpeak({ nick, text, fx }) {
+  ircSay(nick, text);
+  const a = speakers.get(nick.toLowerCase());
+  if (!a || !a.group.visible) return; // Dazza is on the phone and Macca is in Singapore: channel only
+  a.say(text);
+  voices.hear(nick, text, fx, player.pos.distanceTo(a.group.position));
+}
 ircNote('Now talking in #lanparty98');
 for (const m of banter.prefill(14)) ircSay(m.nick, m.text); // the window starts full, mid-argument
 function ircMe(name) { // you picked a handle: you're in the channel too
@@ -745,7 +758,7 @@ function frame() {
   crowd.update(dt, link.players);
   room.updateFan(dt, party.fan.on, party.fanSweep());
   room.door.update(dt);
-  if (mode !== 'intro') for (const m of banter.tick(dt)) ircSay(m.nick, m.text);
+  if (mode !== 'intro') for (const m of banter.tick(dt)) ircSpeak(m);
   const groove = music?.level() ?? 0, bpm = music?.track.bpm ?? 120;
   amp?.update(dt);
   stepHandSlice(dt);
@@ -1080,6 +1093,7 @@ link.addEventListener('chat', (e) => {
   const p = e.detail.id === link.me?.id ? link.me : link.players.get(e.detail.id);
   chatLine(`<b style="color:${esc(p?.color ?? '#fff')}">${esc(e.detail.name)}:</b> ${esc(e.detail.text)}`);
   ircSay(e.detail.name, e.detail.text);
+  crowd.say(e.detail.id, e.detail.text); // their bubble, for everyone else in the room
   banter.heard(e.detail.name, e.detail.text);
 });
 

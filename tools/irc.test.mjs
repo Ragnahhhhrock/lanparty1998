@@ -1,6 +1,6 @@
 // node tools/irc.test.mjs: the #lanparty98 banter engine, with a seeded rng.
 import assert from 'node:assert/strict';
-import { Banter, REGULARS } from '../js/irc.js';
+import { Banter, REGULARS, SCENES } from '../js/irc.js';
 
 const seeded = (seed) => () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
 let n = 0;
@@ -45,5 +45,40 @@ test('shouting gets a complaint', () => {
   const b = new Banter({ rng: () => 0.1 });
   b.heard('YOU', 'HELLO EVERYONE');
   assert.ok(b.tick(10).some((m) => m.text.includes('INDOOR VOICE')));
+});
+test('every scene is well formed', () => {
+  for (const sc of SCENES) {
+    assert.ok(sc.length >= 3);
+    for (const [role, text, fx] of sc) {
+      assert.ok('abc'.includes(role) && text.length > 1);
+      assert.ok(!text.includes('!'), text);
+      if (fx) { assert.ok(['fart', 'burp', 'laugh', 'snort'].includes(fx)); assert.ok(text.startsWith('*'), text); } // noises are actions
+    }
+  }
+});
+test('a scene has three different people, all standing in the room', () => {
+  const bodies = ['Macca', 'xX_Ghoul_Xx', 'PhatBass', 'K-Rad'];
+  for (let seed = 1; seed < 40; seed++) {
+    const b = new Banter({ rng: seeded(seed), bodies });
+    b.next = 1e9; // only the scene, no other chatter
+    const secs = b.scene();
+    const msgs = b.tick(secs + 1);
+    assert.ok(msgs.length >= 3 && secs > 4);
+    assert.ok(msgs.every((m) => bodies.includes(m.nick) && !/\{\w\}/.test(m.text)));
+    assert.ok(new Set(msgs.map((m) => m.nick)).size >= 2);
+  }
+});
+test('the noises come through on the messages', () => {
+  const fx = new Set();
+  const b = new Banter({ rng: seeded(11) });
+  for (let i = 0; i < 40; i++) { b.scene(); for (const m of b.tick(60)) if (m.fx) fx.add(m.fx); }
+  assert.deepEqual([...fx].sort(), ['burp', 'fart', 'laugh', 'snort']);
+});
+test('most of the chatter is scenes', () => {
+  const b = new Banter({ rng: seeded(5) });
+  let scenes = 0;
+  const orig = b.scene.bind(b); b.scene = () => { scenes++; return orig(); };
+  for (let i = 0; i < 100; i++) b.line();
+  assert.ok(scenes > 45 && scenes < 75, String(scenes));
 });
 console.log(`${n} passed`);

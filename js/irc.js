@@ -1,6 +1,8 @@
 // #lanparty98: the IRC channel the whole group has open on the side. The regulars (bots) tell
 // dumb jokes, mock each other and mock whoever just did something dumb in the room.
 // Banter is DOM-free so it can be tested; IrcView draws the mIRC-style window.
+// Most of what they say is teenage-boy stuff (burps, farts, your mum). The same lines come out of
+// their mouths as speech bubbles in the room; a line tagged with an fx also plays that noise.
 
 export const REGULARS = ['Dazza', 'xX_Ghoul_Xx', 'PhatBass', 'n00bslayer', 'K-Rad', 'Macca'];
 
@@ -148,14 +150,44 @@ const LAUGHS = [
   'hehehe poor {t}. no really. so poor',
 ];
 
+// Short scenes for three of the regulars: [role, text, fx]. {a} {b} {c} are the speakers' nicks.
+// An fx (fart, burp, laugh, snort) only goes on a line that is an action in *stars*, so the
+// noise is what you hear and the stars are what you read.
+export const SCENES = [
+  [['a', '*pffffbbbt*', 'fart'], ['b', '{a} DUDE'], ['c', '{a} that was not a smell. that was a weather event'], ['a', 'silent but deadly. except not silent']],
+  [['a', 'watch this'], ['a', '*BUUUURRRP*', 'burp'], ['b', 'ok that went for 9 seconds. new record'], ['c', 'I felt that in my teeth']],
+  [['a', '{b} your mum is so fat her ping is 800ms'], ['b', 'your mum is so dumb she tried to install doom on a toaster'], ['c', 'ooooooh'], ['a', 'that does not even make sense'], ['b', 'neither does your face']],
+  [['a', '{b} you have cheese dust all over your face'], ['b', 'it is war paint'], ['c', 'it is evidence. it is on your keyboard too']],
+  [['a', 'I bet you ten bucks you cannot burp the alphabet'], ['b', 'watch me. A. B. C. D'], ['b', '*BRRRUUURRP*', 'burp'], ['a', 'that was a D at best'], ['c', 'it smelled like a B']],
+  [['a', 'pull my finger'], ['b', 'no'], ['a', 'pull it'], ['b', 'I said no'], ['a', '*pbbbbbt*', 'fart'], ['c', 'I am leaving. I am moving to another basement']],
+  [['a', '{b} take your shoes off and I will end you'], ['b', 'my feet are not that bad'], ['c', 'the carpet is dying {b}. look at it. it is dying']],
+  [['a', '{b} says he has a girlfriend. she lives in canada'], ['b', 'she is real. she is on icq'], ['c', 'what is her name then'], ['b', 'I forgot. it is a long name'], ['a', '*hehehehehe*', 'laugh']],
+  [['a', 'brb. the nachoz did not agree with me'], ['b', 'do not use the good toilet. mum just did a number in it'], ['c', 'just go in the garden. the hedge is free']],
+  [['a', 'I ate six nachoz and a whole pizza. I am a god'], ['a', '*uuurrp*', 'burp'], ['b', 'you are a god of the carpet'], ['c', 'put a bucket by the chair']],
+  [['a', '{b} I will give you a wedgie so big you will see the ceiling'], ['b', 'try it. I am wearing the strong undies'], ['c', 'fight fight fight'], ['a', 'nah. I cannot be bothered. I am too comfy']],
+  [['a', 'volt cola up the nose. watch'], ['a', '*pffft ow ow ow*', 'snort'], ['b', 'you are an idiot. it burns for like an hour'], ['c', 'do it again']],
+  [['a', '{b} said hard drive'], ['a', '*hehehehe*', 'laugh'], ['b', 'grow up'], ['a', 'never']],
+  [['a', 'who has the smelly socks. I can taste them'], ['b', 'it is {c}. it is always {c}'], ['c', 'they are not smelly. they are seasoned']],
+  [['a', '{b} your voice just went squeaky'], ['b', 'it did not'], ['b', 'it is the cold in here'], ['c', 'it is called puberty mate'], ['a', '*snrk*', 'laugh']],
+  [['a', 'I put a whoopee cushion on the good chair'], ['b', 'where did you even get one'], ['a', 'the shop. I have been planning this for weeks'], ['c', '{b} go sit on the good chair. go on'], ['b', '*PFFFRRRT*', 'fart'], ['c', '*HAHAHAHAHA*', 'laugh'], ['a', 'worth it']],
+  [['a', '{b} double dare you to lick the ethernet cable'], ['b', 'no'], ['c', 'I will give you two dollars'], ['b', 'make it five and a nachoz'], ['a', 'deal']],
+  [['a', 'what is smellier. {b} or the hub'], ['c', 'the hub. no wait. {b}. it is {b}'], ['b', 'I hate you both']],
+  [['a', 'I just burped and it tasted like pizza'], ['a', '*burp*', 'burp'], ['b', 'mate that is just old pizza. from last week'], ['c', 'that is a science experiment now']],
+  [['a', '{b} what is that on your shirt'], ['b', 'it is sauce'], ['c', 'it has been sauce since tuesday'], ['b', 'it is a vintage sauce']],
+  [['a', '*ppft*', 'fart'], ['a', 'I have armed the beanbag'], ['b', 'nobody sit in the beanbag'], ['c', 'too late. I am in it. oh no. oh nooo']],
+];
+
 const pick = (arr, rng) => arr[Math.floor(rng() * arr.length)];
 const fill = (s, vars) => s.replace(/\{(\w)\}/g, (_, k) => vars[k] ?? '');
 
 export class Banter {
-  constructor({ rng = Math.random, me = 'YOU', nicks = REGULARS } = {}) {
+  // bodies: the nicks that are standing in the room, so their scenes can be seen and heard there
+  constructor({ rng = Math.random, me = 'YOU', nicks = REGULARS, bodies = nicks } = {}) {
     this.rng = rng;
     this.me = me;
     this.nicks = [...nicks];
+    this.bodies = [...bodies];
+    this.lastScene = -1;
     this.queue = [];      // { at, nick, text }
     this.now = 0;
     this.last = null;
@@ -166,7 +198,7 @@ export class Banter {
   // anyone to pick on: the regulars plus whoever's playing
   victims(except) { return [...this.others(except), this.me].filter((n) => n !== except); }
 
-  say(nick, text, delay = 0) { this.queue.push({ at: this.now + delay, nick, text }); }
+  say(nick, text, delay = 0, fx) { this.queue.push({ at: this.now + delay, nick, text, ...(fx && { fx }) }); }
 
   // a regular roasts another regular's play, the target hits back, a third laughs
   duel() {
@@ -179,6 +211,26 @@ export class Banter {
     this.say(c, fill(pick(LAUGHS, this.rng), { t: b }), 3.5 + this.rng() * 2);
     if (this.rng() < 0.5) this.say(a, fill(pick(LAUGHS, this.rng), { t: b }), 5.5 + this.rng() * 2);
     if (this.rng() < 0.4) this.say(b, fill(pick(COMEBACKS, this.rng), { t: c }), 6 + this.rng() * 2);
+    return 8;
+  }
+
+  // three regulars act out a short immature scene; returns how many seconds it runs
+  scene() {
+    const pool = this.bodies.length >= 3 ? this.bodies : this.nicks;
+    const a = pick(pool.filter((n) => n !== this.last), this.rng);
+    const b = pick(pool.filter((n) => n !== a), this.rng);
+    const c = pick(pool.filter((n) => n !== a && n !== b), this.rng);
+    this.last = a;
+    let i;
+    do { i = Math.floor(this.rng() * SCENES.length); } while (i === this.lastScene);
+    this.lastScene = i;
+    const who = { a, b, c };
+    let t = 0;
+    for (const [role, text, fx] of SCENES[i]) {
+      this.say(who[role], fill(text, who), t, fx);
+      t += 1.7 + this.rng() * 1.3 + (fx ? 0 : text.length * 0.02);
+    }
+    return t;
   }
 
   // enough lines to fill the window on load, oldest first
@@ -193,16 +245,20 @@ export class Banter {
 
   // a line from a regular; mostly a duel, sometimes a mock at somebody, maybe followed by a reply
   line() {
+    if (this.rng() < 0.6) return this.scene();
     if (this.rng() < 0.7) return this.duel();
     const nick = pick(this.others(this.last), this.rng);
     this.last = nick;
     const mock = this.rng() < 0.4;
     const t = pick(this.victims(nick), this.rng), a = pick(this.others(nick), this.rng);
     this.say(nick, fill(pick(mock ? MOCKS : IDLE, this.rng), { t, a }));
+    let end = 2;
     if (this.rng() < 0.55) {
       const r = pick(this.others(nick), this.rng);
-      this.say(r, fill(pick(REPLIES, this.rng), { t: nick }), 1.5 + this.rng() * 3);
+      end = 1.5 + this.rng() * 3;
+      this.say(r, fill(pick(REPLIES, this.rng), { t: nick }), end);
     }
+    return end;
   }
 
   // something happened in the room: a couple of regulars pile on
@@ -229,7 +285,7 @@ export class Banter {
   // advance time; returns the messages due now
   tick(dt) {
     this.now += dt;
-    if ((this.next -= dt) <= 0) { this.line(); this.next = 4 + this.rng() * 5; }
+    if ((this.next -= dt) <= 0) { const end = this.line(); this.next = Math.max(4 + this.rng() * 5, end + 2 + this.rng() * 3); } // wait for the scene to finish
     const due = this.queue.filter((m) => m.at <= this.now).sort((x, y) => x.at - y.at);
     this.queue = this.queue.filter((m) => m.at > this.now);
     return due;

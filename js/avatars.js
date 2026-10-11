@@ -524,6 +524,61 @@ function label(name, color) {
   return s;
 }
 
+/* ---------- speech bubbles ----------
+   A Win98 balloon above the name tag: grey face, bevel, black VT323 text, a stepped tail pointing down.
+   Drawn at 2x so it stays sharp up close. Colours are tokens (--w98-face/-light/-hilite/-shadow/-dark/-text). */
+const BUB = { S: 2, font: 20, line: 17, pad: 6, maxW: 176, tail: 6, maxLines: 5, perM: 190 }; // perM: logical px per metre
+let eye = null; // the camera's position, so far-off bubbles can grow to stay readable
+export const setEye = (v) => { eye = v; };
+
+function wrapText(g, text, maxW, maxLines) {
+  const lines = [];
+  let cur = '';
+  for (let word of text.split(/\s+/)) {
+    while (g.measureText(word).width > maxW) { // a word wider than the bubble: break it
+      let n = word.length - 1;
+      while (n > 1 && g.measureText(word.slice(0, n)).width > maxW) n--;
+      if (cur) { lines.push(cur); cur = ''; }
+      lines.push(word.slice(0, n)); word = word.slice(n);
+    }
+    const next = cur ? `${cur} ${word}` : word;
+    if (g.measureText(next).width > maxW && cur) { lines.push(cur); cur = word; } else cur = next;
+  }
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) { lines.length = maxLines; lines[maxLines - 1] = lines[maxLines - 1].replace(/.{0,2}$/, '..'); }
+  return lines;
+}
+
+function bubbleCanvas(text) {
+  const { S, font, line, pad, maxW, tail, maxLines } = BUB;
+  const c = document.createElement('canvas');
+  let g = c.getContext('2d');
+  g.font = `${font * S}px "VT323", monospace`;
+  const lines = wrapText(g, text, maxW * S, maxLines);
+  const textW = Math.max(...lines.map((l) => g.measureText(l).width)) / S;
+  const w = Math.ceil(textW) + pad * 2 + 4, h = lines.length * line + pad * 2 + 2;
+  c.width = w * S; c.height = (h + tail) * S;
+  g = c.getContext('2d');
+  g.scale(S, S);
+  const r = (col, x, y, rw, rh) => { g.fillStyle = col; g.fillRect(x, y, rw, rh); };
+  r('#0a0a0a', 0, 0, w, h);          // --w98-dark
+  r('#ffffff', 0, 0, w - 1, h - 1);  // --w98-light
+  r('#808080', 1, 1, w - 2, h - 2);  // --w98-shadow
+  r('#dfdfdf', 1, 1, w - 3, h - 3);  // --w98-hilite
+  r('#c0c0c0', 2, 2, w - 4, h - 4);  // --w98-face
+  const cx = Math.floor(w / 2);
+  for (let i = 0; i < tail; i++) {   // the tail: dark steps with a grey middle
+    r('#0a0a0a', cx - tail + i, h - 1 + i, (tail - i) * 2, 1);
+    if (i === 0) r('#c0c0c0', cx - tail + 1, h - 1, (tail - 1) * 2, 1);
+    else if (tail - i > 1) r('#c0c0c0', cx - tail + i + 1, h - 1 + i, (tail - i) * 2 - 2, 1);
+  }
+  g.font = `${font}px "VT323", monospace`;
+  g.textBaseline = 'alphabetic';
+  g.fillStyle = '#000000';           // --w98-text
+  lines.forEach((l, i) => g.fillText(l, 2 + pad, 2 + pad + (i + 1) * line - 4));
+  return { canvas: c, w, h: h + tail };
+}
+
 const EAT = { raise: 0.8, bite: 0.7, lower: 0.7, total: 0.8 + 3 * 0.7 + 0.7 };
 // a slice of pepperoni pizza in the hand: crust, cheese and a pepperoni, all token colours
 function sliceMesh() {
@@ -547,6 +602,8 @@ class Avatar extends EventTarget {
   constructor(player, force, override) {
     super();
     this.id = player.id;
+    this.name = player.name;
+    this.bubble = null; // { sprite, mat, tex, w, h, t, life } while they're talking
     this.group = new THREE.Group();
     this.look = Object.assign(lookFor(player.id ?? player.name, { force, shirt: player.color }), override);
     const b = buildBody(this.look);
@@ -629,6 +686,42 @@ class Avatar extends EventTarget {
     if (T >= D) { this.eatT = -1; upper.rotation.x = this.armBase; fore.rotation.x = 0; this.slice.visible = false; this.setMouth(0); this.dispatchEvent?.(new Event('ate')); }
   }
 
+  // Say something out loud: a speech bubble over the name tag for a few seconds.
+  say(text) {
+    this.clearBubble();
+    const { canvas, w, h } = bubbleCanvas(text);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.generateMipmaps = false; tex.minFilter = THREE.LinearFilter;
+    const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
+    const sprite = new THREE.Sprite(mat);
+    sprite.center.set(0.5, 0); // the tail's tip sits on the point we position
+    sprite.renderOrder = 11;
+    this.group.add(sprite);
+    this.bubble = { sprite, mat, tex, w, h, t: 0, life: Math.min(7, 2.6 + text.length * 0.05) };
+    this.stepBubble(0);
+  }
+  clearBubble() {
+    const b = this.bubble;
+    if (!b) return;
+    this.group.remove(b.sprite);
+    b.tex.dispose(); b.mat.dispose();
+    this.bubble = null;
+    if (this.eatT < 0) this.setMouth(0);
+  }
+  stepBubble(dt) {
+    const b = this.bubble;
+    if (!b) return;
+    if ((b.t += dt) >= b.life) { this.clearBubble(); return; }
+    // the mouth flaps while they talk (the bite animation owns it while they eat)
+    if (this.eatT < 0) this.setMouth(0.1 + Math.abs(Math.sin(b.t * 13 + this.name.length)) * Math.abs(Math.sin(b.t * 5.3)) * 0.8);
+    // natural size up close; beyond 3m it grows with distance (up to 2.2x) so the text stays readable
+    const k = eye ? Math.min(2.2, Math.max(1, eye.distanceTo(this.group.position) / 3)) : 1;
+    b.sprite.scale.set(b.w / BUB.perM * k, b.h / BUB.perM * k, 1);
+    b.sprite.position.y = this.tag.position.y + 0.1;
+    b.mat.opacity = Math.min(1, (b.life - b.t) / 0.4);
+  }
+
   setSeat(seat) {
     this.seat = seat; // { pos: Vector3 (chair, floor level), yaw } or null
     const sitting = !!seat;
@@ -642,6 +735,7 @@ class Avatar extends EventTarget {
   update(dt, player) {
     this.stepEat(dt);
     this.stepFace(dt);
+    this.stepBubble(dt);
     if (this.seat) return;
     this.target.set(player.x, 0, player.z);
     const before = this.group.position.clone();
@@ -671,7 +765,8 @@ export function spawnNpc(scene, { name, color, x, z, yaw, arch, look }) {
   let lastT = t0();
   a.idle = (t, groove = 0, bpm = 120) => {
     const dt = Math.min(0.1, Math.max(0, t - lastT)); lastT = t;
-    a.stepEat(dt); a.stepFace(dt);
+    a.stepEat(dt); a.stepFace(dt); a.stepBubble(dt);
+    a.torso.rotation.x = a.bubble ? Math.sin(t * 11 + a.phase) * 0.05 : 0; // nods along as he talks
     a.group.rotation.y = a.rest + Math.sin(t * 0.7 + a.phase) * 0.08;
     const beat = Math.abs(Math.sin(t * Math.PI * bpm / 120 + a.phase));
     a.torso.position.y = 0.84 + beat * groove * dance * 0.025;
@@ -695,9 +790,12 @@ export class Crowd {
     this.seat(player);
   }
 
+  say(id, text) { this.avatars.get(id)?.say(text); }
+
   remove(id) {
     const a = this.avatars.get(id);
     if (!a) return;
+    a.clearBubble();
     this.scene.remove(a.group);
     a.group.traverse((o) => { o.geometry?.dispose(); if (o.material?.map) o.material.map.dispose(); });
     this.avatars.delete(id);

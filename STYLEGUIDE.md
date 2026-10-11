@@ -101,6 +101,7 @@ All defined in `css/style.css` and shown on `/styleguide.html`.
 | Keycap | `kbd` | Name keys as they appear on a 1998 keyboard: `Esc`, `` ` ``, `W`. |
 | Prompt | `#prompt` | VT323 24px phosphor on `--hud-bg`. Verb first: "Press E to sit down". |
 | Toast | `#toast` | VT323 26px `--toast` with hard black shadow. Short, in-world. |
+| Speech bubble | in `js/avatars.js` | In-world balloon over a person's name tag: `--w98-face` with the raised bevel, black VT323 text, stepped tail pointing down. Max five lines of about 22 characters. Spoken lines only, in the voice below; noises are written as `*actions*`. |
 | CRT surface | `#monitor`, `#crt-fx` | Black glass, scanlines, vignette, faint green inner glow. |
 
 ## 6. Voice
