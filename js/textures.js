@@ -81,6 +81,17 @@ export function keyboardTop() {
   return tex(c);
 }
 
+// the front of a 5.25" CD-R drive: tray slot, activity LED, and the speed it writes at
+export function cdrDrive() {
+  const [c, g] = canvas(150, 40);
+  g.fillStyle = '#d6cdb4'; g.fillRect(0, 0, 150, 40);                    // --beige
+  g.fillStyle = '#0a0a0a'; g.fillRect(8, 10, 134, 4);                    // --w98-dark: tray slot
+  g.fillStyle = '#808080'; g.fillRect(8, 15, 134, 1);                    // --w98-shadow
+  g.font = `bold 13px Tahoma, sans-serif`; g.fillStyle = '#0a0a0a'; g.fillText('CD-R  2x', 8, 33);
+  g.fillStyle = '#3cff5a'; g.fillRect(126, 26, 12, 6);                   // activity LED
+  return tex(c);
+}
+
 export function voltLabel() {
   const [c, g] = canvas(256, 128);
   g.fillStyle = '#c4161c'; g.fillRect(0, 0, 256, 128);
@@ -185,7 +196,8 @@ export class Screen {
   draw(time) {
     const g = this.g, t = time + this.t0;
     g.save();
-    this[this.mode]?.(g, t);
+    // the burner PC shows its write progress while nobody is sitting at it
+    this[this.burn && this.free ? 'burning' : this.mode]?.(g, t);
     if (this.free && this.mode === this.idle) {
       g.fillStyle = '#000080'; g.fillRect(0, H - 34, W, 34); // --w98-title
       this.text(g, `PC-${String(this.pcNumber ?? 0).padStart(2, '0')} FREE · Press E to sit`, 10, H - 11, '#ffffff', 20);
@@ -266,6 +278,19 @@ export class Screen {
     g.fillStyle = '#24150b'; g.fillRect(0, 190, W, 50);     // --wood-dark
     this.text(g, this.who || 'SOMEONE', 10, 214, '#ffcc00', 22);
     this.text(g, this.what || 'PLAYING DOOM', 10, 234, '#aaaaaa', 18);
+  }
+
+  burning(g, t) {
+    const b = this.burn; // { pct, secondsLeft }
+    g.fillStyle = '#000000'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#5a0000'; g.fillRect(0, 0, W, 30);
+    this.text(g, 'CDWRITE  ·  CD-R 2x', 10, 22, '#ffcc00', 20);
+    this.text(g, 'Writing disc...', 10, 62, '#c0c0c0', 22);
+    g.strokeStyle = '#aaaaaa'; g.lineWidth = 2; g.strokeRect(10, 78, W - 20, 22);
+    g.fillStyle = '#9dff7a'; g.fillRect(13, 81, Math.max(0, (W - 26) * b.pct), 16);
+    this.text(g, `${Math.floor(b.pct * 100)}%  ·  ${Math.floor(b.secondsLeft / 60)}:${String(Math.floor(b.secondsLeft % 60)).padStart(2, '0')} left`, 10, 128, '#9dff7a', 22);
+    if (Math.floor(t * 1.5) % 2) this.text(g, 'DO NOT USE THIS PC WHILE WRITING', 10, 170, '#ffcc00', 20);
+    this.text(g, 'Buffer: OK', 10, H - 14, '#777777', 16);
   }
 
   mine(g, t) { // your PC while you're standing

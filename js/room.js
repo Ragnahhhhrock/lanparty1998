@@ -1,6 +1,7 @@
 // Builds the basement: walls, tables, six PC stations, the hub, cables and the snack table.
 import * as THREE from 'three';
 import * as T from './textures.js';
+import { BURNER } from './party.js';
 
 export const ROOM = { minX: -6, maxX: 6, minZ: -5, maxZ: 5, height: 2.8 };
 const TABLE_Y = 0.74;
@@ -61,15 +62,24 @@ function crt(screenTexture) {
   return { group: g, screen };
 }
 
-function tower() {
+function tower(burner = false) {
   const g = new THREE.Group();
   g.add(box(0.19, 0.44, 0.44, beige, 0, 0.22, 0));
-  for (let i = 0; i < 2; i++) g.add(box(0.15, 0.04, 0.01, beigeDark, 0, 0.38 - i * 0.05, 0.222)); // 5.25" bays
+  for (let i = 0; i < 2; i++) {
+    if (i === 0 && burner) continue; // the top bay is the CD-R drive, below
+    g.add(box(0.15, 0.04, 0.01, beigeDark, 0, 0.38 - i * 0.05, 0.222)); // 5.25" bays
+  }
+  let drive = null;
+  if (burner) {
+    drive = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.04), new THREE.MeshStandardMaterial({ map: T.cdrDrive(), roughness: 0.7 }));
+    drive.position.set(0, 0.38, 0.2275);
+    g.add(drive);
+  }
   g.add(box(0.1, 0.02, 0.01, beigeDark, 0, 0.27, 0.222));                                         // floppy
   const power = box(0.015, 0.008, 0.004, new THREE.MeshBasicMaterial({ color: 0x33ff55 }), -0.04, 0.12, 0.223);
   const hdd = box(0.015, 0.008, 0.004, new THREE.MeshBasicMaterial({ color: 0x400000 }), 0.04, 0.12, 0.223);
   g.add(power, hdd);
-  return { group: g, hdd };
+  return { group: g, hdd, drive };
 }
 
 function voltCan(label) {
@@ -168,7 +178,7 @@ export function buildRoom(scene) {
     mon.group.position.set(0, TABLE_Y, -0.12);
     g.add(mon.group);
 
-    const tw = tower();
+    const tw = tower(i === BURNER.pc);
     tw.group.position.set(0.52, TABLE_Y, -0.1);
     g.add(tw.group);
     out.hddLeds.push(tw.hdd);
@@ -210,6 +220,14 @@ export function buildRoom(scene) {
     mon.group.traverse((o) => { o.userData.interact = { kind: 'sit', station }; });
     tw.group.traverse((o) => { o.userData.interact = { kind: 'sit', station }; });
     out.interactables.push(mon.group, tw.group);
+    if (tw.drive) {
+      // a slightly fatter invisible target over the drive, so you can actually aim at it
+      const hit = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.08, 0.06), new THREE.MeshBasicMaterial({ visible: false }));
+      hit.position.set(0, 0.38, 0.235);
+      tw.group.add(hit);
+      for (const o of [tw.drive, hit]) o.userData.interact = { kind: 'burner', station };
+      station.burner = true;
+    }
 
     can.traverse((o) => { o.userData.interact = { kind: 'drink' }; });
     out.interactables.push(can);

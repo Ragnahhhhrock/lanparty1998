@@ -57,6 +57,7 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 .bar i { display: block; height: 100%; width: 0; transition: width var(--dur-fast); }
 #m-caffeine { background: repeating-linear-gradient(90deg, var(--volt) 0 7px, transparent 7px 9px); }
 #m-snacks { background: repeating-linear-gradient(90deg, var(--nacho) 0 7px, transparent 7px 9px); }
+.meter .val { font: var(--text-crt)/1 var(--font-crt); text-align: right; color: var(--w98-text); }
 #clock { font: var(--text-crt)/1 var(--font-crt); text-align: right; color: var(--w98-text); }
 #toast { position: absolute; left: 50%; top: 18%; transform: translateX(-50%); font: var(--text-crt-lg)/1.1 var(--font-crt); color: var(--toast);
   text-shadow: var(--text-shadow-hard); text-align: center; max-width: calc(100vw - 32px); }
@@ -104,6 +105,14 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 #dm { display: inline-flex; gap: var(--space-2); align-items: center; padding-left: var(--space-3); border-left: 1px solid var(--w98-shadow); }
 #dm-text { font: var(--text-crt-sm)/1 var(--font-crt); color: var(--amber); }
 .w98-btn:disabled { color: var(--w98-shadow); text-shadow: 1px 1px 0 var(--w98-light); cursor: default; }
+
+/* ---- Errand dialog (burning discs, ordering parts, fixing shares) ---- */
+#dialog { position: fixed; inset: 0; display: grid; place-items: center; background: var(--scrim); z-index: var(--z-dialog); padding: var(--gutter); }
+#dialog-title { text-transform: uppercase; }
+#dialog-close { cursor: pointer; }
+#dialog-body p { margin: 0 0 var(--space-3); }
+#dialog-bar { margin-top: var(--space-2); }
+#dialog-fill { background: repeating-linear-gradient(90deg, var(--w98-title) 0 7px, transparent 7px 9px); }
 
 @media (prefers-reduced-motion: reduce) {
   #chat-log div { transition: none; } .bar i, #dust { transition: none; } }

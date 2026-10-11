@@ -33,6 +33,12 @@ A 3D basement LAN party in the browser. Walk around with everyone else who's onl
 - `server/` is the room server: a Cloudflare Worker with one Durable Object per room. It tracks players, positions, seats, chat and the current deathmatch. It deploys to `room.lanparty1998.com`.
 - `vendor/` holds pinned copies of Three.js r179 and js-dos 8.5.3.
 
+### The night's logistics
+
+`js/party.js` holds the state of the night (cash, discs, and the rest as it's added). It has no DOM code, so `node tools/party.test.mjs` tests it.
+
+- **The CD burner.** PC-04 has the only CD-R drive and it writes at 2x: a 74 minute disc is a 37 minute write (about six real minutes; a game minute is ten real seconds). Walk up to the drive and press **E**. A blank costs $4, mates pay $10 for a MIX CD. Sit at PC-04 and play while it's writing and it makes a coaster.
+
 ### Deathmatch networking
 
 Game traffic doesn't go through the room server. js-dos emulates IPX over WebRTC: the host's DOSBox runs an IPX tunnelling server, the room server hands its network peer id to the other players, and their DOSBoxes connect to it peer to peer. Signalling uses js-dos's public peer server (`net.dos.zone`), and NAT traversal uses public STUN only. Players behind strict (symmetric) NATs may not be able to connect until a TURN server is added.

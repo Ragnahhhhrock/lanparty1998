@@ -7,11 +7,13 @@ import { RoomLink, ROOM_NAME } from './net.js';
 import { Crowd } from './avatars.js';
 import * as sfx from './sfx.js';
 import { analytics } from './analytics.js';
+import { Party, BURNER, DISCS } from './party.js';
+import * as dialog from './dialog.js';
 
 const $ = (id) => document.getElementById(id);
 const ui = {
   intro: $('intro'), enter: $('enter-btn'), hud: $('hud'), prompt: $('prompt'), toast: $('toast'),
-  caffeine: $('m-caffeine'), snacks: $('m-snacks'), clock: $('clock'),
+  caffeine: $('m-caffeine'), snacks: $('m-snacks'), cash: $('m-cash'), clock: $('clock'),
   monitor: $('monitor'), dos: $('dos'), dust: $('dust'),
   seatedBar: $('seated-bar'), stand: $('stand-btn'), drink: $('drink-btn'), eat: $('eat-btn'), seatedStatus: $('seated-status'),
   handle: $('handle'), netstatus: $('netstatus'),
@@ -40,12 +42,13 @@ const room = buildRoom(scene);
 const pc = new DosPC(ui.dos);
 const link = new RoomLink();
 const crowd = new Crowd(scene, room.stations);
+const party = new Party();
 
 /* ---------- state ---------- */
-let mode = 'intro'; // intro | walk | tween | seated
+let mode = 'intro'; // intro | walk | tween | seated | dialog
 const keys = new Set();
 const stats = { caffeine: 15, snacks: 40, dust: 0, cans: 0, handfuls: 0 };
-let gameMinutes = 23 * 60 + 42;
+const GAME_START = 23 * 60 + 42; // the clock when the doors open
 let target = null;
 let tween = null;
 let myName = 'YOU';
@@ -86,6 +89,7 @@ document.addEventListener('mousemove', (e) => {
 
 window.addEventListener('keydown', (e) => {
   if (e.target === ui.chatInput || e.target === ui.handle) return;
+  if (dialog.isOpen()) return; // the message box owns the keyboard
   if (mode === 'seated') {
     if (e.code === 'Backquote') { e.preventDefault(); e.stopPropagation(); standUp(); }
     return; // everything else belongs to DOOM
@@ -119,6 +123,7 @@ const PROMPTS = {
   },
   drink: () => 'E · Crack a Volt Cola',
   eat: () => 'E · Grab a handful of Nachoz',
+  burner: () => (party.job ? `E · CD-R: writing ${Math.floor(party.burnProgress() * 100)}%` : 'E · Burn a CD (2x)'),
 };
 
 function interact(t) {
@@ -128,6 +133,50 @@ function interact(t) {
     else sitDown(t.station);
   } else if (t.kind === 'drink') drink();
   else if (t.kind === 'eat') eat();
+  else if (t.kind === 'burner') openBurner();
+}
+
+/* ---------- errands: little message boxes ---------- */
+function openErrand(spec) {
+  if (mode !== 'walk') return;
+  if (document.pointerLockElement) document.exitPointerLock();
+  keys.clear();
+  ui.prompt.hidden = true;
+  mode = 'dialog';
+  dialog.open(spec, () => { if (mode === 'dialog') { mode = 'walk'; lockPointer(); } });
+}
+
+const clockText = (secs) => `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
+
+function openBurner() {
+  openErrand({
+    title: 'CDWRITE.EXE',
+    render: () => {
+      const job = party.job;
+      if (job) {
+        return {
+          lines: [
+            `Writing ${DISCS[job.kind].name} at ${BURNER.speed}x. ${Math.floor(party.burnProgress() * 100)}% done, ${clockText(party.burnSecondsLeft())} to go.`,
+            'Keep off PC-04 while it writes. One game of DOOM and it is a coaster.',
+          ],
+          progress: party.burnProgress(),
+          buttons: [{ label: 'Close' }, { label: 'Cancel write', run: () => party.cancelBurn() }],
+        };
+      }
+      return {
+        lines: [
+          `CD-R drive, ${BURNER.speed}x. The only burner in the basement, and it is in PC-04.`,
+          `A blank is $${BURNER.blankCost}. A ${party.burnMinutes()}-minute write. Mates pay $${DISCS.MIX.pays} for a MIX CD.`,
+          `Cash $${party.cash}. Discs burned: ${party.discs}. Coasters: ${party.coasters}.`,
+        ],
+        progress: null,
+        buttons: [
+          { label: 'Burn a MIX CD', disabled: !party.canBurn(), run: () => party.startBurn('MIX'), keep: true },
+          { label: 'Close' },
+        ],
+      };
+    },
+  });
 }
 
 const DRINK_LINES = ['*psssht*', 'Tastes like a battery. Excellent.', 'You can hear the hub blinking.', 'Your aim feels... faster.'];
@@ -299,6 +348,7 @@ function frame() {
   const now = performance.now() / 1000;
 
   crowd.update(dt, link.players);
+  if (mode !== 'intro') party.tick(dt, { seatedPc: seatedAt?.index ?? null });
   if (link.online && mode === 'walk' && (sendTimer += dt) > 0.1) { sendTimer = 0; link.pos(player.pos.x, player.pos.z, player.yaw); }
 
   if (mode === 'walk') {
@@ -337,12 +387,14 @@ function frame() {
     stats.caffeine = Math.max(0, stats.caffeine - 0.7);
     stats.snacks = Math.max(0, stats.snacks - 0.35);
     stats.dust = Math.max(0, stats.dust - 0.02);
-    gameMinutes += 0.1;
+    const gameMinutes = GAME_START + party.now;
     const h = Math.floor(gameMinutes / 60) % 24, m = Math.floor(gameMinutes % 60);
     ui.clock.textContent = `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
     ui.caffeine.style.width = `${stats.caffeine}%`;
     ui.snacks.style.width = `${stats.snacks}%`;
     ui.dust.style.opacity = (stats.dust * 0.9).toFixed(2);
+    room.stations[BURNER.pc].screen.burn = party.job ? { pct: party.burnProgress(), secondsLeft: party.burnSecondsLeft() } : null;
+    dialog.refresh();
   }
 
   renderer.render(scene, camera);
@@ -361,6 +413,20 @@ camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
 ui.caffeine.style.width = `${stats.caffeine}%`;
 ui.snacks.style.width = `${stats.snacks}%`;
 frame();
+
+/* ---------- the night's logistics ---------- */
+ui.cash.textContent = `$${party.cash}`;
+party.addEventListener('cash', (e) => { ui.cash.textContent = `$${e.detail}`; });
+party.addEventListener('burn-start', () => toast('CDWRITE: writing at 2x. Hands off PC-04.'));
+party.addEventListener('burn-done', (e) => {
+  toast(`Disc done. Mates pay $${e.detail.pays}.`);
+  chatLine(`The CD-R finally spat out a ${DISCS[e.detail.kind].name}. +$${e.detail.pays}.`, true);
+});
+party.addEventListener('coaster', (e) => {
+  const why = e.detail.reason === 'underrun' ? 'Buffer underrun. That one is a coaster.' : 'Write cancelled. That disc is a coaster now.';
+  toast(why);
+  chatLine(why, true);
+});
 
 /* ---------- the room: other people, seats, deathmatch ---------- */
 

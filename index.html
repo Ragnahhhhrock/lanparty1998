@@ -80,6 +80,7 @@
     <div id="meters" class="w98-panel">
       <div class="meter"><span>CAFFEINE</span><div class="bar"><i id="m-caffeine"></i></div></div>
       <div class="meter"><span>SNACKS</span><div class="bar"><i id="m-snacks"></i></div></div>
+      <div class="meter"><span>CASH</span><b id="m-cash" class="val">$150</b></div>
       <div id="clock">11:42 PM</div>
       <div id="netstatus">Connecting to the hub...</div>
     </div>
@@ -110,6 +111,18 @@
     </span>
   </div>
 
+  <!-- Errands: one message box, filled in by whatever you're fiddling with -->
+  <div id="dialog" hidden>
+    <div class="w98-window" role="dialog" aria-labelledby="dialog-title">
+      <div class="w98-title"><span id="dialog-title"></span><b id="dialog-close" role="button" aria-label="Close" tabindex="0">×</b></div>
+      <div class="w98-body">
+        <div id="dialog-body"></div>
+        <div id="dialog-bar" class="bar" hidden><i id="dialog-fill"></i></div>
+        <div id="dialog-actions" class="w98-actions"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Intro dialog -->
   <div id="intro">
     <div class="w98-window">
@@ -120,7 +133,7 @@
         <label class="handle">Your handle <input id="handle" maxlength="12" autocomplete="off" spellcheck="false" placeholder="e.g. FRAGMASTER"></label>
         <table class="keys">
           <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> + mouse</td><td>Walk and look</td></tr>
-          <tr><td><kbd>E</kbd></td><td>Sit down · drink · eat</td></tr>
+          <tr><td><kbd>E</kbd></td><td>Sit down · drink · eat · use whatever you're looking at</td></tr>
           <tr><td><kbd>T</kbd></td><td>Chat</td></tr>
           <tr><td><kbd>`</kbd></td><td>Stand up from your PC (leaves any deathmatch)</td></tr>
           <tr><td><kbd>Esc</kbd></td><td>Release the mouse</td></tr>
