@@ -2,3 +2,4 @@ bundles/doom.jsdos
 .DS_Store
 node_modules/
 tests/
+tools/invitees.csv

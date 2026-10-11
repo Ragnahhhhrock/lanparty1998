@@ -125,3 +125,15 @@ Sent from `js/analytics.js`:
 | `stand_up` | `game_name`, `play_seconds` |
 | `trip_cable` | `cable` (`cat5` or `coax`), `trips_total` |
 | `party_summary` | `cans_total`, `handfuls_total`, `games_total`, `play_seconds` (on tab close) |
+
+### Inviting people
+
+`tools/remind.mjs` emails everyone on a list and tells them to come and play. Copy `tools/invitees.example.csv` to `tools/invitees.csv` (gitignored: it holds real addresses) and add `email,name` lines.
+
+```
+node tools/remind.mjs                          # dry run: lists who would get it, sends nothing
+node tools/remind.mjs --send                   # sends (needs RESEND_API_KEY and REMIND_FROM)
+node tools/remind.mjs --room friday --when "Sat 7:30 PM"
+```
+
+The email is plain text, links to https://lanparty1998.com (or a private `?room=`), and tells people to reply STOP to be dropped from the list. `node tools/remind.test.mjs` checks the list parsing and the message.
