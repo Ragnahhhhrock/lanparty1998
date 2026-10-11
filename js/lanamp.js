@@ -56,7 +56,7 @@ export function initLanamp(root, player) {
   const flag = (id, key) => $(id).addEventListener('click', (e) => { player[key] = !player[key]; e.currentTarget.setAttribute('aria-pressed', player[key]); });
   flag('#amp-shuffle', 'shuffle'); flag('#amp-repeat', 'repeat');
   $('#amp-vol').addEventListener('input', (e) => player.setVolume(e.target.value / 100));
-  player.setVolume(0.6);
+  player.setVolume(0); // LANamp launches muted; the visitor raises the slider to listen
 
   /* ---------- the visitor's own MP3s ---------- */
   const say = (text) => { status.textContent = text; };

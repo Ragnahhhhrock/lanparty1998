@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-06', kind: 'fix', title: 'LANamp starts muted',
+    text: 'The player now opens with the volume at zero so the room is quiet when you walk in. Drag the volume slider up to hear the playlist.',
+  },
+  {
     date: '1998-02-06', kind: 'new', title: 'Internet Explorer, and this site',
     text: 'The basement has a web browser. Start > Programs > Internet Explorer, or press H. Back, Forward, Favorites, History and Search all work. You are reading this in it.',
   },
