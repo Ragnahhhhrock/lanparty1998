@@ -81,6 +81,10 @@
   --cheese: #ffcc00;        /* Nachoz wordmark */
   --curlz-bag: #1f7a4d;     /* Cheez Curlz bag */
   --curlz: #ffa51f;         /* Cheez Curlz, the curls themselves */
+  --zap-green: #4aa52a;     /* Citrus Zap label and what's in the bottle */
+  --zap-lime: #b5d334;      /* Citrus Zap splash and highlights (wordmark is --volt-yellow) */
+  --zap-dark: #1c5a1e;      /* Citrus Zap label bands and bottle caps */
+  --cup-red: #d42b22;       /* disposable party cups */
 
   /* ---- Apps: the little programs on the desktop ---- */
   /* Minesweeper numbers: the classic hues, darkened where needed to pass AA on the grey; 4 and 7 reuse shell colours */

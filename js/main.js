@@ -190,6 +190,7 @@ const PROMPTS = {
   taped: () => 'E · Talk to DUCTAPE',
   door: () => `E · ${room.door.open ? 'Close' : 'Open'} the door`,
   drink: () => 'E · Crack a Volt Cola',
+  soda: () => 'E · Pour a Citrus Zap into a red cup',
   eat: () => 'E · Grab a handful of Nachoz or Cheez Curlz',
   burner: () => (party.job ? `E · CD-R: writing ${Math.floor(party.burnProgress() * 100)}%` : 'E · Burn a CD (2x)'),
 };
@@ -200,6 +201,7 @@ function interact(t) {
     if (who) toast(`${who.name} is on that one. Find a free PC.`);
     else sitDown(t.station);
   } else if (t.kind === 'drink') drink();
+  else if (t.kind === 'soda') soda();
   else if (t.kind === 'eat') eat();
   else if (t.kind === 'burner') openBurner();
   else if (t.kind === 'shop') openShop();
@@ -436,6 +438,7 @@ function openBurner() {
 }
 
 const DRINK_LINES = ['*psssht*', 'Tastes like a battery. Excellent.', 'You can hear the hub blinking.', 'Your aim feels... faster.'];
+const SODA_LINES = ['Fizz. Lime. A bit of sherbet.', 'Warm already. Still good.', 'The cup is soft. It will survive.', 'It is the colour of a highlighter. You drink it anyway.'];
 const EAT_LINES = ['Crunch.', 'Orange fingers acquired.', 'Nuclear cheese: confirmed.', 'You wipe your hand on your jeans. Mostly.'];
 
 function drink() {
@@ -444,6 +447,13 @@ function drink() {
   sfx.fizz();
   analytics.drinkCola(stats.caffeine);
   toast(stats.caffeine > 85 ? 'You can hear colours. Maybe slow down.' : DRINK_LINES[stats.cans % DRINK_LINES.length]);
+}
+
+let sodas = 0;
+function soda() {
+  stats.caffeine = Math.min(100, stats.caffeine + 18);
+  sfx.fizz();
+  toast(SODA_LINES[sodas++ % SODA_LINES.length]);
 }
 
 /* ---------- pizza: boxes, slices, and who is eating what ---------- */

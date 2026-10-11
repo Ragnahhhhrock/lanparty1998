@@ -205,6 +205,24 @@ export function voltLabel() {
   return tex(c);
 }
 
+// Citrus Zap, the green two-litre: a parody brand, drawn only in --zap-*, --volt-yellow and --volt-can
+export function zapLabel() {
+  const [c, g] = canvas(256, 128);
+  g.fillStyle = '#4aa52a'; g.fillRect(0, 0, 256, 128);                       // --zap-green
+  g.fillStyle = '#1c5a1e'; g.fillRect(0, 0, 256, 16); g.fillRect(0, 112, 256, 16); // --zap-dark
+  g.fillStyle = '#b5d334';                                                   // --zap-lime splash
+  g.beginPath(); g.arc(46, 64, 30, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#4aa52a';
+  for (let a = 0; a < 6; a++) { g.save(); g.translate(46, 64); g.rotate(a * Math.PI / 3); g.fillRect(-1.5, -28, 3, 56); g.restore(); } // citrus segments
+  g.fillStyle = '#c4161c'; g.fillRect(84, 22, 160, 6);                      // --volt-can stripe
+  g.textAlign = 'left';
+  g.font = 'bold 20px Arial, sans-serif'; g.fillStyle = '#b5d334'; g.fillText('CITRUS', 86, 50);
+  g.font = 'bold 50px Impact, "Arial Black", sans-serif';
+  g.fillStyle = '#0a0a0a'; g.fillText('ZAP', 89, 94); g.fillStyle = '#ffd400'; g.fillText('ZAP', 86, 91); // --volt-yellow
+  g.font = '11px Arial, sans-serif'; g.fillStyle = '#fff'; g.fillText('GREEN. LOUD. COLD.', 140, 106);
+  return tex(c);
+}
+
 export function nachozBag() {
   const [c, g] = canvas(192, 256);
   const grad = g.createLinearGradient(0, 0, 0, 256);

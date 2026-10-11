@@ -138,6 +138,57 @@ function chipBag(label) {
   return g;
 }
 
+// A 2 L soda: clear PET, a label band, a cap. `level` is how full it is (0 to 1).
+// Colours: --case-clear (plastic), --zap-green (the drink), --zap-dark (cap).
+function twoLitre(label, level = 1) {
+  const g = new THREE.Group();
+  const pet = new THREE.MeshStandardMaterial({ color: 0xdfe6ea, roughness: 0.2, transparent: true, opacity: 0.35, depthWrite: false });
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.3, 20), pet).translateY(0.15));
+  if (level > 0) {
+    const h = 0.27 * level;
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.048, h, 20), new THREE.MeshStandardMaterial({ color: 0x4aa52a, roughness: 0.3 })).translateY(0.015 + h / 2));
+  }
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.1, 20, 1, true), new THREE.MeshStandardMaterial({ map: label, roughness: 0.4, side: THREE.DoubleSide }));
+  band.position.y = 0.12;
+  g.add(band);
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.026, 0.05, 12), pet).translateY(0.325));
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.025, 12), new THREE.MeshStandardMaterial({ color: 0x1c5a1e, roughness: 0.4 })).translateY(0.36));
+  return g;
+}
+
+// A red disposable party cup (--cup-red), open at the top. `fill` 0 to 1 of Citrus Zap (--zap-green).
+const CUP = { h: 0.115, rTop: 0.042, rBot: 0.029 };
+function redCup(fill = 0) {
+  const g = new THREE.Group();
+  const red = new THREE.MeshStandardMaterial({ color: 0xd42b22, roughness: 0.55, side: THREE.DoubleSide });
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(CUP.rTop, CUP.rBot, CUP.h, 18, 1, true), red).translateY(CUP.h / 2));
+  const base = new THREE.Mesh(new THREE.CircleGeometry(CUP.rBot, 18), red);
+  base.rotation.x = -Math.PI / 2; base.position.y = 0.002; g.add(base);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(CUP.rTop, 0.0028, 6, 18), red);
+  rim.rotation.x = Math.PI / 2; rim.position.y = CUP.h; g.add(rim);
+  if (fill > 0) {
+    const y = 0.008 + (CUP.h - 0.03) * fill, r = CUP.rBot + (CUP.rTop - CUP.rBot) * (y / CUP.h) - 0.002;
+    const top = new THREE.Mesh(new THREE.CircleGeometry(r, 18), new THREE.MeshStandardMaterial({ color: 0x4aa52a, roughness: 0.25 }));
+    top.rotation.x = -Math.PI / 2; top.position.y = y; g.add(top);
+  }
+  return g;
+}
+
+// A sleeve of cups nested one in another, standing on end: only the rims and the top one show.
+function cupSleeve(n = 10) {
+  const g = new THREE.Group();
+  const red = new THREE.MeshStandardMaterial({ color: 0xd42b22, roughness: 0.55, side: THREE.DoubleSide });
+  const step = 0.011;
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(CUP.rTop, CUP.rBot, CUP.h, 18, 1, true), red).translateY(CUP.h / 2));
+  for (let i = 1; i < n; i++) {
+    const y = CUP.h + (i - 1) * step;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(CUP.rTop, 0.0028, 6, 18), red);
+    ring.rotation.x = Math.PI / 2; ring.position.y = y + step; g.add(ring);
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(CUP.rTop, CUP.rTop - 0.0015, step, 18, 1, true), red).translateY(y + step / 2));
+  }
+  return g;
+}
+
 // Six PCs. Nobody owns one any more: whoever sits down first gets it. The idle screens are
 // whatever the last person left running.
 const STATIONS = [
@@ -1063,6 +1114,27 @@ export function buildRoom(scene) {
     scene.add(bag);
     out.interactables.push(bag);
   }
+  // Citrus Zap two-litres and red party cups: the far end of the snack table, and the lounge
+  const labelZap = T.zapLabel();
+  const pourable = (obj, x, y, z, yaw = 0, tipX = 0, tipZ = 0) => {
+    obj.position.set(x, y, z); obj.rotation.set(tipX, yaw, tipZ);
+    obj.traverse((o) => { o.userData.interact = { kind: 'soda' }; });
+    scene.add(obj); out.interactables.push(obj); return obj;
+  };
+  pourable(twoLitre(labelZap, 1), -5.62, TABLE_Y, 0.98);
+  pourable(twoLitre(labelZap, 0.9), -5.62, TABLE_Y, 1.22, 0.8);
+  pourable(twoLitre(labelZap, 0.35), -5.62, TABLE_Y, 1.46, 2.1);
+  pourable(cupSleeve(12), -5.28, TABLE_Y, 1.05, 0);
+  pourable(redCup(0.7), -5.2, TABLE_Y, 1.32, 0);
+  pourable(redCup(0), -5.38, TABLE_Y, 1.6, 0);
+  pourable(redCup(0.3), -5.15, TABLE_Y, 1.68, 0);
+  pourable(redCup(0), -5.3, TABLE_Y + CUP.rTop, 1.78, 0, 0, Math.PI / 2);   // knocked over at the end of the table
+  // the lounge, on the carpet between the coffee table and the TV: an open two-litre and a few cups
+  pourable(twoLitre(labelZap, 0.6), 4.82, 0, -1.0, 0.4);
+  pourable(redCup(0.5), 4.7, 0, -0.85, 0);
+  pourable(redCup(0), 3.55, 0, -0.55, 0);
+  pourable(redCup(0), 4.95, CUP.rTop, -0.3, 0.5, 0, Math.PI / 2);           // on its side
+  pourable(redCup(0), 3.4, 0, -1.9, 0);
 
   buildNetwork(scene, out);
   buildErrands(scene, out);
