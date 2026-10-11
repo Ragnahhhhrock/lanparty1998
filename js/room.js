@@ -445,6 +445,196 @@ function buildDoor(scene, out, wallTex) {
   out.door = door;
 }
 
+// The lounge corner, against the right wall: a plaid couch, a big CRT TV on a stand with a four-player
+// console under it, and a coffee table somebody has been living off. Nothing here is a trip hazard:
+// the pad leads are decoration. Colours are tokens: --couch*, --oak, --tv-case, --console-*, --wood-dark.
+const COUCH = { x: 2.9, z: -1.0, w: 2.0, d: 0.9 };                       // faces +x, toward the TV
+const COFFEE = { x: 4.15, z: -1.0, top: 0.44, w: 0.62, l: 1.3 };          // long side along z
+const TV = { x: 5.7, z: -1.0, stand: 0.42 };                              // against the wall, faces -x
+
+// a pad lies with its player edge toward +z and its lead leaving the far edge (-z)
+function gamePad(color) {
+  const g = new THREE.Group();
+  const shell = new THREE.MeshStandardMaterial({ color, roughness: 0.55 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x44474b, roughness: 0.6 });  // --console-dark
+  g.add(box(0.1, 0.022, 0.058, shell, 0, 0.011, 0));
+  for (const sx of [-1, 1]) {
+    const grip = box(0.034, 0.022, 0.076, shell, sx * 0.05, 0.011, 0.04);
+    grip.rotation.y = -sx * 0.22;
+    g.add(grip);
+  }
+  g.add(box(0.026, 0.004, 0.008, dark, -0.034, 0.024, -0.004), box(0.008, 0.004, 0.026, dark, -0.034, 0.024, -0.004)); // d-pad
+  const btn = (x, z, c) => { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.0065, 0.0065, 0.005, 10), new THREE.MeshStandardMaterial({ color: c, roughness: 0.5 })); b.position.set(x, 0.024, z); g.add(b); };
+  btn(0.046, -0.01, 0xc4161c); btn(0.034, 0.004, 0xffd400); btn(0.058, 0.004, 0x44474b); btn(0.046, 0.018, 0x44474b); // --volt-can, --volt-yellow, --console-dark
+  g.add(box(0.014, 0.006, 0.006, dark, 0, 0.024, 0.004));                                                              // start
+  return g;
+}
+
+function buildLounge(scene, out, labelVolt, labelNachoz) {
+  const rnd = (() => { let s = 1999; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); })();
+  const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.7, ...o });
+  const woodDark = std(0x24150b, { roughness: 0.85 });   // --wood-dark
+  const oak = std(0x8a5a2e, { roughness: 0.6 });         // --oak
+  const place = (obj, x, y, z, yaw = 0) => { obj.position.set(x, y, z); obj.rotation.y = yaw; scene.add(obj); return obj; };
+  const use = (obj, kind) => { obj.traverse((o) => { o.userData.interact = { kind }; }); out.interactables.push(obj); };
+
+  // ---- couch: faces +x, so local +z is the front and local x runs along the wall (world -z)
+  const couch = new THREE.Group();
+  const cloth = T.couchFabric();
+  const fabric = (rx, ry) => { const t = cloth.clone(); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); t.needsUpdate = true; return std(0xffffff, { map: t, roughness: 0.95 }); };
+  const seatMat = fabric(1.7, 2.2), armMat = fabric(3, 1.7), backMat = fabric(5.4, 1.8), cushionMat = fabric(1.7, 1.4); // one plaid tile is about 30 cm
+  const baseMat = std(0x3f4f38, { roughness: 0.95 }); // --couch-dark
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) couch.add(box(0.06, 0.05, 0.06, woodDark, sx * 0.9, 0.025, sz * 0.38));
+  couch.add(box(1.96, 0.2, 0.86, baseMat, 0, 0.15, 0));
+  for (const sx of [-1, 1]) {
+    couch.add(box(0.2, 0.5, 0.9, armMat, sx * 0.9, 0.3, 0));
+    const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.9, 14), armMat);
+    roll.rotation.x = Math.PI / 2; roll.position.set(sx * 0.9, 0.55, 0);
+    couch.add(roll);
+  }
+  couch.add(box(1.62, 0.55, 0.2, backMat, 0, 0.525, -0.33));
+  for (const x of [-0.54, 0, 0.54]) {
+    couch.add(box(0.52, 0.16, 0.66, seatMat, x, 0.33, 0.1));
+    const back = box(0.52, 0.4, 0.16, cushionMat, x, 0.61, -0.17);
+    back.rotation.x = -0.18;
+    couch.add(back);
+  }
+  const pillow = box(0.3, 0.3, 0.1, std(0xa3483b, { roughness: 0.9 }), -0.66, 0.6, -0.04); // --couch-line
+  pillow.rotation.set(-0.35, 0.3, 0.25);
+  couch.add(pillow);
+  place(couch, COUCH.x, 0, COUCH.z, Math.PI / 2);
+  out.colliders.push({ minX: COUCH.x - COUCH.d / 2, maxX: COUCH.x + COUCH.d / 2, minZ: COUCH.z - COUCH.w / 2, maxZ: COUCH.z + COUCH.w / 2 });
+
+  // ---- TV stand, TV and console: one group, front toward -x
+  const set = new THREE.Group();
+  const tvCase = std(0x2b2b2f, { roughness: 0.5 });    // --tv-case
+  const consoleBody = std(0x9a9da1, { roughness: 0.55 }); // --console-body
+  const consoleDark = std(0x44474b, { roughness: 0.6 }); // --console-dark
+  set.add(box(1.15, 0.03, 0.55, woodDark, 0, TV.stand - 0.015, 0));         // top
+  for (const sx of [-1, 1]) set.add(box(0.03, TV.stand - 0.03, 0.55, woodDark, sx * 0.56, (TV.stand - 0.03) / 2, 0));
+  set.add(box(1.09, 0.025, 0.5, woodDark, 0, 0.17, -0.01));                  // console shelf
+  set.add(box(1.09, TV.stand - 0.03, 0.012, woodDark, 0, (TV.stand - 0.03) / 2, -0.268)); // back
+
+  const gameScreen = new T.ConsoleScreen();
+  const tvY = TV.stand + 0.32;
+  set.add(box(0.78, 0.64, 0.28, tvCase, 0, tvY, 0.1));                       // front shell
+  set.add(box(0.54, 0.46, 0.24, tvCase, 0, tvY, -0.15));                     // tube bulge
+  set.add(box(0.7, 0.54, 0.01, black, 0, tvY + 0.03, 0.241));                // bezel recess
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.465), new THREE.MeshBasicMaterial({ map: gameScreen.texture, toneMapped: false }));
+  glass.position.set(0, tvY + 0.03, 0.247);
+  set.add(glass);
+  for (let k = 0; k < 4; k++) set.add(box(0.04, 0.012, 0.006, black, -0.3 + k * 0.05, TV.stand + 0.045, 0.242)); // buttons
+  for (let k = 0; k < 5; k++) set.add(box(0.2, 0.004, 0.004, black, 0.2, TV.stand + 0.03 + k * 0.009, 0.242));  // speaker slots
+  set.add(box(0.012, 0.012, 0.005, new THREE.MeshBasicMaterial({ color: 0x3cff5a }), 0.34, TV.stand + 0.045, 0.242));
+
+  set.add(box(0.3, 0.07, 0.24, consoleBody, 0, 0.2175, 0.0));                // console
+  set.add(box(0.12, 0.01, 0.1, consoleDark, 0, 0.2575, -0.03));              // cartridge slot
+  set.add(box(0.1, 0.06, 0.02, consoleDark, 0, 0.29, -0.03));                // cartridge
+  set.add(box(0.07, 0.034, 0.004, std(0xe8e1cc, { roughness: 0.8 }), 0, 0.292, -0.018)); // its label (--paper)
+  const portZ = 0.12, portX = [-0.105, -0.035, 0.035, 0.105];
+  for (const x of portX) set.add(box(0.04, 0.026, 0.012, consoleDark, x, 0.2275, portZ + 0.003));
+  set.add(box(0.012, 0.012, 0.004, new THREE.MeshBasicMaterial({ color: 0xe2231a }), -0.14, 0.245, portZ + 0.002)); // power light (--volt)
+  place(set, TV.x, 0, TV.z, -Math.PI / 2);
+  out.colliders.push({ minX: TV.x - 0.275, maxX: TV.x + 0.275, minZ: TV.z - 0.575, maxZ: TV.z + 0.575 });
+  const glow = new THREE.PointLight(0x9fb8ff, 2.4, 4.2, 2);
+  glow.position.set(TV.x - 0.7, 0.8, TV.z);
+  scene.add(glow);
+  out.updateTv = (dt) => { gameScreen.update(dt); glow.intensity = 2.2 + Math.sin(gameScreen.clock * 9) * 0.25 + Math.sin(gameScreen.clock * 2.3) * 0.2; };
+
+  // ---- coffee table
+  const table = new THREE.Group();
+  table.add(box(COFFEE.w, 0.04, COFFEE.l, oak, 0, COFFEE.top - 0.02, 0));
+  table.add(box(COFFEE.w - 0.12, 0.02, COFFEE.l - 0.12, woodDark, 0, 0.12, 0));
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) table.add(box(0.05, COFFEE.top - 0.04, 0.05, woodDark, sx * (COFFEE.w / 2 - 0.04), (COFFEE.top - 0.04) / 2, sz * (COFFEE.l / 2 - 0.04)));
+  place(table, COFFEE.x, 0, COFFEE.z);
+  out.colliders.push({ minX: COFFEE.x - COFFEE.w / 2, maxX: COFFEE.x + COFFEE.w / 2, minZ: COFFEE.z - COFFEE.l / 2, maxZ: COFFEE.z + COFFEE.l / 2 });
+  const T0 = COFFEE.top;
+
+  // wet rings where cans have stood
+  const ring = std(0x24150b, { roughness: 0.9, transparent: true, opacity: 0.4, depthWrite: false });
+  for (const [x, z] of [[4.4, -1.45], [4.17, -0.7], [4.0, -1.3]]) {
+    const r = new THREE.Mesh(new THREE.RingGeometry(0.03, 0.036, 20), ring);
+    r.rotation.x = -Math.PI / 2; r.position.set(x, T0 + 0.0006, z);
+    scene.add(r);
+  }
+
+  // drinks: standing, tipped over, and a flat two-litre on the carpet
+  const can = (x, y, z, yaw = 0, tip = 0) => { const c = voltCan(labelVolt); c.position.set(x, y, z); c.rotation.set(0, yaw, tip); scene.add(c); use(c, 'drink'); return c; };
+  can(4.4, T0, -1.45); can(4.17, T0, -0.7);
+  can(4.06, T0 + 0.034, -1.3, 0, Math.PI / 2);                // on its side, base toward +x
+  can(4.7, 0.034, -1.62, 0.2, Math.PI / 2 - 0.1);             // one on the carpet
+  const bottle = new THREE.Group();                            // 2 L Volt Cola, a third left
+  const pet = new THREE.MeshStandardMaterial({ color: 0xdfe6ea, roughness: 0.2, transparent: true, opacity: 0.35, depthWrite: false }); // --case-clear
+  const label = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.1, 20, 1, true), new THREE.MeshStandardMaterial({ map: labelVolt, roughness: 0.4, side: THREE.DoubleSide }));
+  label.position.y = 0.12;
+  bottle.add(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.3, 20), pet).translateY(0.15));
+  bottle.add(new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.048, 0.1, 20), std(0x3b1a12, { roughness: 0.3 })).translateY(0.05)); // what's left (colour is --wood-dark)
+  bottle.add(label);
+  bottle.add(new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.026, 0.05, 12), pet).translateY(0.325));
+  bottle.add(new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.025, 12), std(0xc4161c, { roughness: 0.4 })).translateY(0.36)); // cap (--volt-can)
+  place(bottle, 4.62, 0, -1.78, 0);
+  use(bottle, 'drink');
+
+  // food: a bowl of Nachoz, a bag, and the odd one on the table
+  const bowl = new THREE.Group();
+  const bowlMat = std(0xebe4cf, { roughness: 0.45 });   // --beige-light
+  bowlMat.side = THREE.DoubleSide;
+  const shellBowl = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.065, 0.07, 24, 1, true), bowlMat);
+  shellBowl.position.y = 0.035; bowl.add(shellBowl);
+  const bottomBowl = new THREE.Mesh(new THREE.CircleGeometry(0.065, 24), bowlMat);
+  bottomBowl.rotation.x = -Math.PI / 2; bottomBowl.position.y = 0.002; bowl.add(bottomBowl);
+  const puff = std(0xf28a1c, { roughness: 0.8 });       // --nacho
+  const puffGeo = new THREE.SphereGeometry(0.017, 8, 6);
+  for (let k = 0; k < 26; k++) {
+    const a = rnd() * Math.PI * 2, rad = Math.sqrt(rnd()) * 0.075;
+    const m = new THREE.Mesh(puffGeo, puff);
+    m.position.set(Math.cos(a) * rad, 0.05 + (0.075 - rad) * 0.45 + rnd() * 0.012, Math.sin(a) * rad);
+    m.scale.set(1, 0.7 + rnd() * 0.5, 1);
+    bowl.add(m);
+  }
+  place(bowl, 3.99, T0, -0.55, 0);
+  for (const [x, z] of [[3.88, -0.8], [4.2, -0.42], [4.43, -0.64]]) { // strays
+    const m = new THREE.Mesh(puffGeo, puff); m.position.set(x, T0 + 0.012, z); m.scale.set(1, 0.7, 1); scene.add(m);
+  }
+  use(bowl, 'eat');
+  const bag = chipBag(labelNachoz);
+  place(bag, 4.34, T0, -0.5, 1.1);
+  use(bag, 'eat');
+  const bag2 = chipBag(labelNachoz);   // empty and crushed on the carpet
+  bag2.scale.set(1, 0.4, 1);
+  place(bag2, 3.62, 0.0, -0.3, 2.4);
+
+  // ---- four pads, wired to the console: three on the cushions, one on the carpet
+  const pads = [
+    { color: 0x2b6fd6, x: 3.05, y: 0.41, z: -0.46, yaw: -Math.PI / 2 + 0.3 },     // --floppy-blue
+    { color: 0xc0392b, x: 3.12, y: 0.41, z: -1.0, yaw: -Math.PI / 2 - 0.15 },     // --floppy-red
+    { color: 0xe8c21b, x: 3.05, y: 0.41, z: -1.54, yaw: -Math.PI / 2 + 0.1 },     // --floppy-yellow
+    { color: 0x3aa35a, x: 3.55, y: 0.0, z: -1.85, yaw: -Math.PI / 2 + 0.7 },      // --floppy-green
+  ];
+  set.updateMatrixWorld(true);
+  const wire = new THREE.MeshStandardMaterial({ color: 0x44474b, roughness: 0.7 }); // --console-dark
+  pads.forEach((P, i) => {
+    const g = gamePad(P.color);
+    place(g, P.x, P.y, P.z, P.yaw);
+    g.updateMatrixWorld(true);
+    const exit = g.localToWorld(new THREE.Vector3(0, 0.012, -0.03));
+    const port = set.localToWorld(new THREE.Vector3(portX[i], 0.2275, portZ + 0.01));
+    const lip = port.z + (i - 1.5) * 0.05;
+    const pts = [
+      port,
+      new THREE.Vector3(port.x - 0.03, 0.19, port.z + (i - 1.5) * 0.01),
+      new THREE.Vector3(TV.x - 0.3, 0.19, lip),                       // over the lip of the shelf
+      new THREE.Vector3(TV.x - 0.42, 0.012, lip + (i - 1.5) * 0.04),   // down to the carpet
+      new THREE.Vector3(4.7, 0.012, lip * 0.5 + exit.z * 0.5),
+      new THREE.Vector3(3.95, 0.012, exit.z + (rnd() - 0.5) * 0.12),
+    ];
+    if (P.y > 0) pts.push(new THREE.Vector3(3.5, 0.012, exit.z), new THREE.Vector3(3.36, 0.2, exit.z), new THREE.Vector3(3.33, 0.42, exit.z), new THREE.Vector3(exit.x + 0.04, P.y + 0.02, exit.z));
+    else pts.push(new THREE.Vector3((3.95 + exit.x) / 2, 0.012, exit.z + 0.05));
+    pts.push(exit);
+    scene.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.3), 70, 0.0035, 5), wire));
+  });
+}
+
 // A pizza box with a pepperoni pizza cut in eight. setSlices(n) leaves n slices in the box.
 // Colours are tokens: --cardboard, --pizza-crust, --pizza-cheese, --pepperoni.
 function pizzaBox(slices = 8) {
@@ -502,6 +692,7 @@ function buildPizza(scene, out) {
   place(1.4, TABLE_Y, -4.25, 2.9, 2);    // between PC-02 and PC-03
   place(-1.4, TABLE_Y, 4.25, 0.5, 4);    // between PC-04 and PC-05
   place(-3.6, 0, -2.4, 0.9, 1);          // on the carpet, where somebody put it down
+  place(COFFEE.x, COFFEE.top, COFFEE.z, Math.PI / 2 + 0.1, 5); // the coffee table, lid toward the TV
   out.addPizza = () => {
     const [x, y, z, yaw] = PIZZA_SPOTS[delivered % PIZZA_SPOTS.length];
     const stack = Math.floor(delivered / PIZZA_SPOTS.length);
@@ -695,6 +886,16 @@ function buildMedia(scene, out) {
   loose(scene, -5.25, TABLE_Y, 0.04, 0.7); loose(scene, -5.22, TABLE_Y + FL.t, 0.04, 0.2);
   cd(scene, 'burnt', -5.28, TABLE_Y, 0.2, 1.9);
 
+  // ---- the coffee table and the carpet round the couch
+  put(scene, spindle(), 3.97, COFFEE.top, -1.46, 0);
+  put(scene, jewel(1, 'cdr'), 4.22, COFFEE.top, -1.52, 0.3);
+  cd(scene, 'burnt', 4.3, COFFEE.top, -0.72, 1.2);
+  loose(scene, 3.9, COFFEE.top, -0.7, 0.6);
+  put(scene, diskCase(true, 6), 4.15, 0.13, -1.0, 0.2);          // on the lower shelf
+  cd(scene, 'silver', 4.7, 0.003, -1.3, 0.4); cd(scene, 'printed', 3.6, 0.003, -0.15, 1.7);
+  put(scene, jewel(2, 'silver'), 4.62, 0.005, -0.6, 0.9);
+  loose(scene, 3.7, 0.003, -1.3, 1.2);
+
   // ---- on the carpet: dropped, kicked, stood on
   loose(scene, -1.0, 0.003, 0.8, 0.4); loose(scene, 2.3, 0.003, -1.1, 2.0); loose(scene, -3.3, 0.003, -2.9, 5.5);
   cd(scene, 'silver', 0.4, 0.003, 1.6, 1.0); cd(scene, 'burnt2', 3.3, 0.003, 2.3, 0.2); cd(scene, 'cdr', -2.2, 0.003, -1.6, 2.7);
@@ -855,6 +1056,7 @@ export function buildRoom(scene) {
   buildErrands(scene, out);
   buildFan(scene, out);
   buildDoor(scene, out, wallMat.map);
+  buildLounge(scene, out, labelVolt, labelNachoz);
   buildPizza(scene, out);
   buildCeilingGamer(scene, out);
   buildMedia(scene, out);

@@ -762,3 +762,62 @@ export class Screen {
     this.text(g, 'Walk up and press E to sit down', 10, H - 10, '#e0e0e0', 16);
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* The lounge corner: couch cloth and the big TV's game.               */
+/* ------------------------------------------------------------------ */
+
+// Faded sage plaid with a rust stripe, a bit worn. Colours: --couch, --couch-dark, --couch-line.
+export function couchFabric() {
+  const [c, g] = canvas(128, 128);
+  g.fillStyle = '#5b7050'; g.fillRect(0, 0, 128, 128);
+  g.fillStyle = '#3f4f38';
+  for (const p of [16, 80]) { g.fillRect(p, 0, 16, 128); g.fillRect(0, p, 128, 16); }
+  g.fillStyle = '#a3483b';
+  for (const p of [47, 111]) { g.fillRect(p, 0, 3, 128); g.fillRect(0, p, 128, 3); }
+  const r = rand(98);
+  g.fillStyle = 'rgba(0,0,0,.08)';
+  for (let i = 0; i < 260; i++) g.fillRect(Math.floor(r() * 128), Math.floor(r() * 128), 1, 2); // weave
+  return tex(c, [1, 1]);
+}
+
+// What the four of them are playing on the TV: a four-player arena brawl, drawn flat.
+// Parody and generic on purpose: no real game, character or console. Colours are the four
+// pad colours (--floppy-red, --floppy-blue, --floppy-yellow, --floppy-green) on --nacho-navy.
+const BRAWL = { w: 256, h: 192 };
+export class ConsoleScreen {
+  constructor() {
+    const [c, g] = canvas(BRAWL.w, BRAWL.h);
+    this.g = g;
+    this.texture = tex(c);
+    this.clock = 0; this.last = -1;
+    this.draw(0);
+  }
+  draw(t) {
+    const g = this.g, { w, h } = BRAWL;
+    g.fillStyle = '#1d1a5c'; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(255,255,255,.06)';
+    for (let y = 24; y < h; y += 24) for (let x = ((y / 24) % 2) * 24; x < w; x += 48) g.fillRect(x, y, 24, 24); // floor tiles
+    g.fillStyle = '#0a0a0a'; g.fillRect(0, 0, w, 20);
+    const P = ['#c0392b', '#2b6fd6', '#e8c21b', '#3aa35a'];
+    const score = [3, 1, 2, Math.floor(t / 9) % 4];
+    g.font = `18px ${CRT_FONT}`; g.textBaseline = 'middle';
+    P.forEach((col, i) => { g.fillStyle = col; g.fillRect(6 + i * 62, 6, 8, 8); g.fillStyle = '#e8e1cc'; g.fillText(`P${i + 1} 0${score[i]}`, 18 + i * 62, 11, 40); });
+    // four fighters running laps round the arena, each at their own speed
+    P.forEach((col, i) => {
+      const a = t * (0.8 + i * 0.27) + i * 1.6;
+      const x = w / 2 + Math.cos(a) * (60 + i * 14) - 9, y = 110 + Math.sin(a * 1.3) * (38 + i * 5) - 9;
+      g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(x + 2, y + 16, 16, 4);
+      g.fillStyle = col; g.fillRect(x, y - (Math.sin(a * 6) > 0.6 ? 4 : 0), 18, 18);
+      g.fillStyle = '#e8e1cc'; g.fillRect(x + 3, y + 5, 4, 5); g.fillRect(x + 11, y + 5, 4, 5);
+    });
+    g.fillStyle = '#ffcc00'; g.textAlign = 'center'; g.font = `26px ${CRT_FONT}`;
+    g.fillText(`ROUND ${1 + Math.floor(t / 30) % 9}`, w / 2, 36);
+    if (Math.floor(t * 2) % 2) g.fillText('LAST ONE STANDING', w / 2, h - 14);
+    g.textAlign = 'left';
+    g.fillStyle = 'rgba(0,0,0,.22)';
+    for (let y = 0; y < h; y += 2) g.fillRect(0, y, w, 1); // scanlines
+    this.texture.needsUpdate = true;
+  }
+  update(dt) { this.clock += dt; if (this.clock - this.last > 0.12) { this.last = this.clock; this.draw(this.clock); } }
+}

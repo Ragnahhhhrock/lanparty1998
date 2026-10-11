@@ -779,6 +779,7 @@ function frame() {
   const groove = music?.level() ?? 0, bpm = music?.track.bpm ?? 120;
   crowd.update(dt, link.players, groove, bpm, now);
   room.updateFan(dt, party.fan.on, party.fanSweep());
+  room.updateTv(dt);
   room.door.update(dt);
   if (mode !== 'intro') for (const m of banter.tick(dt)) ircSpeak(m);
   amp?.update(dt);
