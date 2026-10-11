@@ -1,8 +1,9 @@
 // LAN Party '98: walk the basement with everyone else who's online, grab a free PC,
-// play DOOM shareware, and start a deathmatch with whoever's sitting down.
+// play a shareware game (DOOM, Quake, Hexen, Heretic, Descent), and start a deathmatch with whoever's sitting down.
 import * as THREE from 'three';
 import { buildRoom, ROOM } from './room.js';
 import { DosPC } from './emulator.js';
+import { GAMES, DEFAULT_GAME, MAX_PLAYERS, gameOf, nextGame, netHint, pilotName } from './games.js';
 import { RoomLink, ROOM_NAME } from './net.js';
 import { Crowd, spawnNpc, spawnTaped, setEye } from './avatars.js';
 import * as sfx from './sfx.js';
@@ -23,7 +24,7 @@ const ui = {
   intro: $('intro'), enter: $('enter-btn'), hud: $('hud'), prompt: $('prompt'), toast: $('toast'),
   caffeine: $('m-caffeine'), snacks: $('m-snacks'), cash: $('m-cash'), shares: $('m-shares'), clock: $('clock'), schedule: $('schedule'),
   monitor: $('monitor'), dos: $('dos'), dust: $('dust'), bsod: $('bsod'),
-  seatedBar: $('seated-bar'), stand: $('stand-btn'), drink: $('drink-btn'), eat: $('eat-btn'), seatedStatus: $('seated-status'),
+  seatedBar: $('seated-bar'), stand: $('stand-btn'), drink: $('drink-btn'), eat: $('eat-btn'), gameBtn: $('game-btn'), seatedStatus: $('seated-status'),
   handle: $('handle'), netstatus: $('netstatus'),
   chat: $('chat'), chatLog: $('chat-log'), chatForm: $('chat-form'), chatInput: $('chat-input'),
   dm: $('dm'), dmText: $('dm-text'), dmBtn: $('dm-btn'), dmBtn2: $('dm-btn2'),
@@ -141,7 +142,7 @@ window.addEventListener('keydown', (e) => {
   if (mode === 'seated') {
     if (e.code === 'Backquote') { e.preventDefault(); e.stopPropagation(); standUp(); }
     else if (!ui.bsod.hidden) { e.preventDefault(); e.stopPropagation(); recoverFromCrash(); } // any key
-    return; // everything else belongs to DOOM
+    return; // everything else belongs to the game
   }
   if (mode !== 'walk') return;
   if (e.code === 'KeyT') { e.preventDefault(); openChat(); return; }
@@ -550,8 +551,34 @@ function toast(text) {
 function seatedStatusText() {
   if (!pc.running) return 'Booting...';
   if (pc.kind === 'solo') return 'Click the screen to play';
-  return 'Deathmatch on. Click the screen. Esc aborts setup.';
+  return netHint(pc.game, pc.kind);
 }
+
+/* ---------- which game this PC runs ---------- */
+// The game you get when you sit down, remembered between visits. In a deathmatch the PC runs
+// the match's game instead, whatever this says.
+let myGame = DEFAULT_GAME;
+try { myGame = gameOf(localStorage.getItem('lan98.game')).id; } catch { /* storage can be blocked */ }
+
+const gameTitle = () => `${gameOf(pc.game ?? myGame).name}${pc.kind && pc.kind !== 'solo' ? ' deathmatch' : ''}`;
+
+function updateGameBtn() {
+  const locked = inMatch(); // the match picks the game
+  const g = gameOf(locked ? link.match.game : myGame);
+  ui.gameBtn.textContent = `Game: ${g.name}`;
+  ui.gameBtn.disabled = locked;
+  ui.gameBtn.title = locked ? 'The deathmatch decides the game' : 'Reboot into another game';
+  ui.gameBtn.onmouseup = () => ui.gameBtn.blur(); // or Space and Enter in the game would click it
+}
+
+ui.gameBtn.addEventListener('click', () => {
+  if (mode !== 'seated' || inMatch()) return;
+  myGame = nextGame(myGame);
+  try { localStorage.setItem('lan98.game', myGame); } catch { /* fine, it just won't be remembered */ }
+  updateGameBtn();
+  toast(`Rebooting into ${gameOf(myGame).name}...`);
+  if (ui.bsod.hidden) bootForMatch();
+});
 
 /* ---------- sitting and standing ---------- */
 const tmpV = new THREE.Vector3(), tmpQ = new THREE.Quaternion();
@@ -581,12 +608,13 @@ function sitDown(station) {
     ui.monitor.hidden = false;
     ui.seatedBar.hidden = false;
     pc.onReady = () => {
-      analytics.gameStart(pc.kind === 'solo' ? 'DOOM' : 'DOOM deathmatch');
+      analytics.gameStart(gameTitle());
       if (mode === 'seated') ui.seatedStatus.textContent = seatedStatusText();
     };
+    updateGameBtn();
     if (party.phase() === 'rts' && !seatHintShown) { // the room moved on to StarCraft; this box still runs what it runs
       seatHintShown = true;
-      toast('StarCraft is on across the room. This box has DOOM.');
+      toast(`StarCraft is on across the room. This box has ${gameOf(myGame).name}.`);
     }
     if (party.pcs[station.index].crashed) showCrash(); // somebody left it blue screened
     else {
@@ -604,7 +632,7 @@ function standUp() {
   const station = sitDown.station;
   pc.pause();
   ui.bsod.hidden = true;
-  analytics.standUp(pc.kind === 'join' || pc.kind === 'host' ? 'DOOM deathmatch' : 'DOOM');
+  analytics.standUp(gameTitle());
   if (document.pointerLockElement) document.exitPointerLock();
   ui.monitor.hidden = true;
   ui.seatedBar.hidden = true;
@@ -626,7 +654,7 @@ function standUp() {
   });
 }
 
-// A blue screen over your DOS window. Any key (or a click) restarts DOOM, with the case still hot.
+// A blue screen over your DOS window. Any key (or a click) restarts the game, with the case still hot.
 function showCrash() {
   ui.bsod.hidden = false;
   pc.pause();
@@ -877,7 +905,7 @@ room.setNetwork(party.net);
 party.addEventListener('cash', (e) => { ui.cash.textContent = `$${e.detail}`; });
 // shooters until midnight, then StarCraft, which wants memory
 function scheduleText() {
-  if (party.phase() === 'fps') return 'ON TONIGHT: DOOM now, StarCraft at midnight';
+  if (party.phase() === 'fps') return 'ON TONIGHT: shooters now, StarCraft at midnight';
   return `ON TONIGHT: StarCraft. ${party.starcraftBoxes()} of ${PC_COUNT} PCs have the 32MB for it`;
 }
 
@@ -936,7 +964,7 @@ party.addEventListener('fan-off', (e) => {
 });
 const ANNOUNCE_LINES = {
   doors: 'Doors open, 7:30 PM. Everyone wants shooters first.',
-  fps: "8:30 PM. DOOM deathmatch is the only thing anyone wants to play.",
+  fps: "8:30 PM. Shooters only. Everybody wants a deathmatch.",
   soon: 'Quarter to midnight. Somebody is hunting through a CD case for StarCraft.',
   midnight: "Midnight. Somebody's kicking off a StarCraft game.",
   late: '2:00 AM. The StarCraft game is still going. Somebody has built a second base.',
@@ -1024,12 +1052,12 @@ function refreshStations() {
     if (mine) {
       st.setTag(myName);
       st.screen.free = false;
-      st.screen.setMode('mine', `${myName} · ${pc.kind === 'solo' || !pc.kind ? 'DOOM' : 'DEATHMATCH'}`);
+      st.screen.setMode('mine', `${myName} · ${pc.kind === 'solo' || !pc.kind ? gameOf(pc.game ?? myGame).name : 'DEATHMATCH'}`);
     } else {
       if (st.screen.mode === 'mine') st.screen.mode = st.screen.idle;
       st.setTag(who ? who.name : st.name);
       const inMatch = who && link.match?.players.includes(who.id) && link.match.status !== 'lobby';
-      st.screen.setFree(!who, who?.name, inMatch ? 'IN THE DEATHMATCH' : 'PLAYING DOOM');
+      st.screen.setFree(!who, who?.name, inMatch ? 'IN THE DEATHMATCH' : 'FRAGGING');
     }
   }
 }
@@ -1130,10 +1158,16 @@ link.addEventListener('chat', (e) => {
 });
 
 let lastMatch = null;
+let hostingGame = null; // what I asked for when I hit Host, to notice a room server that hasn't heard of it
 link.addEventListener('match', (e) => {
   const m = e.detail, was = lastMatch;
   lastMatch = m;
-  if (m && !was) chatLine(`${esc(link.nameOf(m.host))} is hosting a DOOM deathmatch. Sit at a free PC to join.`, true);
+  if (m && !was && hostingGame && link.me && m.host === link.me.id && hostingGame !== gameOf(m.game).id) {
+    // an old room server doesn't know about the other games and starts a DOOM match whatever you asked for
+    toast(`The hub only knows DOOM so far. This one is ${gameOf(m.game).name}.`);
+  }
+  if (m) hostingGame = null;
+  if (m && !was) chatLine(`${esc(link.nameOf(m.host))} is hosting a ${gameOf(m.game).name} deathmatch. Sit at a free PC to join.`, true);
   if (!m && was) chatLine('Deathmatch over.', true);
   if (m?.status === 'starting' && was?.status === 'lobby') chatLine(`Deathmatch starting: ${m.players.map((id) => esc(link.nameOf(id))).join(' vs ')}`, true);
   refreshStations();
@@ -1144,14 +1178,20 @@ link.addEventListener('match', (e) => {
 const inMatch = () => !!(link.match && link.me && link.match.players.includes(link.me.id));
 const isHost = () => !!(link.match && link.me && link.match.host === link.me.id);
 
-// Make the PC run whatever it should right now: solo DOOM, or this match's IPX setup.
+// Make the PC run whatever it should right now: your game solo, or this match's game on the IPX network.
+// Once you are in a match (even while it is still a lobby) the PC runs the match's game.
 let announcing = null;
 function bootForMatch() {
   const m = link.match;
-  let opts = { kind: 'solo' };
-  if (inMatch() && m.status !== 'lobby') {
-    if (isHost()) opts = { kind: 'host', nodes: m.nodes, match: m.id };
-    else if (m.peerId) opts = { kind: 'join', nodes: m.nodes, peerId: m.peerId, match: m.id };
+  const mine = inMatch();
+  const game = mine ? gameOf(m.game).id : myGame;
+  // Descent needs a pilot before its menu: one named after you, kept apart from anyone with the same handle
+  const others = mine ? m.players.filter((id) => id !== link.me.id).map((id) => link.nameOf(id)) : [];
+  const extra = GAMES[game].pilot ? { pilot: pilotName(myName, others, seatedAt?.index ?? 0) } : {};
+  let opts = { kind: 'solo', game, ...extra };
+  if (mine && m.status !== 'lobby') {
+    if (isHost()) opts = { kind: 'host', game, nodes: m.nodes, match: m.id, ...extra };
+    else if (m.peerId) opts = { kind: 'join', game, nodes: m.nodes, peerId: m.peerId, match: m.id, ...extra };
     else { ui.seatedStatus.textContent = 'Host is setting up the network...'; return; }
   }
   const booting = pc.boot(opts);
@@ -1171,6 +1211,7 @@ function bootForMatch() {
 
 function updateDM() {
   const m = link.match;
+  updateGameBtn();
   if (!link.online || mode !== 'seated') { ui.dm.hidden = true; return; }
   if (seatedAt && !party.pcLinkUp(seatedAt.index)) {
     ui.dm.hidden = false; ui.dmBtn.hidden = true; ui.dmBtn2.hidden = true;
@@ -1184,8 +1225,8 @@ function updateDM() {
   const names = m ? m.players.map((id) => link.nameOf(id)).join(', ') : '';
   if (!m) {
     ui.dmText.textContent = '';
-    ui.dmBtn.textContent = 'Host a deathmatch';
-    ui.dmBtn.onclick = () => link.send({ t: 'dm_host' });
+    ui.dmBtn.textContent = `Host a ${gameOf(myGame).name} deathmatch`;
+    ui.dmBtn.onclick = () => { hostingGame = myGame; link.send({ t: 'dm_host', game: myGame }); };
   } else if (m.status === 'lobby') {
     if (isHost()) {
       ui.dmText.textContent = m.players.length < 2 ? 'Waiting for players to join...' : `In: ${names}`;
@@ -1200,20 +1241,20 @@ function updateDM() {
       ui.dmBtn.textContent = 'Leave';
       ui.dmBtn.onclick = () => link.send({ t: 'dm_leave' });
     } else {
-      ui.dmText.textContent = `${link.nameOf(m.host)} is hosting (${m.players.length}/4)`;
-      ui.dmBtn.textContent = 'Join deathmatch';
-      ui.dmBtn.disabled = m.players.length >= 4;
+      ui.dmText.textContent = `${link.nameOf(m.host)} is hosting ${gameOf(m.game).name} (${m.players.length}/${MAX_PLAYERS})`;
+      ui.dmBtn.textContent = `Join ${gameOf(m.game).name}`;
+      ui.dmBtn.disabled = m.players.length >= MAX_PLAYERS;
       ui.dmBtn.onclick = () => link.send({ t: 'dm_join' });
     }
   } else if (inMatch()) {
-    ui.dmText.textContent = `DEATHMATCH: ${names}`;
+    ui.dmText.textContent = `${gameOf(m.game).name} DEATHMATCH: ${names}`;
     ui.dmBtn.textContent = isHost() ? 'End match' : 'Leave match';
     ui.dmBtn.onclick = () => link.send({ t: isHost() ? 'dm_end' : 'dm_leave' });
   } else {
-    ui.dmText.textContent = `Deathmatch on: ${names}`;
+    ui.dmText.textContent = `${gameOf(m.game).name} deathmatch on: ${names}`;
     ui.dmBtn.hidden = true;
   }
-  // buttons shouldn't keep keyboard focus, or Space/Enter in DOOM would click them
+  // buttons shouldn't keep keyboard focus, or Space/Enter in the game would click them
   for (const b of [ui.dmBtn, ui.dmBtn2]) b.onmouseup = () => b.blur();
 }
 

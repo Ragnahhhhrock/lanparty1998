@@ -5,12 +5,12 @@ Live at **https://lanparty1998.com**
 ![The room](docs/room.png)
 ![Seated at your PC](docs/seated-doom.png)
 
-A 3D basement LAN party in the browser. Walk around with everyone else who's online, crack a Volt Cola, eat Nachoz, grab a free PC and play DOOM on an emulated DOS box, then start a deathmatch with whoever else is sitting down.
+A 3D basement LAN party in the browser. Walk around with everyone else who's online, crack a Volt Cola, eat Nachoz, grab a free PC and play DOOM, Quake, Hexen, Heretic or Descent on an emulated DOS box, then start a deathmatch with whoever else is sitting down.
 
 ## Playing
 
 1. Enter a handle and walk in. Everyone on the site shares the same basement; add `?room=<name>` to the URL for a private room.
-2. Walk up to any free PC (its screen says **FREE**) and press **E**. DOOM boots solo.
+2. Walk up to any free PC (its screen says **FREE**) and press **E**. DOOM boots solo. The **Game** button on the seated bar reboots the PC into the next game.
 3. To deathmatch: one seated player clicks **Host a deathmatch**, others sitting at PCs click **Join deathmatch** (up to 4), and the host clicks **Start**. Every PC in the match reboots into DOOM's `IPXSETUP` and finds the others over a virtual IPX network.
 4. Standing up (backtick) leaves the deathmatch.
 
@@ -82,9 +82,17 @@ python3 -m http.server 8000
 
 ## Game data
 
-`bundles/doom-shareware.zip` is the DOOM v1.9 shareware release, unmodified and freely redistributable. `bundles/conf-*.jsdos` are tiny js-dos bundles holding only a `dosbox.conf` (solo DOOM, or `IPXSETUP -nodes N -deathmatch`); rebuild them with `python3 tools/make-confs.py`.
+| Game | Year | Network | How a deathmatch starts |
+| --- | --- | --- | --- |
+| DOOM 1.9 | 1994 | IPX, up to 4 here | `IPXSETUP -nodes N -deathmatch`, automatic |
+| Heretic 1.3 | 1995 | IPX | same |
+| Hexen (4 level demo) | 1995 | IPX | same |
+| Descent 1.0 | 1995 | IPX | in the game's own menu: Multiplayer, Start/Join a network game |
+| Quake 1.06 | 1996 | IPX | in the game's own menu: Multiplayer, New Game / Join a Game |
 
-Only redistributable data goes in this repo. Commercial game files (full DOOM, DOOM II, Quake, etc.) must be supplied by the player.
+Each `bundles/<game>-shareware.zip` is that game's shareware release as id, Raven or Parallax handed it round (Quake's installer wrapper unpacked, the data untouched). `bundles/conf-*.jsdos` are tiny js-dos bundles holding only a `dosbox.conf`; rebuild them with `python3 tools/make-confs.py`. Where each file came from is in `bundles/SOURCES.md`.
+
+Only redistributable data goes in this repo: shareware releases whose licence says to pass them on. Commercial game files (full DOOM, DOOM II, the registered Quake episodes, StarCraft, etc.) must be supplied by the player.
 
 ## Next
 

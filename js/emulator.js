@@ -1,24 +1,40 @@
-// Wraps js-dos: boots DOOM shareware on your PC, either solo or as part of an IPX deathmatch.
-// Game files come from bundles/doom-shareware.zip (the unmodified shareware release). A tiny
-// config bundle (bundles/conf-*.jsdos, built by tools/make-confs.py) supplies dosbox.conf,
-// whose autoexec runs DOOM or IPXSETUP.
+// Wraps js-dos: boots one of the shareware games (js/games.js) on your PC, either solo or as part
+// of an IPX deathmatch.
+// Game files come from bundles/<game>-shareware.zip (the shareware releases as they were handed
+// round). A tiny config bundle (bundles/conf-*.jsdos, built by tools/make-confs.py) supplies
+// dosbox.conf, whose autoexec runs the game or its IPX setup.
 // Multiplayer uses js-dos's IPX-over-WebRTC: the host runs DOSBox's IPX server and the
 // others connect to the host's network peer id (passed around by the room server).
 
+import { gameOf, confName } from './games.js';
+import { makeZip } from './zip.js';
+
 const BUNDLES = new URL('../bundles/', import.meta.url).href;
-const GAME_ZIP = BUNDLES + 'doom-shareware.zip';
 const EMULATORS = new URL('../vendor/js-dos/emulators/', import.meta.url).href;
 
-let gameFiles = null;
-async function loadGame() {
-  if (!gameFiles) {
-    gameFiles = fetch(GAME_ZIP).then((r) => {
-      if (!r.ok) throw new Error(`couldn't fetch DOOM (${r.status})`);
+// each file is fetched once and kept: sitting down again shouldn't download the game again
+const cache = new Map();
+function fetchBytes(name) {
+  if (!cache.has(name)) {
+    const p = fetch(BUNDLES + name).then((r) => {
+      if (!r.ok) throw new Error(`couldn't fetch ${name} (${r.status})`);
       return r.arrayBuffer();
     }).then((b) => new Uint8Array(b));
-    gameFiles.catch(() => { gameFiles = null; });
+    p.catch(() => cache.delete(name));
+    cache.set(name, p);
   }
-  return gameFiles;
+  return cache.get(name);
+}
+
+// Files made on the spot for this player, handed to js-dos after the game's own files.
+async function extraFiles(game, opts) {
+  if (!game.pilot) return [];
+  const name = opts.pilot || 'PILOT';
+  const template = await fetchBytes(game.pilot.template);
+  return [makeZip([
+    { name: `${name}.${game.pilot.ext}`, data: template },
+    { name: 'DESCENT.CFG', data: game.pilot.config(name) },
+  ])];
 }
 
 export class DosPC {
@@ -27,11 +43,13 @@ export class DosPC {
     this.props = null;
     this.running = false;
     this.kind = null;     // 'solo' | 'host' | 'join'
+    this.game = null;     // id of the game this PC is running
     this.onReady = null;
     this.booting = null;
   }
 
-  // Start (or resume) DOOM. opts: { kind: 'solo' } | { kind: 'host', nodes } | { kind: 'join', nodes, peerId }
+  // Start (or resume) a game. opts: { game, kind: 'solo' } | { game, kind: 'host', nodes } | { game, kind: 'join', nodes, peerId }
+  // Descent also takes opts.pilot, the pilot name to make.
   async boot(opts = { kind: 'solo' }) {
     const key = JSON.stringify(opts);
     if (this.props && this.key === key) { this.props.setPaused(false); return; }
@@ -44,14 +62,15 @@ export class DosPC {
   async _boot(opts, key) {
     if (typeof window.Dos !== 'function') throw new Error('js-dos failed to load');
     await this.shutdown();
-    const files = await loadGame();
-    const confBundle = BUNDLES + (opts.kind === 'solo' ? 'conf-solo.jsdos' : `conf-dm${Math.min(4, Math.max(2, opts.nodes))}.jsdos`);
+    const game = gameOf(opts.game);
+    const [files, extras] = await Promise.all([fetchBytes(game.zip), extraFiles(game, opts)]);
     this.key = key;
     this.kind = opts.kind;
+    this.game = game.id;
     this.running = false;
     this.props = window.Dos(this.el, {
-      url: confBundle,
-      initFs: files,
+      url: BUNDLES + confName(game.id, opts.kind, opts.nodes),
+      initFs: extras.length ? [files, ...extras] : files,
       pathPrefix: EMULATORS,
       autoStart: true,
       kiosk: true,

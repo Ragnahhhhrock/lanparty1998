@@ -330,12 +330,29 @@ const paint = {
 const DIRS = {
   'C:\\': [
     ['AUTOEXEC', 'BAT', 128, '07-02-98', '7:30p'], ['COMMAND', 'COM', 93890, '05-11-98', '9:50a'], ['CONFIG', 'SYS', 212, '07-02-98', '7:30p'],
-    ['DOOM', null, '<DIR>', '07-02-98', '7:30p'], ['LANPARTY', 'EXE', 412160, '07-02-98', '7:30p'], ['NACHOZ', 'TXT', 641, '07-02-98', '8:14p'],
-    ['CURLZ', 'TXT', 187, '07-02-98', '8:51p'], ['VOLT', 'TXT', 233, '07-02-98', '9:02p'],
+    ['CURLZ', 'TXT', 187, '07-02-98', '8:51p'], ['DESCENT', null, '<DIR>', '07-02-98', '7:30p'], ['DOOM', null, '<DIR>', '07-02-98', '7:30p'],
+    ['HERETIC', null, '<DIR>', '07-02-98', '7:30p'], ['HEXEN', null, '<DIR>', '07-02-98', '7:30p'], ['LANPARTY', 'EXE', 412160, '07-02-98', '7:30p'],
+    ['NACHOZ', 'TXT', 641, '07-02-98', '8:14p'], ['QUAKE', null, '<DIR>', '07-02-98', '7:30p'], ['VOLT', 'TXT', 233, '07-02-98', '9:02p'],
   ],
   'C:\\DOOM': [
     ['DOOM', 'EXE', 709404, '12-10-94', '3:00a'], ['DOOM1', 'WAD', 4196020, '12-10-94', '3:00a'], ['IPXSETUP', 'EXE', 33124, '12-10-94', '3:00a'],
     ['SETUP', 'EXE', 88420, '12-10-94', '3:00a'],
+  ],
+  'C:\\HERETIC': [
+    ['HERETIC', 'EXE', 728031, '06-28-95', '1:02a'], ['HERETIC1', 'WAD', 5120920, '06-28-95', '1:02a'], ['IPXSETUP', 'EXE', 17971, '12-24-94', '12:17a'],
+    ['SETUP', 'EXE', 47096, '06-28-95', '1:02a'],
+  ],
+  'C:\\HEXEN': [
+    ['HEXEN', 'EXE', 875885, '10-18-95', '12:52a'], ['HEXEN', 'WAD', 10644136, '10-18-95', '1:32a'], ['IPXSETUP', 'EXE', 18003, '10-02-95', '12:59a'],
+    ['SETUP', 'EXE', 47682, '10-14-95', '1:37p'],
+  ],
+  'C:\\QUAKE': [
+    ['CWSDPMI', 'EXE', 25920, '10-01-96', '2:30p'], ['ID1', null, '<DIR>', '07-02-98', '7:30p'], ['QUAKE', 'EXE', 404480, '09-30-96', '2:59a'],
+    ['README', 'TXT', 19087, '10-01-96', '2:30p'],
+  ],
+  'C:\\DESCENT': [
+    ['DESCENT', 'EXE', 1034693, '01-06-95', '4:16p'], ['DESCENT', 'HOG', 2339773, '01-06-95', '4:16p'], ['DESCENT', 'PIG', 2529454, '01-06-95', '4:16p'],
+    ['README', 'TXT', 50047, '01-06-95', '4:16p'], ['SETUP', 'EXE', 390221, '01-06-95', '4:16p'],
   ],
 };
 const FILES = {
@@ -343,7 +360,7 @@ const FILES = {
   'NACHOZ.TXT': ['NACHOZ: orange dust, sold in bags of 400g.', 'Do not touch the keyboard until you have wiped your hands.'],
   'CURLZ.TXT': ['CHEEZ CURLZ: crunchy orange fingers, sold in bags of 300g.', 'They leave a trail. Use a napkin or use the mouse, not both.'],
   'CONFIG.SYS': ['DEVICE=C:\\WINDOWS\\HIMEM.SYS', 'DEVICE=C:\\WINDOWS\\EMM386.EXE NOEMS', 'DOS=HIGH,UMB', 'FILES=40', 'BUFFERS=20'],
-  'AUTOEXEC.BAT': ['@ECHO OFF', 'SET BLASTER=A220 I5 D1 T4', 'PATH C:\\;C:\\DOOM', 'LH C:\\WINDOWS\\COMMAND\\MSCDEX.EXE /D:MSCD001'],
+  'AUTOEXEC.BAT': ['@ECHO OFF', 'SET BLASTER=A220 I5 D1 T4', 'PATH C:\\;C:\\DOOM;C:\\HERETIC;C:\\HEXEN;C:\\QUAKE;C:\\DESCENT', 'LH C:\\WINDOWS\\COMMAND\\MSCDEX.EXE /D:MSCD001'],
 };
 const BANNER = 'LAN PARTY OS [Version 4.10.1998]\n(C)Copyright nobody 1981-1998.\n\nType HELP for a list of commands.\n';
 
@@ -381,7 +398,7 @@ const dosPrompt = {
         const to = a.trim().toUpperCase().replace(/\\$/, '');
         if (!to) print(cwd);
         else if (to === '..' || to === '\\') cwd = 'C:\\';
-        else if (cwd === 'C:\\' && to === 'DOOM') cwd = 'C:\\DOOM';
+        else if (cwd === 'C:\\' && DIRS['C:\\' + to]) cwd = 'C:\\' + to;
         else print('Invalid directory');
         setPrompt();
       },
@@ -406,7 +423,7 @@ const dosPrompt = {
       const name = cmd.toLowerCase();
       if (!name) return;
       if (COMMANDS[name]) COMMANDS[name](rest.join(' '));
-      else if (name === 'doom' && cwd === 'C:\\DOOM') print('Not enough memory.');
+      else if (['doom', 'heretic', 'hexen', 'quake', 'descent'].includes(name) && cwd === 'C:\\' + name.toUpperCase()) print('Not enough memory.');
       else print('Bad command or file name');
     };
     print(BANNER);

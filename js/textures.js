@@ -722,7 +722,7 @@ export class Screen {
 
   remote(g, t) { // somebody else's game, seen over their shoulder
     g.fillStyle = '#000000'; g.fillRect(0, 0, W, H);
-    // a suggestion of DOOM: grey walls, a brown floor, the status bar (token colours only)
+    // a suggestion of a 90s shooter: grey walls, a brown floor, the status bar (token colours only)
     g.fillStyle = '#808080'; g.fillRect(0, 0, W, 90);       // --w98-shadow
     g.fillStyle = '#4a2c17'; g.fillRect(0, 90, W, 100);     // --wood
     const sway = Math.sin(t * 1.7) * 30;
@@ -730,7 +730,7 @@ export class Screen {
     if (Math.floor(t * 3) % 4 === 0) { g.fillStyle = '#ffcc00'; g.fillRect(150, 130, 20, 14); } // --amber muzzle flash
     g.fillStyle = '#24150b'; g.fillRect(0, 190, W, 50);     // --wood-dark
     this.text(g, this.who || 'SOMEONE', 10, 214, '#ffcc00', 22);
-    this.text(g, this.what || 'PLAYING DOOM', 10, 234, '#aaaaaa', 18);
+    this.text(g, this.what || 'FRAGGING', 10, 234, '#aaaaaa', 18);
   }
 
   burning(g, t) {
