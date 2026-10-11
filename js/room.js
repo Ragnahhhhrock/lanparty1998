@@ -470,7 +470,7 @@ function gamePad(color) {
   return g;
 }
 
-function buildLounge(scene, out, labelVolt, labelNachoz) {
+function buildLounge(scene, out, labelVolt, labelNachoz, labelCurlz) {
   const rnd = (() => { let s = 1999; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); })();
   const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.7, ...o });
   const woodDark = std(0x24150b, { roughness: 0.85 });   // --wood-dark
@@ -603,6 +603,9 @@ function buildLounge(scene, out, labelVolt, labelNachoz) {
   const bag2 = chipBag(labelNachoz);   // empty and crushed on the carpet
   bag2.scale.set(1, 0.4, 1);
   place(bag2, 3.62, 0.0, -0.3, 2.4);
+  const bag3 = chipBag(labelCurlz);    // a bag of Cheez Curlz open on the table, orange fingers everywhere
+  place(bag3, 4.3, T0, -0.95, -0.7);
+  use(bag3, 'eat');
 
   // ---- four pads, wired to the console: three on the cushions, one on the carpet
   const pads = [
@@ -939,7 +942,7 @@ export function buildRoom(scene) {
   }
 
   // stations
-  const labelVolt = T.voltLabel(), labelNachoz = T.nachozBag();
+  const labelVolt = T.voltLabel(), labelNachoz = T.nachozBag(), labelCurlz = T.curlzBag();
   const table = (z) => {
     const t = foldingTable(5);   // five 6 ft tables end to end
     t.position.set(0, 0, z);
@@ -1015,8 +1018,8 @@ export function buildRoom(scene) {
 
     can.traverse((o) => { o.userData.interact = { kind: 'drink' }; });
     out.interactables.push(can);
-    if (i % 2 === 1) {
-      const bag = chipBag(labelNachoz);
+    if (i % 2 === 1 || i % 4 === 0) {
+      const bag = chipBag(i % 2 === 1 ? labelNachoz : labelCurlz);   // Nachoz on the odd desks, Cheez Curlz on PC-01 and PC-05
       bag.position.set(-0.6, TABLE_Y, 0.02);
       bag.rotation.y = 0.5;
       g.add(bag);
@@ -1052,11 +1055,20 @@ export function buildRoom(scene) {
     out.interactables.push(bag);
   }
 
+  for (let k = 0; k < 2; k++) {   // Cheez Curlz share the snack table
+    const bag = chipBag(labelCurlz);
+    bag.position.set(-5.5, TABLE_Y, 0.55 + k * 0.24);
+    bag.rotation.y = Math.PI / 2 + (k - 0.5) * 0.3;
+    bag.traverse((o) => { o.userData.interact = { kind: 'eat' }; });
+    scene.add(bag);
+    out.interactables.push(bag);
+  }
+
   buildNetwork(scene, out);
   buildErrands(scene, out);
   buildFan(scene, out);
   buildDoor(scene, out, wallMat.map);
-  buildLounge(scene, out, labelVolt, labelNachoz);
+  buildLounge(scene, out, labelVolt, labelNachoz, labelCurlz);
   buildPizza(scene, out);
   buildCeilingGamer(scene, out);
   buildMedia(scene, out);

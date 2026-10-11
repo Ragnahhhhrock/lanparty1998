@@ -329,7 +329,7 @@ const DIRS = {
   'C:\\': [
     ['AUTOEXEC', 'BAT', 128, '07-02-98', '7:30p'], ['COMMAND', 'COM', 93890, '05-11-98', '9:50a'], ['CONFIG', 'SYS', 212, '07-02-98', '7:30p'],
     ['DOOM', null, '<DIR>', '07-02-98', '7:30p'], ['LANPARTY', 'EXE', 412160, '07-02-98', '7:30p'], ['NACHOZ', 'TXT', 641, '07-02-98', '8:14p'],
-    ['VOLT', 'TXT', 233, '07-02-98', '9:02p'],
+    ['CURLZ', 'TXT', 187, '07-02-98', '8:51p'], ['VOLT', 'TXT', 233, '07-02-98', '9:02p'],
   ],
   'C:\\DOOM': [
     ['DOOM', 'EXE', 709404, '12-10-94', '3:00a'], ['DOOM1', 'WAD', 4196020, '12-10-94', '3:00a'], ['IPXSETUP', 'EXE', 33124, '12-10-94', '3:00a'],
@@ -339,6 +339,7 @@ const DIRS = {
 const FILES = {
   'VOLT.TXT': ['VOLT COLA: the caffeine you are not supposed to run out of.', 'There is a crate by the snack table. It is not enough.'],
   'NACHOZ.TXT': ['NACHOZ: orange dust, sold in bags of 400g.', 'Do not touch the keyboard until you have wiped your hands.'],
+  'CURLZ.TXT': ['CHEEZ CURLZ: crunchy orange fingers, sold in bags of 300g.', 'They leave a trail. Use a napkin or use the mouse, not both.'],
   'CONFIG.SYS': ['DEVICE=C:\\WINDOWS\\HIMEM.SYS', 'DEVICE=C:\\WINDOWS\\EMM386.EXE NOEMS', 'DOS=HIGH,UMB', 'FILES=40', 'BUFFERS=20'],
   'AUTOEXEC.BAT': ['@ECHO OFF', 'SET BLASTER=A220 I5 D1 T4', 'PATH C:\\;C:\\DOOM', 'LH C:\\WINDOWS\\COMMAND\\MSCDEX.EXE /D:MSCD001'],
 };

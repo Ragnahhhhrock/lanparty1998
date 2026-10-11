@@ -79,6 +79,8 @@
   --nacho: #f28a1c;         /* Nachoz, snack meter */
   --nacho-navy: #1d1a5c;    /* Nachoz bag */
   --cheese: #ffcc00;        /* Nachoz wordmark */
+  --curlz-bag: #1f7a4d;     /* Cheez Curlz bag */
+  --curlz: #ffa51f;         /* Cheez Curlz, the curls themselves */
 
   /* ---- Apps: the little programs on the desktop ---- */
   /* Minesweeper numbers: the classic hues, darkened where needed to pass AA on the grey; 4 and 7 reuse shell colours */

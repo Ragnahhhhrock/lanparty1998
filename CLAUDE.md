@@ -6,4 +6,4 @@
 - After changing tokens: `python3 scripts/build-tokens.py`.
 - After changing `design/social/card.html` or `favicon.svg`: `python3 scripts/render-social.py` (never hand-edit the PNGs).
 - New pages copy the `<head>` metadata pattern from `index.html` (canonical, description, theme-color, icons, Open Graph, Twitter, absolute URLs) and get added to `sitemap.xml` if public.
-- Parody brands only (Volt Cola, Nachoz). No real brand logos or commercial game data in the repo.
+- Parody brands only (Volt Cola, Nachoz, Cheez Curlz). No real brand logos or commercial game data in the repo.

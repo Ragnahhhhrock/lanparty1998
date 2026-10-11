@@ -190,7 +190,7 @@ const PROMPTS = {
   taped: () => 'E · Talk to DUCTAPE',
   door: () => `E · ${room.door.open ? 'Close' : 'Open'} the door`,
   drink: () => 'E · Crack a Volt Cola',
-  eat: () => 'E · Grab a handful of Nachoz',
+  eat: () => 'E · Grab a handful of Nachoz or Cheez Curlz',
   burner: () => (party.job ? `E · CD-R: writing ${Math.floor(party.burnProgress() * 100)}%` : 'E · Burn a CD (2x)'),
 };
 
@@ -483,10 +483,10 @@ function eatPizza(box) {
 const PIZZA_LINES = ['Cold pepperoni. Still good.', 'A string of cheese reaches the box. You follow it.', 'Grease, salt and regret.', 'You eat the pizza like a man with a frag limit.'];
 stats.pizzaSlices = 0;
 
-// the regulars eat and drink too: pizza from whichever box has a slice left, handfuls of Nachoz, cans of Volt.
+// the regulars eat and drink too: pizza from whichever box has a slice left, handfuls of Nachoz or Cheez Curlz, cans of Volt.
 // The man on the ceiling has his own pizza.
 const eaters = [macca, ...regulars];
-const SNACKING = ['pizza', 'snack', 'drink', 'snack', 'drink']; // cans and chips come round more often than pizza
+const SNACKING = ['pizza', 'snack', 'drink', 'curl', 'drink']; // cans and chips come round more often than pizza
 let nextEat = 5;
 function stepEaters(dt, now) {
   nextEat -= dt;

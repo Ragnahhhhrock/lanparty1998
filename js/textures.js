@@ -222,6 +222,25 @@ export function nachozBag() {
   return tex(c);
 }
 
+export function curlzBag() {
+  const [c, g] = canvas(192, 256);
+  const grad = g.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, '#1f7a4d'); grad.addColorStop(1, '#14522f');
+  g.fillStyle = grad; g.fillRect(0, 0, 192, 256);
+  g.strokeStyle = '#ffa51f'; g.lineWidth = 14; g.lineCap = 'round';   // three fat curls
+  for (const [x, y, r] of [[64, 150, 22], [112, 138, 26], [92, 190, 20]]) {
+    g.beginPath(); g.arc(x, y, r, 0.4, Math.PI * 1.7); g.stroke();
+  }
+  g.save(); g.translate(96, 64); g.rotate(0.08);
+  g.font = 'bold 40px Impact, "Arial Black", sans-serif'; g.textAlign = 'center';
+  g.fillStyle = '#000'; g.fillText('CHEEZ', 3, 3); g.fillStyle = '#ffcc00'; g.fillText('CHEEZ', 0, 0);
+  g.fillStyle = '#000'; g.fillText('CURLZ', 3, 43); g.fillStyle = '#ffa51f'; g.fillText('CURLZ', 0, 40);
+  g.restore();
+  g.font = 'bold 14px Arial, sans-serif'; g.fillStyle = '#fff'; g.textAlign = 'center';
+  g.fillText('CRUNCHY ORANGE FINGERS', 96, 240);
+  return tex(c);
+}
+
 export function pizzaLid() {
   const [c, g] = canvas(256, 256);
   g.fillStyle = '#cfb48a'; g.fillRect(0, 0, 256, 256);

@@ -584,6 +584,7 @@ function bubbleCanvas(text) {
 const HAND_ACTS = {
   pizza: { raise: 0.8, n: 3, bite: 0.7, lower: 0.7 },
   snack: { raise: 0.6, n: 3, bite: 0.5, lower: 0.6 },
+  curl: { raise: 0.6, n: 3, bite: 0.5, lower: 0.6 },
   drink: { raise: 0.8, n: 2, bite: 1.1, lower: 0.7 },
 };
 const actLength = (a) => a.raise + a.n * a.bite + a.lower;
@@ -630,7 +631,19 @@ function canMesh() {
   g.scale.setScalar(1.3); // a little oversized so it reads from across the room
   return g;
 }
-const ITEMS = { pizza: sliceMesh, snack: snackMesh, drink: canMesh };
+// a fistful of Cheez Curlz: three little curls, one gets eaten per bite
+function curlMesh() {
+  const g = new THREE.Group();
+  const chips = new THREE.Group();
+  for (const [x, y, z, r] of [[0, 0, 0, 0.3], [0.014, 0.012, 0.008, 1.8], [-0.012, 0.024, -0.006, 3.4]]) {
+    const c = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.0085, 6, 10, Math.PI * 1.5), mat(0xffa51f)); // --curlz
+    c.position.set(x, y, z); c.rotation.set(Math.PI / 2, 0, r); chips.add(c);
+  }
+  g.add(chips);
+  g.userData.chips = chips.children;
+  return g;
+}
+const ITEMS = { pizza: sliceMesh, snack: snackMesh, curl: curlMesh, drink: canMesh };
 
 // How hard each tribe dances (ravers go for it, goths barely sway)
 const DANCE = { raver: 1, hiphop: 0.85, surfer: 0.8, grunge: 0.75, nerd: 0.5, goth: 0.35 };
@@ -675,7 +688,7 @@ class Avatar extends EventTarget {
   }
 
   // Eat or drink something: lift it to the mouth, take a few bites or sips, lower the hand.
-  // kind: 'pizza' (a slice), 'snack' (a handful of Nachoz) or 'drink' (a can of Volt Cola)
+  // kind: 'pizza' (a slice), 'snack' (a handful of Nachoz), 'curl' (Cheez Curlz) or 'drink' (a can of Volt Cola)
   eat(kind = 'pizza') {
     if (this.eatT >= 0) return;
     this.eatT = 0;
@@ -744,7 +757,7 @@ class Avatar extends EventTarget {
       const nibble = pulse * 0.12;
       fore.rotation.set(fold * lift - nibble, 0, -wrist * lift);
       this.setMouth(nibble > 0 ? Math.min(1, nibble / 0.1) : 0);
-      if (this.eatKind === 'snack') item.userData.chips.forEach((c, i) => { c.visible = i >= bites; });
+      if (this.eatKind === 'snack' || this.eatKind === 'curl') item.userData.chips.forEach((c, i) => { c.visible = i >= bites; });
       else item.scale.setScalar(1 - bites * 0.3);
     }
     if (T >= D) { this.eatT = -1; this.lean = 0; upper.rotation.set(this.armBase, 0, 0); fore.rotation.set(0, 0, 0); item.visible = false; this.setMouth(0); this.dispatchEvent?.(new Event('ate')); }
