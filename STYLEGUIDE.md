@@ -94,6 +94,7 @@ All defined in `css/style.css` and shown on `/styleguide.html`.
 | Panel | `.w98-panel` | Raised bevel, used for HUD meters. |
 | Meter | `.meter` > `span` + `.bar > i` | Segmented fill (7px block, 2px gap). Caffeine red, snacks orange. |
 | Share row | `.share` > `.share-label` + `.w98-btn.share-btn` | Text labels only, no network logos. Links are plain anchors with `rel="noopener noreferrer"`; status text speaks DOS ("Bad command or file name."). |
+| Support row | `.share` > `.share-label` (`SUPPORT`) + `.w98-btn.share-btn` + `.share-status` | The "Shout me a Volt Cola" donation link to Stripe Checkout. Same bevelled button as the share row: no Stripe or card logos, no red fill. Plain anchor, `rel="noopener noreferrer"`, opens in a new tab. |
 | Keycap | `kbd` | Name keys as they appear on a 1998 keyboard: `Esc`, `` ` ``, `W`. |
 | Prompt | `#prompt` | VT323 24px phosphor on `--hud-bg`. Verb first: "Press E to sit down". |
 | Toast | `#toast` | VT323 26px `--toast` with hard black shadow. Short, in-world. |
