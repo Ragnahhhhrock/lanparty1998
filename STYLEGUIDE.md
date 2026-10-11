@@ -64,6 +64,9 @@ Use tokens by name. Never introduce a raw hex value in CSS, canvas code or a tem
 ### Lounge
 `--couch #5b7050` (faded sage plaid) · `--couch-dark #3f4f38` · `--couch-line #a3483b` (rust stripe, throw pillow) · `--oak #8a5a2e` (coffee table top) · `--beanbag #2f5d6e` / `--beanbag-dark #204452` (the bean bag: faded teal vinyl in six alternating panels) · `--tv-case #2b2b2f` (the big CRT TV) · `--console-body #9a9da1` · `--console-dark #44474b` (console, pads and their leads). Pad shells reuse `--floppy-blue/red/yellow/green`; the TV game is flat, generic and on `--nacho-navy`.
 
+### Posters
+`--poster-ember #7a1a12` · `--poster-steel #46697a` · `--poster-steel-light #8fb1c0` · `--poster-space #0b1033` · `--poster-nebula #5b2f86` · `--poster-planet #b4532a` · `--poster-rock #6e6055` · `--poster-rock-dark #3d352f` · `--poster-chrome #c9d5dd` · `--poster-chrome-dark #5e6c76` · `--poster-sky #7fb4dc` (invented game boxes and film one-sheets on the walls; everything else on them reuses existing tokens)
+
 ### Apps
 `--mine-1 #0000ff` · `--mine-2 #005000` · `--mine-3 #a00000` · `--mine-5 #800000` · `--mine-6 #005050` · `--mine-8 #505050` (Minesweeper numbers: the classic hues, darkened where the originals fail AA on grey; 4 and 7 reuse `--w98-title` and `--w98-text`) · `--mine-face #ffff00` (the smiley button) · `--felt #008000` and `--card-red #c4161c` (Solitaire on the in-room PCs; black suits use `--w98-text`) · `--snow #f4f8ff` and `--snow-shade #c3d0e4` (Downhill: the slope and the tracks cut in it; trees, rocks and the skier reuse existing tokens)
 

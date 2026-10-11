@@ -104,6 +104,19 @@
   --snow: #f4f8ff;
   --snow-shade: #c3d0e4;
 
+  /* ---- Posters: invented 1990s game boxes and movie one-sheets on the walls (all titles, characters and art are made up) ---- */
+  --poster-ember: #7a1a12;        /* dark crimson: fortress corridors, burnt skies */
+  --poster-steel: #46697a;        /* armour plate, teal steel */
+  --poster-steel-light: #8fb1c0;  /* armour highlights */
+  --poster-space: #0b1033;        /* deep space */
+  --poster-nebula: #5b2f86;       /* gas clouds */
+  --poster-planet: #b4532a;       /* rust planet */
+  --poster-rock: #6e6055;         /* asteroid rock */
+  --poster-rock-dark: #3d352f;    /* craters, rock shadow */
+  --poster-chrome: #c9d5dd;       /* machine faces, hulls */
+  --poster-chrome-dark: #5e6c76;  /* chrome shade, gun metal */
+  --poster-sky: #7fb4dc;          /* cartoon sky */
+
   /* ---- People: the other players in the room ---- */
   --link-led: #1fbf3a;      /* "plugged into the hub" status LED */
   --skin: #e0b48f;

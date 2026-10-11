@@ -370,6 +370,152 @@ export function bandPoster(kind) {
   return tex(c);
 }
 
+// Box art and one-sheets for invented 1990s games and films, in the spirit of the era's shooters,
+// space strategy and blockbusters. Every title, character and picture is made up: nothing here copies
+// a real cover or poster. Flat, hard-edged, pixel-aligned; colours are tokens (hex in comments).
+function disc(g, cx, cy, r, col, step = 4) { // blocky circle: stacked 4px rows
+  g.fillStyle = col;
+  for (let y = -r; y < r; y += step) {
+    const half = Math.round(Math.sqrt(r * r - (y + step / 2) * (y + step / 2)) / step) * step;
+    g.fillRect(cx - half, cy + y, half * 2, step);
+  }
+}
+
+export function gamePoster(kind) {
+  const [c, g] = canvas(256, 360);
+  const r = rand(kind.length * 3301 + kind.charCodeAt(1));
+  const rect = (col, x, y, w, h) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  const crt = '#000000', paper = '#e8e1cc', amber = '#ffcc00', volt = '#e2231a', nacho = '#f28a1c'; // --crt-black --paper --amber --volt --nacho
+  const ember = '#7a1a12', steel = '#46697a', steelHi = '#8fb1c0', space = '#0b1033'; // --poster-ember --poster-steel --poster-steel-light --poster-space
+  const nebula = '#5b2f86', planet = '#b4532a', chrome = '#c9d5dd', chromeDk = '#5e6c76'; // --poster-nebula --poster-planet --poster-chrome --poster-chrome-dark
+  const phos = '#9dff7a', grey = '#aaaaaa', black = '#141414'; // --phosphor --dos-grey --clothes-black
+
+  if (kind === 'corridor') { // IRON HYMN: a stone corridor, a one-eyed floater, a helmeted soldier from behind
+    rect(crt, 0, 0, 256, 360);
+    for (let i = 0; i < 6; i++) { // the tunnel: nested frames toward the vanishing point
+      const inset = 8 + i * 18, col = i % 2 ? ember : black;
+      rect(col, inset, inset + 40, 256 - inset * 2, 280 - inset * 2);
+    }
+    rect(nacho, 100, 150, 56, 56); rect(amber, 112, 162, 32, 32); rect(paper, 124, 174, 8, 8); // the light at the end
+    const orb = [ // 1 body, 2 eye white, 3 iris, 4 pupil, 5 tentacle
+      '......1111......', '....11111111....', '...1111111111...', '..111122221111..', '..111223322111..', '.11112334332111.',
+      '.11112334332111.', '..111223322111..', '..111122221111..', '...1111111111...', '....11111111....', '...5.5.55.5.5...', '...5.5....5.5...', '..5...5..5...5..',
+    ];
+    const oc = { 1: volt, 2: paper, 3: amber, 4: crt, 5: ember };
+    orb.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') rect(oc[ch], 64 + x * 8, 130 + y * 8, 8, 8); }));
+    rect(steel, 104, 244, 48, 12); rect(steel, 96, 256, 64, 36); rect(steelHi, 104, 244, 48, 4); rect(steelHi, 96, 256, 8, 36); // helmet dome
+    rect(steel, 88, 292, 80, 28); rect(steel, 56, 284, 40, 36); rect(steel, 160, 284, 40, 36); // back and pauldrons
+    rect(steelHi, 56, 284, 40, 4); rect(steelHi, 160, 284, 40, 4); rect(steelHi, 88, 292, 80, 4);
+    rect(chromeDk, 168, 190, 16, 104); rect(chrome, 168, 190, 4, 104); rect(black, 168, 182, 16, 8); // gun barrel
+    bandText(g, ['IRON HYMN'], 128, 56, 232, amber, crt, [40]);
+    rect(crt, 0, 320, 256, 40);
+    bandText(g, ['27 LEVELS · 8 PLAYER IPX'], 128, 344, 240, phos, null, [18]);
+  } else if (kind === 'hero') { // RICO RAMPAGE 3D: sunset city, a mohawked action hero in shades
+    [nacho, volt, ember, ember, ember].forEach((col, i) => rect(col, 0, i * 56, 256, 56)); // sunset stripes
+    rect(amber, 96, 232, 64, 8); rect(amber, 72, 240, 112, 8); // low sun, hard-edged
+    for (let x = 0; x < 256; x += 24) { // skyline
+      const h = 40 + ((r() * 7) | 0) * 12;
+      rect(black, x, 312 - h, 24, h + 48);
+      for (let wy = 312 - h + 8; wy < 340; wy += 16) if (r() > 0.55) rect(amber, x + 8, wy, 8, 8);
+    }
+    rect(black, 0, 340, 256, 20);
+    // hero
+    rect(volt, 124, 112, 8, 12); rect(volt, 120, 124, 16, 12); rect(volt, 124, 136, 8, 12); // mohawk
+    rect('#e0b48f', 104, 144, 48, 60); // --skin
+    rect('#3b2716', 104, 192, 48, 12); // --hair: stubble
+    rect(black, 100, 160, 56, 14); rect(chrome, 108, 162, 10, 4); rect(chrome, 134, 162, 10, 4); // shades
+    rect('#f4efe6', 116, 186, 24, 6); rect('#a8493f', 116, 192, 24, 4); // --eye-white grin, --lip
+    rect('#e0b48f', 116, 204, 24, 10); // neck
+    rect('#ececec', 80, 214, 96, 86); rect(black, 100, 214, 8, 20); rect(black, 148, 214, 8, 20); // tank top, straps
+    rect('#e0b48f', 52, 214, 28, 72); rect('#e0b48f', 176, 214, 28, 72); // arms
+    rect('#44474b', 164, 244, 72, 20); rect(chromeDk, 164, 244, 72, 6); rect('#44474b', 160, 256, 28, 36); // gun --console-dark
+    rect(amber, 236, 240, 12, 28); rect(volt, 240, 248, 8, 12); // muzzle flash
+    rect(black, 80, 300, 96, 12); rect(amber, 120, 300, 16, 12); // belt
+    bandText(g, ['RICO', 'RAMPAGE 3D'], 128, 44, 232, paper, black, [40]);
+    bandText(g, ['FRAG LIMIT 20 · 8 PLAYERS'], 128, 354, 240, amber, null, [18]);
+  } else { // VOID HARVEST: real-time strategy, a crescent planet and a fleet
+    rect(space, 0, 0, 256, 360);
+    for (let i = 0; i < 6; i++) disc(g, 40 + ((r() * 176) | 0), 40 + ((r() * 200) | 0), 24 + ((r() * 3) | 0) * 8, nebula); // gas clouds
+    for (let i = 0; i < 70; i++) rect(r() > 0.8 ? amber : paper, 4 * ((r() * 64) | 0), 4 * ((r() * 90) | 0), 4, 4); // stars
+    disc(g, 176, 232, 72, planet); disc(g, 152, 216, 68, space); // crescent: the dark disc bites the light one
+    for (let i = 0; i < 6; i++) disc(g, 40 + ((r() * 176) | 0), 40 + ((r() * 200) | 0), 4, space); // keeps stars off the dark limb
+    const ship = [ // 1 hull, 2 shade, 3 engine
+      '....1111....', '...111111...', '..11111111..', '.1111221111.', '111112211111', '111122221111', '.1111111111.', '..33.33.33..',
+    ];
+    const sc = { 1: chrome, 2: chromeDk, 3: amber };
+    ship.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') rect(sc[ch], 36 + x * 12, 104 + y * 12, 12, 12); }));
+    for (let i = 0; i < 3; i++) { // escort fighters
+      const fx = 148 + i * 28, fy = 144 + i * 16;
+      rect(chrome, fx + 8, fy, 8, 24); rect(chromeDk, fx, fy + 16, 24, 8); rect(amber, fx + 8, fy + 24, 8, 8);
+    }
+    bandText(g, ['VOID', 'HARVEST'], 128, 48, 224, amber, crt, [96, 40]);
+    bandText(g, ['REAL-TIME STRATEGY · 3 RACES'], 128, 322, 240, paper, null, [18]);
+    bandText(g, ['256 COLOURS · IPX · MODEM'], 128, 344, 240, grey, null, [18]);
+  }
+  return tex(c);
+}
+
+export function moviePoster(kind) {
+  const [c, g] = canvas(256, 360);
+  const r = rand(kind.length * 4157 + kind.charCodeAt(2));
+  const rect = (col, x, y, w, h) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  const crt = '#000000', paper = '#e8e1cc', amber = '#ffcc00', volt = '#e2231a', nacho = '#f28a1c'; // --crt-black --paper --amber --volt --nacho
+  const ember = '#7a1a12', rock = '#6e6055', rockDk = '#3d352f', chrome = '#c9d5dd', chromeDk = '#5e6c76'; // --poster-ember --poster-rock --poster-rock-dark --poster-chrome --poster-chrome-dark
+  const sky = '#7fb4dc', black = '#141414', space = '#0b1033', yellow = '#ffd400'; // --poster-sky --clothes-black --poster-space --volt-yellow
+  const skin = '#e0b48f', snow = '#f4f8ff', snowShade = '#c3d0e4', eyeW = '#f4efe6'; // --skin --snow --snow-shade --eye-white
+
+  if (kind === 'asteroid') { // DEEP CORE: a rock the size of a state, six miners walking toward camera
+    [volt, nacho, amber, nacho, volt].forEach((col, i) => rect(col, 0, i * 40, 256, 40)); // dusk bands
+    for (let i = 0; i < 40; i++) rect(paper, 4 * ((r() * 64) | 0), 4 * ((r() * 50) | 0), 4, 4); // stars through the haze
+    disc(g, 128, 270, 132, rock);
+    [[80, 190, 20], [168, 200, 28], [120, 150, 12], [208, 160, 12], [44, 220, 16]].forEach(([x, y, rr]) => { disc(g, x, y, rr, rockDk); disc(g, x - 4, y - 4, rr - 8, rock); });
+    rect(black, 24, 108, 40, 12); rect(black, 36, 100, 12, 8); rect(volt, 56, 112, 4, 4); // shuttle, running lights
+    for (let i = 0; i < 6; i++) { // the crew
+      const x = 22 + i * 38, y = 268 + (i % 2) * 6;
+      rect(black, x, y, 22, 16); rect(amber, x + 2, y - 8, 18, 10); rect(amber, x - 2, y, 26, 4); // hard hat
+      rect(black, x + 2, y + 16, 18, 36); rect(black, x + 2, y + 52, 8, 24); rect(black, x + 12, y + 52, 8, 24);
+    }
+    bandText(g, ['DEEP CORE'], 128, 58, 232, paper, black, [40]);
+    rect(black, 0, 336, 256, 24);
+    bandText(g, ['11 DAYS · 1 ROCK · 6 MINERS'], 128, 354, 240, amber, null, [18]);
+  } else if (kind === 'machine') { // CHROME SHIFT 2: a chrome android head, one red visor, firelit
+    rect(space, 0, 0, 256, 360);
+    for (let i = 0; i < 5; i++) rect(i % 2 ? black : space, 0, 120 + i * 48, 256, 48); // cold slats behind
+    rect(chromeDk, 88, 108, 80, 128); rect(chrome, 88, 108, 40, 128); rect(chrome, 96, 100, 64, 8); rect(chromeDk, 96, 236, 64, 12); // head: lit left, shaded right
+    rect(black, 96, 136, 64, 20); rect(volt, 100, 140, 56, 12); rect(paper, 124, 144, 8, 4); // visor, a hot centre
+    rect(black, 112, 196, 32, 24); for (let x = 116; x < 144; x += 8) rect(chromeDk, x, 198, 4, 20); // grille
+    rect(black, 76, 156, 12, 28); rect(black, 168, 156, 12, 28); // ear bolts
+    rect(chromeDk, 108, 248, 40, 24); rect(black, 116, 252, 8, 20); rect(black, 132, 252, 8, 20); // neck cables
+    [volt, nacho, amber, nacho, volt].forEach((col, i) => rect(col, 0, 296 + i * 8, 256, 8)); // fire along the bottom
+    for (let x = 0; x < 256; x += 32) rect(black, x, 280 + ((r() * 3) | 0) * 8, 32, 16); // wreckage silhouettes
+    bandText(g, ['CHROME', 'SHIFT 2'], 128, 52, 224, chrome, black, [96, 40]);
+    rect(black, 0, 336, 256, 24);
+    bandText(g, ['RESET DAY · COMING SOON'], 128, 354, 240, paper, null, [18]);
+  } else { // BUS STOP BANDITS: three cut-out cartoon kids in the snow
+    rect(sky, 0, 0, 256, 360); rect(snow, 0, 236, 256, 124);
+    for (let i = 0; i < 8; i++) rect(snowShade, 8 + ((r() * 30) | 0) * 8, 248 + ((r() * 12) | 0) * 8, 16, 4); // footprints
+    rect(chromeDk, 20, 136, 6, 104); rect(volt, 6, 120, 34, 22); rect(paper, 14, 126, 18, 4); // bus stop sign
+    const kid = (cx, body, trim, hat, big) => { // cut-out kid: round head, tiny body, mitts
+      const hr = big ? 28 : 24;
+      rect(body, cx - 18, 196, 36, 44); for (let y = 200; y < 240; y += 12) rect(trim, cx - 18, y, 36, 4); // striped top
+      rect(black, cx - 14, 240, 10, 12); rect(black, cx + 4, 240, 10, 12); // boots
+      rect(trim, cx - 28, 204, 10, 14); rect(trim, cx + 18, 204, 10, 14); // mittens
+      disc(g, cx, 164, hr, skin); rect(black, cx - hr, 156, 4, 12); // head
+      rect(eyeW, cx - 14, 152, 12, 16); rect(eyeW, cx + 2, 152, 12, 16); rect(black, cx - 8, 160, 4, 4); rect(black, cx + 4, 160, 4, 4);
+      rect(black, cx - 8, 180, 16, 4); // mouth
+      hat(cx, hr);
+    };
+    kid(76, '#3aa35a', paper, (cx, hr) => { rect('#f28a1c', cx - hr + 2, 132, hr * 2 - 4, 16); rect('#f28a1c', cx - 4, 124, 8, 8); }, false); // green top, orange beanie with a pom (--shirt-4, --nacho)
+    kid(128, '#2b6fd6', yellow, (cx, hr) => { rect(black, cx - hr + 2, 134, hr * 2 - 4, 12); rect(black, cx + 8, 146, 24, 6); }, true); // blue top, black cap (--shirt-2)
+    kid(180, '#9b4dca', paper, (cx, hr) => { rect(volt, cx - hr, 144, hr * 2, 8); rect(volt, cx - hr - 8, 152, 8, 12); }, false); // purple top, red headband (--shirt-5)
+    bandText(g, ['BUS STOP', 'BANDITS'], 128, 44, 232, yellow, black, [40]);
+    bandText(g, ['THE MOVIE'], 128, 112, 224, paper, black, [26]);
+    rect(black, 0, 320, 256, 40);
+    bandText(g, ['RATED R FOR RUDE'], 128, 346, 240, amber, null, [24]);
+  }
+  return tex(c);
+}
+
 // An invented 1990s point-and-click adventure: a pixel treasure chest and a text parser.
 export function pixelAdventure() {
   const [c, g] = canvas(256, 360);

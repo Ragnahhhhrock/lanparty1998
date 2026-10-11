@@ -1279,6 +1279,13 @@ export function buildRoom(scene) {
     [1.4, maxZ - 0.01, Math.PI, T.bandPoster('industrial')],
     [4.2, maxZ - 0.01, Math.PI, T.bandPoster('hairmetal')],
     [minX + 0.01, 2.8, Math.PI / 2, T.bandPoster('dance')],
+    // invented game boxes and film one-sheets in the style of the era (see textures.js gamePoster, moviePoster)
+    [-2.9, maxZ - 0.01, Math.PI, T.gamePoster('corridor')],
+    [0, maxZ - 0.01, Math.PI, T.gamePoster('hero')],
+    [2.8, maxZ - 0.01, Math.PI, T.gamePoster('space')],
+    [minX + 0.01, -0.9, Math.PI / 2, T.moviePoster('asteroid')],
+    [minX + 0.01, 0.4, Math.PI / 2, T.moviePoster('machine')],
+    [minX + 0.01, 1.6, Math.PI / 2, T.moviePoster('kids')],
   ];
   for (const [x, z, ry, tex] of nostalgia) {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.98), posterMat(tex));
