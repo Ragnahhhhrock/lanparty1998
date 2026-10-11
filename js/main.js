@@ -149,6 +149,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'Tab' && document.pointerLockElement) { e.preventDefault(); document.exitPointerLock(); return; } // free the mouse for the desktop
   if (e.code === 'KeyI') { desktop.toggle('irc'); return; }
   if (e.code === 'KeyM') { desktop.toggle('lanamp'); return; }
+  if (e.code === 'KeyH') { e.preventDefault(); desktop.toggle('ie'); return; } // preventDefault: the window focuses its address bar, which would swallow the h
   if (e.code === 'KeyN') { toast(voices.toggle() ? 'Voices on.' : 'Voices off.'); return; }
   if (amp?.keys[e.code]) { amp.keys[e.code](); return; }
   keys.add(e.code);

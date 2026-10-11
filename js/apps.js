@@ -1,4 +1,4 @@
-// The programs on the desktop: Minesweeper, Calculator, Notepad, Paint, an MS-DOS prompt, the
+// The programs on the desktop: Internet Explorer, Minesweeper, Calculator, Notepad, Paint, an MS-DOS prompt, the
 // defragmenter, Help, Run and Shut Down. The game windows (IRC, LANamp) are adopted from the page.
 // Parody rule: nothing here uses a real brand's logo, and the file names are the party's own.
 import { icon } from './icons.js';
@@ -6,6 +6,8 @@ import { Board, LEVELS, MARK } from './minesweeper.js';
 import * as calc from './calc.js';
 import { solitaire } from './app-solitaire.js';
 import { downhill } from './app-ski.js';
+import { ie } from './app-browser.js';
+import { PAGE_LIST, parseUrl } from './web-pages.js';
 
 const el = (tag, cls, html) => {
   const e = document.createElement(tag);
@@ -507,7 +509,7 @@ const help = {
         <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>Walk, with the mouse to look</td></tr>
         <tr><td><kbd>E</kbd> <kbd>F</kbd></td><td>Use what you are looking at · open a PC's case</td></tr>
         <tr><td><kbd>T</kbd></td><td>Chat (shows up in #lanparty98)</td></tr>
-        <tr><td><kbd>I</kbd> <kbd>M</kbd></td><td>Show or hide the IRC window · LANamp</td></tr>
+        <tr><td><kbd>I</kbd> <kbd>M</kbd> <kbd>H</kbd></td><td>Show or hide the IRC window · LANamp · Internet Explorer</td></tr>
         <tr><td><kbd>Tab</kbd></td><td>Free the mouse to use the taskbar and windows</td></tr>
         <tr><td><kbd>\`</kbd></td><td>Stand up from your PC</td></tr>
       </table>
@@ -521,7 +523,11 @@ const help = {
 const RUN = {
   calc: 'calc', calculator: 'calc', notepad: 'notepad', mspaint: 'paint', paint: 'paint', winmine: 'mine', minesweeper: 'mine', sol: 'sol', solitaire: 'sol', ski: 'ski', downhill: 'ski',
   command: 'dos', 'command.com': 'dos', defrag: 'defrag', mirc: 'irc', mirc32: 'irc', lanamp: 'lanamp', help: 'help',
+  iexplore: 'ie', ie: 'ie', 'internet explorer': 'ie',
 };
+
+// an address typed into Run opens in Internet Explorer: http://lanparty1998.com, www.lanparty1998.com, lanparty1998.com/news.htm
+const isAddress = (s) => /^(https?:\/\/|www\.)/i.test(s) || /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/|$)/i.test(s);
 
 const run = {
   id: 'run', title: 'Run', icon: 'run', size: [370], center: true,
@@ -538,6 +544,7 @@ const run = {
       const app = RUN[name];
       ctx.close();
       if (app) ctx.desktop.open(app);
+      else if (isAddress(name)) ctx.desktop.open('ie', parseUrl(name).url);
       else ctx.desktop.message({ title: typed, kind: 'error', text: `Cannot find the file '${typed}' (or one of its components). Make sure the path and filename are correct and that all required libraries are available.` });
     };
     ctx.body.querySelector('.run-ok').addEventListener('click', go);
@@ -586,6 +593,8 @@ const MENU = [
   {
     label: 'Programs', icon: 'programs',
     items: [
+      { app: 'ie' },
+      { sep: true },
       { label: 'Accessories', icon: 'folder', items: [{ app: 'calc' }, { app: 'dos' }, { app: 'notepad' }, { app: 'paint' }] },
       { label: 'Games', icon: 'folder', items: [{ app: 'mine' }, { app: 'sol' }, { app: 'ski' }] },
       { label: 'System Tools', icon: 'folder', items: [{ app: 'defrag' }] },
@@ -593,6 +602,10 @@ const MENU = [
       { app: 'irc', label: 'mIRC' },
       { app: 'lanamp', label: 'LANamp' },
     ],
+  },
+  {
+    label: 'Favorites', icon: 'star',
+    items: PAGE_LIST.map((p) => ({ app: 'ie', arg: p.url, label: p.title, icon: 'page' })),
   },
   {
     label: 'Documents', icon: 'doc',
@@ -620,6 +633,6 @@ export function registerApps(desktop, { irc, lanamp, gameTime }) {
   desktop.gameTime = gameTime;
   desktop.adopt('irc', irc, { title: 'mIRC32 - [#lanparty98]', icon: 'irc', resize: true, min: [260, 140] });
   desktop.adopt('lanamp', lanamp, { title: 'LANamp 2.0', icon: 'amp' });
-  for (const app of [minesweeper, solitaire, downhill, calculator, notepad, paint, dosPrompt, defrag, help, run, shutdown]) desktop.define(app);
+  for (const app of [ie, minesweeper, solitaire, downhill, calculator, notepad, paint, dosPrompt, defrag, help, run, shutdown]) desktop.define(app);
   desktop.setMenu(MENU);
 }

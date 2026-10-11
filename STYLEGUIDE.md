@@ -61,6 +61,9 @@ Use tokens by name. Never introduce a raw hex value in CSS, canvas code or a tem
 ### Brand accents
 `--volt #e2231a` (caffeine, UI red) · `--volt-can #c4161c` · `--volt-yellow #ffd400` · `--nacho #f28a1c` (snacks) · `--nacho-navy #1d1a5c` · `--cheese #ffcc00` · `--curlz-bag #1f7a4d` (Cheez Curlz bag) · `--curlz #ffa51f` (the curls) · `--zap-green #4aa52a` / `--zap-lime #b5d334` / `--zap-dark #1c5a1e` (Citrus Zap, the green two-litre: green label, `--volt-yellow` wordmark, `--volt-can` stripe, `--zap-dark` cap) · `--cup-red #d42b22` (disposable party cups)
 
+### Web
+`--web-visited #551a8b` (visited links on the beige page; AA on `--beige-light`) · `--web-width 520px` (the page column: the site is built for 800x600). Unvisited links are `--w98-title`, hover and active are `--volt-can`.
+
 ### Lounge
 `--couch #5b7050` (faded sage plaid) · `--couch-dark #3f4f38` · `--couch-line #a3483b` (rust stripe, throw pillow) · `--oak #8a5a2e` (coffee table top) · `--beanbag #2f5d6e` / `--beanbag-dark #204452` (the bean bag: faded teal vinyl in six alternating panels) · `--tv-case #2b2b2f` (the big CRT TV) · `--console-body #9a9da1` · `--console-dark #44474b` (console, pads and their leads). Pad shells reuse `--floppy-blue/red/yellow/green`; the TV game is flat, generic and on `--nacho-navy`.
 
@@ -112,6 +115,8 @@ All defined in `css/style.css` and shown on `/styleguide.html`.
 | Menu bar and pop-ups | `.w98-menubar` > `.mb-top` > `.mb-btn` + `.w98-popup` > `.sm-item` | Raised pop-up, navy highlight with white text, a tick for checked items, key hints on the right. |
 | Taskbar | `#taskbar` (`#start-btn`, `#tasks` > `.w98-task`, `#tray`) | 28px (`--taskbar-h`) bar along the bottom. Start button, one raised button per open window (the active one pressed and bold), sunken tray with the speaker, a VT323 hint and the party clock. |
 | Start menu | `#startmenu` > `.sm-banner` + `.sm-list` | Navy banner with the VT323 words LAN Party 98, 32px icons at the top level, 16px in sub-menus, separators, a right-pointing triangle on sub-menus. |
+| Internet Explorer | `.dwin-body.ie` > `.ie-toolbar`, `.ie-addr`, `.ie-links`, `.ie-main` (`.ie-pane` + `.ie-view`), `.ie-status` | The web browser (`js/app-browser.js`, Start > Programs, **H**). Win98 chrome: flat toolbar buttons that bevel on hover, a sunken Address combo, a Links bar, an Explorer bar for Search, Favorites and History, a status bar with the segmented progress meter. The throbber is the party's own pixel globe (`globe`, `globe2`, `globe3`), never a real logo. Pages load in a few steps, slowly on purpose; reduced motion loads at once. |
+| Web page | `.web` > `.w-page` (`.w-banner`, `.w-side`, `.w-main`, `.w-foot`), `.w-box`, `.w-tbl`, `.w-tag` | The site inside the browser (`js/web-pages.js`, news in `js/web-news.js`). A 1998 homepage: table layout, a black CRT banner with an amber VT323 logo, a button column, a hit counter, 88x31 badges, a guestbook, NEW and FIXED tags, a marquee. Wood panelling behind (hard-stop stripes of `--wood` and `--wood-dark`), `--beige-light` on the page, `--w98-face` for buttons and boxes, navy flat box titles. Tahoma and VT323 only, square corners, bevels, tokens only. Under construction is a `--volt-yellow` and `--w98-dark` hazard bar. Errors talk like 1998 IE: "The page cannot be displayed", "404 File Not Found". |
 | Pixel icon | `icon(name, size)` in `js/icons.js` | 16x16 grids drawn in tokens only, scaled to 16 or 32 with `crispEdges`. Add new icons to that file, never as image files. |
 | Keycap | `kbd` | Name keys as they appear on a 1998 keyboard: `Esc`, `` ` ``, `W`. |
 | Prompt | `#prompt` | VT323 24px phosphor on `--hud-bg`. Verb first: "Press E to sit down". |

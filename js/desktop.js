@@ -4,8 +4,10 @@
 //
 // An app is { id, title, icon, size: [w, h?], pos: [x, y]?, center?, resize?, min: [w, h]?, build(ctx), menus(ctx)?, keep? }.
 // `resize: true` gives the window sizing borders and a Maximise button; `min` is its smallest size.
-// build() fills ctx.body and may return { dispose() }. Apps are destroyed when closed unless
+// build() fills ctx.body and may return { dispose(), api? }. Apps are destroyed when closed unless
 // `keep` is set; windows adopted from the page (IRC, LANamp) are only hidden.
+// open(id, arg) hands `arg` to the app: ctx.arg while it is built, or onOpen(win, arg, fresh) if it is already open.
+// An app's `api` (what build() returned) is kept on its window as win.api.
 import { icon } from './icons.js';
 
 const $ = (id) => document.getElementById(id);
@@ -145,7 +147,7 @@ export class Desktop {
     return this;
   }
 
-  create(app) {
+  create(app, arg) {
     const root = make('section', 'w98-window dwin off');
     root.dataset.app = app.id;
     root.dataset.ownsKeys = ''; // typing in here must not walk the player around
@@ -156,7 +158,7 @@ export class Desktop {
     const body = make('div', 'dwin-body');
     const win = { menus: null };
     const ctx = {
-      desktop: this, body, root,
+      desktop: this, body, root, arg,
       setTitle: (t) => { root.querySelector('.w98-ttext').textContent = t; win.task?.querySelector('.task-text').replaceChildren(t); },
       close: () => this.close(app.id),
       focus: () => this.focus(app.id),
@@ -166,7 +168,9 @@ export class Desktop {
     root.append(body);
     if (app.size) { root.style.width = `${app.size[0]}px`; if (app.size[1]) root.style.height = `${app.size[1]}px`; }
     this.layer.append(root);
-    win.dispose = app.build(ctx)?.dispose;
+    const built = app.build(ctx);
+    win.dispose = built?.dispose;
+    win.api = built?.api;
     return { root, win };
   }
 
@@ -194,12 +198,13 @@ export class Desktop {
     return win;
   }
 
-  open(id) {
+  open(id, arg) {
     const app = this.apps.get(id);
     if (!app) return;
     let win = this.wins.get(id);
+    const fresh = !win;
     if (!win) {
-      const made = this.create(app);
+      const made = this.create(app, arg);
       win = this.register(id, made.root, made.win);
     }
     win.state = 'open';
@@ -208,7 +213,7 @@ export class Desktop {
     this.focus(id);
     if (!win.placed) this.position(win, app);
     win.root.querySelector('[data-autofocus]')?.focus();
-    app.onOpen?.(win);
+    app.onOpen?.(win, arg, fresh);
   }
 
   position(win, app) {
@@ -405,7 +410,7 @@ export class Desktop {
 
   /* ---------- Start menu ---------- */
 
-  // [{ app } | { label, icon, items } | { label, icon, open } | { sep: true } | { label, disabled }]
+  // [{ app, arg? } | { label, icon, items } | { label, icon, open, arg? } | { sep: true } | { label, disabled }]
   setMenu(defs) {
     const banner = make('div', 'sm-banner', '<span><b>LAN Party</b> 98</span>');
     this.menu.replaceChildren(banner, this.buildList(defs, true));
@@ -431,7 +436,7 @@ export class Desktop {
       } else {
         li.append(b);
         // Entries with no app/open target are decoys (e.g. the joke files in Documents): clicking does nothing.
-        if (d.app || d.open) b.addEventListener('click', () => { this.closeMenu(); this.open(d.app ?? d.open); });
+        if (d.app || d.open) b.addEventListener('click', () => { this.closeMenu(); this.open(d.app ?? d.open, d.arg); });
       }
       ul.append(li);
     }

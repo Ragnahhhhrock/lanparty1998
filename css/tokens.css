@@ -104,6 +104,10 @@
   --snow: #f4f8ff;
   --snow-shade: #c3d0e4;
 
+  /* ---- Web: the pages inside Internet Explorer (they sit on --beige-light; links are --w98-title) ---- */
+  --web-visited: #551a8b;   /* visited links: the classic purple, AA on --beige-light */
+  --web-width: 520px;       /* the page column; the site is built for 800x600 */
+
   /* ---- Posters: invented 1990s game boxes and movie one-sheets on the walls (all titles, characters and art are made up) ---- */
   --poster-ember: #7a1a12;        /* dark crimson: fortress corridors, burnt skies */
   --poster-steel: #46697a;        /* armour plate, teal steel */
