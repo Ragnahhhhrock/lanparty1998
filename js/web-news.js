@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-06', kind: 'new', title: 'Speakers and headphones',
+    text: 'Three PCs now have speakers and three have headphones on the tower. Whoever is at a speaker PC is playing something, and you can hear it from across the room: shotgun blasts, imps, the odd rocket. At a headphone PC you put them on, and it is quiet. Some people turn up wearing a pair already. N turns the noises off.',
+  },
+  {
     date: '1998-02-06', kind: 'fix', title: 'The pole by the taped man is gone',
     text: 'The white pole beside DUCTAPE has been taken out, and you can walk through where it stood. He is still taped to the duct. Nobody has explained that either.',
   },

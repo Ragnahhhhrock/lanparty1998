@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import * as T from './textures.js';
 import { BURNER } from './party.js';
+import { headphones } from './headphones.js';
 
 export const ROOM = { minX: -6, maxX: 6, minZ: -5, maxZ: 5, height: 2.8 };
 const TABLE_Y = 0.74;
@@ -113,6 +114,27 @@ function tower(burner = false) {
   return { group: g, hdd, drive };
 }
 
+// A pair of desktop speakers, one each side of the monitor, the way every PC with a sound card had them.
+function speakerPair() {
+  const g = new THREE.Group();
+  const led = new THREE.MeshBasicMaterial({ color: 0x3cff5a });
+  for (const sx of [-1, 1]) {
+    const sp = new THREE.Group();
+    sp.position.set(sx * 0.29, 0, -0.1);
+    sp.add(box(0.1, 0.2, 0.11, beigeDark, 0, 0.1, 0));
+    const cone = (r, y) => {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.008, 18).rotateX(Math.PI / 2), black);
+      m.position.set(0, y, 0.056);
+      return m;
+    };
+    sp.add(cone(0.036, 0.075), cone(0.015, 0.16));   // woofer, tweeter
+    sp.add(box(0.008, 0.008, 0.004, led, 0, 0.025, 0.056));
+    g.add(sp);
+  }
+  g.position.y = TABLE_Y;
+  return g;
+}
+
 function voltCan(label) {
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.033, 0.12, 20, 1, true),
@@ -191,7 +213,7 @@ function cupSleeve(n = 10) {
 
 // One PC on a table, in the table's own space (the monitor faces -z, the chair is at +z): monitor, tower, keyboard,
 // mouse and pad, a name tag on the tube, and a folding chair. Returns the pieces the caller wires up.
-function pcSetup(g, screen, tagText, chairYaw, burner = false) {
+function pcSetup(g, screen, tagText, chairYaw, burner = false, audio = 'speakers') {
   const mon = crt(screen.texture);
   mon.group.position.set(0, TABLE_Y, -0.12);
   g.add(mon.group);
@@ -208,6 +230,17 @@ function pcSetup(g, screen, tagText, chairYaw, burner = false) {
   g.add(box(0.06, 0.03, 0.1, beige, 0.33, TABLE_Y + 0.015, 0.26)); // mouse
   g.add(box(0.2, 0.004, 0.18, new THREE.MeshStandardMaterial({ color: 0x1c3b6e }), 0.34, TABLE_Y + 0.002, 0.25)); // mousepad
 
+  // sound: speakers either side of the monitor, or a pair of headphones resting on top of the tower
+  let phones = null;
+  if (audio === 'speakers') g.add(speakerPair());
+  else {
+    phones = headphones();
+    phones.scale.setScalar(0.95);
+    phones.position.set(0.52, TABLE_Y + 0.44 + 0.042 * 0.95 + 0.002, -0.1);
+    phones.rotation.y = Math.PI / 2 + 0.2;
+    g.add(phones);
+  }
+
   const tagTex = T.nameTag(tagText);
   const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.04), new THREE.MeshBasicMaterial({ map: tagTex }));
   tag.position.set(0, 0.39, 0.152);
@@ -217,20 +250,21 @@ function pcSetup(g, screen, tagText, chairYaw, burner = false) {
   chair.position.set(0, 0, 0.82);
   chair.rotation.y = chairYaw;
   g.add(chair);
-  return { mon, tw, tagTex, chair };
+  return { mon, tw, tagTex, chair, phones };
 }
 
 // Six PCs. Nobody owns one any more: whoever sits down first gets it. The idle screens are
 // whatever the last person left running.
 const STATIONS = [
   // row along the back wall, monitors facing the room
-  { x: -2.8, z: -4.25, face: 0, idle: 'defrag' },
-  { x: 0, z: -4.25, face: 0, idle: 'dos' },
-  { x: 2.8, z: -4.25, face: 0, idle: 'waiting' },
+  // audio: 'speakers' (the room can hear what's on the screen) or 'headphones' (only you can)
+  { x: -2.8, z: -4.25, face: 0, idle: 'defrag', audio: 'speakers' },
+  { x: 0, z: -4.25, face: 0, idle: 'dos', audio: 'headphones' },
+  { x: 2.8, z: -4.25, face: 0, idle: 'waiting', audio: 'speakers' },
   // row along the front wall
-  { x: -2.8, z: 4.25, face: Math.PI, idle: 'win98' },
-  { x: 0, z: 4.25, face: Math.PI, idle: 'bios' },
-  { x: 2.8, z: 4.25, face: Math.PI, idle: 'solitaire' },
+  { x: -2.8, z: 4.25, face: Math.PI, idle: 'win98', audio: 'headphones' },
+  { x: 0, z: 4.25, face: Math.PI, idle: 'bios', audio: 'speakers' },
+  { x: 2.8, z: 4.25, face: Math.PI, idle: 'solitaire', audio: 'headphones' },
 ];
 
 // The network, in three generations. Only one is visible at a time (out.setNetwork).
@@ -773,13 +807,13 @@ function buildLounge(scene, out, labelVolt, labelNachoz, labelCurlz) {
 // Where the regulars sit. They don't wander: each has a PC of their own or a cushion on the couch, and plays all
 // night. The desks are scenery: not in out.stations, nothing on them can be used (no sit prompt, no cans to
 // drink), so only the six real PCs are for visitors. Each runs a game of its own on its screen.
-//   out.seats[name]     where that regular sits (see seatFor in avatars.js)
+//   out.seats[name]     where that regular sits (see seatFor in avatars.js), and whether their PC has speakers or headphones
 //   out.gamerScreens    the screens to redraw each frame, with out.screens
 const GAMER_DESKS = [
   // right wall, two PCs facing the wall. Players face +x.
-  { x: 5.45, z: 2.0, segments: 2, yaw: -Math.PI / 2, pcs: [['K-Rad', 1.25, 'DEATHMATCH'], ['n00bslayer', 2.75, 'FRAGGING']] },
+  { x: 5.45, z: 2.0, segments: 2, yaw: -Math.PI / 2, pcs: [['K-Rad', 1.25, 'DEATHMATCH', 'speakers'], ['n00bslayer', 2.75, 'FRAGGING', 'speakers']] },
   // front-left corner, where the snack table leaves off. Players face -x.
-  { x: -5.45, z: 1.838 + TABLE_LEN / 2, segments: 1, yaw: Math.PI / 2, pcs: [['xX_Ghoul_Xx', 1.838 + TABLE_LEN / 2, 'DEATHMATCH']] },
+  { x: -5.45, z: 1.838 + TABLE_LEN / 2, segments: 1, yaw: Math.PI / 2, pcs: [['xX_Ghoul_Xx', 1.838 + TABLE_LEN / 2, 'DEATHMATCH', 'headphones']] },
 ];
 const COUCH_SEATS = [['MACCA', 0], ['PhatBass', 2]]; // [who, cushion]: 0 is the near end, 1 the middle, 2 the far end
 
@@ -794,7 +828,7 @@ function buildGamers(scene, out, labelVolt) {
     const half = (d.segments * TABLE_LEN) / 2;
     out.colliders.push({ minX: d.x - TABLE_DEPTH / 2, maxX: d.x + TABLE_DEPTH / 2, minZ: d.z - half, maxZ: d.z + half });
 
-    d.pcs.forEach(([who, z, what], pi) => {
+    d.pcs.forEach(([who, z, what, audio], pi) => {
       const g = new THREE.Group();
       g.position.set(d.x, 0, z);
       g.rotation.y = d.yaw;
@@ -802,12 +836,13 @@ function buildGamers(scene, out, labelVolt) {
       const screen = new T.Screen('remote', 20 + di * 3 + pi);
       screen.setFree(false, who.toUpperCase(), what);
       out.gamerScreens.push(screen);
-      const { chair } = pcSetup(g, screen, who.toUpperCase(), 0.1 * (pi + 1) - 0.15);
+      const { chair, phones } = pcSetup(g, screen, who.toUpperCase(), 0.1 * (pi + 1) - 0.15, false, audio);
+      if (phones) phones.visible = false; // they're wearing them
       const can = voltCan(labelVolt);
       can.position.set(-0.36, TABLE_Y, 0.12);
       g.add(can);
       g.updateMatrixWorld(true);
-      out.seats[who] = { chair, group: g };
+      out.seats[who] = { chair, group: g, audio };
       const at = chair.getWorldPosition(new THREE.Vector3());
       out.colliders.push({ minX: at.x - 0.25, maxX: at.x + 0.25, minZ: at.z - 0.25, maxZ: at.z + 0.25 });
     });
@@ -1209,7 +1244,7 @@ export function buildRoom(scene) {
     screen.pcNumber = i + 1;
     out.screens.push(screen);
 
-    const { mon, tw, tagTex, chair } = pcSetup(g, screen, `PC-0${i + 1}`, (i * 0.37) % 0.5 - 0.25, i === BURNER.pc); // nobody pushes their chair in straight
+    const { mon, tw, tagTex, chair, phones } = pcSetup(g, screen, `PC-0${i + 1}`, (i * 0.37) % 0.5 - 0.25, i === BURNER.pc, s.audio); // nobody pushes their chair in straight
     out.hddLeds.push(tw.hdd);
 
     // every station gets a can, every other one a bag of Nachoz
@@ -1219,7 +1254,7 @@ export function buildRoom(scene) {
 
     const station = {
       ...s, index: i, name: `PC-0${i + 1}`, group: g, screen, monitor: mon, seatTarget: new THREE.Object3D(),
-      cableStart: new THREE.Vector3(), chair,
+      cableStart: new THREE.Vector3(), chair, deskPhones: phones, // deskPhones: on the tower while nobody is wearing them
       setTag: (text) => T.nameTag(text, tagTex),
     };
     // where the camera goes when you sit: square in front of the tube

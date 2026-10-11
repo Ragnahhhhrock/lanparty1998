@@ -5,6 +5,7 @@
 // server sent and drop into the chair when they sit at a PC. The regulars don't walk:
 // they sit at their own PCs or on the couch, playing.
 import * as THREE from 'three';
+import { headphones } from './headphones.js';
 
 // colours are tokens from css/tokens.css (--skin-N, --hair-*, --eye-white, --iris-*, --lip, --clothes-*, --neon-*, --denim, --shoe, --shirt-N)
 const mats = new Map();
@@ -164,8 +165,12 @@ export function lookFor(seed, { force, shirt } = {}) {
     L.facial = chance(0.2) ? 'stubble' : 'none';
   }
   L.face = faceFor(seed, arch, L);
+  L.headphones = hashRng(`${seed}~cans`)() < CANS[arch]; // its own stream too, so nobody's clothes or hair change
   return L;
 }
+
+// How many of each crowd wear headphones: the ones who'd rather not hear the room.
+const CANS = { nerd: 0.45, raver: 0.4, goth: 0.35, grunge: 0.3, hiphop: 0.25, surfer: 0.15 };
 
 // The face is rolled from its own stream so adding features never reshuffles anybody's clothes or hair.
 function faceFor(seed, arch, L) {
@@ -455,7 +460,7 @@ function buildBody(look) {
       }
     }
   }
-  if (look.hat) {
+  if (look.hat && !look.headphones) {
     const hm = mat(look.hat.color);
     if (look.hat.kind === 'cap') { // worn backwards
       P.cap(torso, hm, [0, C0 + 0.008, 0.004], [0.116 * jw, 0.131, 0.125], Math.PI * 0.38);
@@ -499,9 +504,16 @@ function buildBody(look) {
     P.box(torso, dark, [0, headY + 0.03, -0.116], [0.018, 0.005, 0.005]);
   }
 
+  // headphones: one pair for everybody, shown or hidden (they go on when you sit at a PC that has them, see wearsPhones)
+  const phones = headphones();
+  phones.position.set(0, headY - 0.005, 0);
+  phones.scale.x = jw;
+  phones.visible = false;
+  torso.add(phones);
+
   P.finish();
   body.add(torso);
-  return { body, legs, torso, arms, eyes, mouth: { group: mouth, lower, inner, teeth }, headTop: (0.84 + headY + 0.2) * look.height };
+  return { body, legs, torso, arms, eyes, mouth: { group: mouth, lower, inner, teeth }, phones, headTop: (0.84 + headY + 0.2) * look.height };
 }
 
 function label(name, color) {
@@ -671,6 +683,7 @@ class Avatar extends EventTarget {
     this.arms = b.arms;
     this.eyes = b.eyes;
     this.mouth = b.mouth;
+    this.phones = b.phones;
     this.faceT = 0;
     this.blinkIn = 1.5 + Math.random() * 3; // seconds until the next blink
     this.blinkT = -1;
@@ -694,7 +707,12 @@ class Avatar extends EventTarget {
     this.seat = null;
     this.walkT = 0;
     this.armBase = 0;
+    this.syncPhones();
   }
+
+  // Headphones on: if they came wearing them, or they're sitting at a PC that has a pair (unless there's a hat in the way).
+  wearsPhones() { return !!this.look.headphones || (this.seat?.audio === 'headphones' && !this.look.hat); }
+  syncPhones() { this.phones.visible = this.wearsPhones(); }
 
   // Eat or drink something: lift it to the mouth, take a few bites or sips, lower the hand.
   // kind: 'pizza' (a slice), 'snack' (a handful of Nachoz), 'curl' (Cheez Curlz) or 'drink' (a can of Volt Cola)
@@ -837,7 +855,7 @@ class Avatar extends EventTarget {
     b.mat.opacity = Math.min(1, (b.life - b.t) / 0.4);
   }
 
-  // seat: { pos: Vector3 (on the floor, under the hips), yaw, pose: 'desk' | 'couch', pad?: Object3D to hold } or null to stand
+  // seat: { pos: Vector3 (on the floor, under the hips), yaw, pose: 'desk' | 'couch', audio?: 'speakers' | 'headphones', pad?: Object3D to hold } or null to stand
   setSeat(seat) {
     this.seat = seat;
     const P = seat ? POSES[seat.pose ?? 'desk'] : null;
@@ -854,6 +872,7 @@ class Avatar extends EventTarget {
     if (this.pad) { this.group.remove(this.pad); this.pad = null; }
     if (seat?.pad) { this.pad = seat.pad; this.pad.position.set(0, 0.7, -0.25); this.pad.rotation.set(-0.25, 0, 0); this.group.add(this.pad); } // held in both hands
     if (seat) { this.group.position.copy(seat.pos); this.group.rotation.y = seat.yaw; }
+    this.syncPhones();
   }
 
   update(dt, player, t = 0) {
@@ -886,7 +905,7 @@ export function seatFor(spot) {
   const yaw = spot.group.rotation.y;
   // the chair faces the desk; the avatar's front is -z, the station's front (toward the chair) is +z
   pos.x -= Math.sin(yaw) * 0.1; pos.z -= Math.cos(yaw) * 0.1;
-  return { pos, yaw, pose: 'desk' };
+  return { pos, yaw, pose: 'desk', audio: spot.audio };
 }
 
 // A regular who isn't another player: sits where you put him (at a PC or on the couch), plays, and eats and drinks.

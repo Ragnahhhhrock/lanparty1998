@@ -8,6 +8,7 @@ import { RoomLink, ROOM_NAME } from './net.js';
 import { Crowd, spawnNpc, spawnTaped, seatFor, setEye } from './avatars.js';
 import * as sfx from './sfx.js';
 import * as voices from './voices.js';
+import { GameNoise } from './gaming.js';
 import { analytics } from './analytics.js';
 import { Party, PIZZA, BURNER, DISCS, NET, SHOP, PC_COUNT, OC, HEAT, RAM, NIGHT, SEC_PER_GAME_MIN, SHARE_STEPS, celsius } from './party.js';
 import * as dialog from './dialog.js';
@@ -63,7 +64,7 @@ const party = new Party({ startMinutes: GAME_START });
 // Where each one sits is in buildGamers (js/room.js). Nobody else can use those PCs.
 const sit = (name) => seatFor(room.seats[name]);
 // Macca: off to Singapore for work, and happy to bring RAM back if you give him cash first
-const macca = spawnNpc(scene, { name: 'MACCA', color: '#20b2aa', yaw: -Math.PI / 2, arch: 'surfer', seat: sit('MACCA') }); // --shirt-7
+const macca = spawnNpc(scene, { name: 'MACCA', color: '#20b2aa', yaw: -Math.PI / 2, arch: 'surfer', seat: sit('MACCA'), look: { headphones: false } }); // --shirt-7
 const maccaHit = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.5, 0.7), new THREE.MeshBasicMaterial({ visible: false }));
 maccaHit.position.set(macca.group.position.x, 0.75, macca.group.position.z);
 maccaHit.userData.interact = { kind: 'buddy' };
@@ -71,10 +72,11 @@ scene.add(maccaHit);
 room.interactables.push(maccaHit);
 
 const regulars = [
-  { name: 'xX_Ghoul_Xx', color: '#9b4dca', arch: 'goth' },     // --shirt-5
-  { name: 'PhatBass', color: '#d94f8a', arch: 'raver' },        // --shirt-8
-  { name: 'K-Rad', color: '#2b6fd6', arch: 'hiphop' },           // --shirt-2
-  { name: 'n00bslayer', color: '#3aa35a', arch: 'nerd' },       // --shirt-4
+  // headphones: the PCs with speakers (K-Rad, n00bslayer) are the ones the room can hear; Ghoul's has headphones, so he wears them
+  { name: 'xX_Ghoul_Xx', color: '#9b4dca', arch: 'goth', look: { headphones: true } },      // --shirt-5
+  { name: 'PhatBass', color: '#d94f8a', arch: 'raver', look: { headphones: false } },       // --shirt-8
+  { name: 'K-Rad', color: '#2b6fd6', arch: 'hiphop', look: { headphones: false } },         // --shirt-2
+  { name: 'n00bslayer', color: '#3aa35a', arch: 'nerd', look: { headphones: false } },      // --shirt-4
 ].map((r) => spawnNpc(scene, { ...r, seat: sit(r.name) }));
 // who is sitting where, by IRC nick, so what they say in the channel comes out of their mouths
 const speakers = new Map([macca, ...regulars].map((a) => [a.name.toLowerCase(), a]));
@@ -773,6 +775,19 @@ function walk(dt) {
 const taped = spawnTaped(scene, { name: 'DUCTAPE', color: '#e8c21b', ...room.taped });
 let tapedNext = 6;
 
+/* ---------- speaker PCs: the noise of the games ---------- */
+const gameNoise = new GameNoise();
+// The PCs with speakers that somebody is playing on: the regulars at theirs, and anyone else sat at one. Headphones
+// on (or a PC with headphones) and nobody else can hear it.
+function speakerPcs() {
+  if (!voices.isOn()) return []; // N turns the room's noises off, these included
+  const out = [];
+  for (const a of [...regulars, ...crowd.avatars.values()]) {
+    if (a.seat?.audio === 'speakers' && !a.wearsPhones()) out.push({ id: a.id, x: a.group.position.x, z: a.group.position.z });
+  }
+  return out;
+}
+
 /* ---------- LANamp: the room's music ---------- */
 let music = null, amp = null;
 function startMusic() {
@@ -826,6 +841,7 @@ function frame() {
   if ((tapedNext -= dt) < 0) { tapedNext = 12 + Math.random() * 10; if (taped.eatT < 0) taped.eat(); }
   if (macca.group.visible) macca.idle(now);
   for (const r of regulars) r.idle(now);
+  if (mode !== 'intro') gameNoise.tick(dt, speakerPcs(), { x: player.pos.x, z: player.pos.z, yaw: player.yaw, seated: mode === 'seated' });
   if (mode !== 'intro') party.tick(dt, { seatedPc: seatedAt?.index ?? null });
   if (link.online && mode === 'walk' && (sendTimer += dt) > 0.1) { sendTimer = 0; link.pos(player.pos.x, player.pos.z, player.yaw); }
 
@@ -1049,6 +1065,7 @@ function refreshStations() {
   for (const st of room.stations) {
     const mine = seatedAt === st;
     const who = mine ? null : link.occupant(st.index);
+    if (st.deskPhones) st.deskPhones.visible = !mine && !who; // somebody sitting there has them on
     if (mine) {
       st.setTag(myName);
       st.screen.free = false;

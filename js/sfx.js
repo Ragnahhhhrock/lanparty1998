@@ -72,10 +72,14 @@ export function crunch() {
 /* ---------- the regulars' noises ----------
    All made from oscillators and noise, like everything else. vol is 0..1 (how close they are),
    pitch scales the voice so a bigger bloke is lower. */
-function bus(vol) {
+function bus(vol, pan = 0) {
   const g = ctx.createGain();
   g.gain.value = vol;
-  g.connect(master);
+  if (pan && ctx.createStereoPanner) { // -1 is hard left, 1 hard right: which side of the room it comes from
+    const p = ctx.createStereoPanner();
+    p.pan.value = Math.max(-1, Math.min(1, pan));
+    g.connect(p).connect(master);
+  } else g.connect(master);
   return g;
 }
 
@@ -167,4 +171,108 @@ export function snort(vol = 1, pitch = 1) {
     osc.connect(bp).connect(g).connect(out);
     osc.start(at); osc.stop(at + 0.1);
   }
+}
+
+/* ---------- what comes out of a PC's speakers ----------
+   The noises of a shooter, made from oscillators and noise like everything else (js/gaming.js decides when each
+   one plays). vol is 0..1 (how close the PC is), pan -1..1 (which side of you it is), pitch nudges each PC so two
+   of them never sound identical. */
+
+// a sine that drops fast: the body of a gunshot or an explosion
+function thump(start, dur, f0, f1, vol, dest) {
+  const osc = ctx.createOscillator(); osc.type = 'sine';
+  osc.frequency.setValueAtTime(f0, start);
+  osc.frequency.exponentialRampToValueAtTime(f1, start + dur);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(vol, start);
+  g.gain.exponentialRampToValueAtTime(0.001, start + dur);
+  osc.connect(g).connect(dest);
+  osc.start(start); osc.stop(start + dur + 0.02);
+}
+
+// a pump shotgun: the blast, the room ringing, then the slide going back and forward
+export function shotgun(vol = 1, pan = 0, pitch = 1) {
+  if (!ctx) return;
+  const t = ctx.currentTime, out = bus(vol, pan);
+  burst(t, 0.09, 2600 * pitch, 0.6, 0.9, 'bandpass', out);   // the crack
+  burst(t, 0.4, 950 * pitch, 0.5, 0.8, 'lowpass', out);      // the body of it
+  burst(t + 0.03, 1.1, 420, 0.4, 0.25, 'lowpass', out);      // the room
+  thump(t, 0.3, 160 * pitch, 40, 0.9, out);
+  for (const at of [0.62, 0.78]) {                           // ch-chk
+    burst(t + at, 0.05, 1200 * pitch, 5, 0.5, 'bandpass', out);
+    burst(t + at + 0.015, 0.04, 2400 * pitch, 3, 0.3, 'bandpass', out);
+  }
+}
+
+// an imp: a raspy scream that starts high and tears downward. len makes it longer (a death rattle) or shorter.
+export function impShriek(vol = 1, pan = 0, pitch = 1, len = 0.85) {
+  if (!ctx) return;
+  const t = ctx.currentTime, out = bus(vol, pan);
+  const f0 = 1050 * pitch, f1 = 340 * pitch;
+  const voice = (type, ratio, mix) => {
+    const osc = ctx.createOscillator(); osc.type = type;
+    osc.frequency.setValueAtTime(f0 * 0.75 * ratio, t);
+    osc.frequency.exponentialRampToValueAtTime(f0 * ratio, t + 0.08);
+    osc.frequency.exponentialRampToValueAtTime(f1 * ratio, t + len);
+    const vib = ctx.createOscillator(); vib.frequency.value = 27;
+    const vibDepth = ctx.createGain(); vibDepth.gain.value = 34 * pitch * ratio;
+    vib.connect(vibDepth).connect(osc.frequency);
+    const m = ctx.createGain(); m.gain.value = mix;
+    osc.connect(m);
+    for (const o of [osc, vib]) { o.start(t); o.stop(t + len + 0.05); }
+    return m;
+  };
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.5, t + 0.03);
+  g.gain.setValueAtTime(0.5, t + len * 0.45);
+  g.gain.exponentialRampToValueAtTime(0.001, t + len);
+  const gargle = ctx.createOscillator(); gargle.frequency.value = 46;      // the rasp
+  const gargleDepth = ctx.createGain(); gargleDepth.gain.value = 0.28;
+  gargle.connect(gargleDepth).connect(g.gain);
+  gargle.start(t); gargle.stop(t + len + 0.05);
+  const throat = [[voice('sawtooth', 1, 1), 1800, 900, 4], [voice('square', 1.51, 0.35), 3000, 1700, 5]];
+  for (const [src, a, b, q] of throat) {   // two formants sliding down with the pitch
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = q;
+    bp.frequency.setValueAtTime(a * pitch, t); bp.frequency.exponentialRampToValueAtTime(b * pitch, t + len);
+    src.connect(bp).connect(g);
+  }
+  g.connect(out);
+  burst(t, len * 0.8, 4200, 0.8, 0.14, 'bandpass', out);                    // spit and hiss
+}
+
+// a chaingun: a run of flat cracks, fast
+export function chaingun(vol = 1, pan = 0, pitch = 1, shots = 8) {
+  if (!ctx) return;
+  const t = ctx.currentTime, out = bus(vol, pan);
+  for (let i = 0; i < shots; i++) {
+    const at = t + i * 0.085;
+    burst(at, 0.07, 1900 * pitch, 0.9, 0.5, 'bandpass', out);
+    thump(at, 0.06, 230 * pitch, 90, 0.45, out);
+  }
+}
+
+// a rocket: the launch whoosh, then the bang and its rumble
+export function rocket(vol = 1, pan = 0, pitch = 1) {
+  if (!ctx) return;
+  const t = ctx.currentTime, out = bus(vol, pan);
+  burst(t, 0.5, 700 * pitch, 0.7, 0.45, 'bandpass', out);
+  burst(t + 0.55, 1.2, 320, 0.5, 1.0, 'lowpass', out);
+  burst(t + 0.56, 0.3, 1800, 0.6, 0.45, 'bandpass', out);
+  thump(t + 0.55, 0.9, 100 * pitch, 28, 1.0, out);
+}
+
+// picking something up: two quick chirps, the second higher
+export function pickup(vol = 1, pan = 0, pitch = 1) {
+  if (!ctx) return;
+  const t = ctx.currentTime, out = bus(vol, pan);
+  [[0, 660], [0.08, 990]].forEach(([at, f]) => {
+    const osc = ctx.createOscillator(); osc.type = 'square'; osc.frequency.value = f * pitch;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t + at);
+    g.gain.linearRampToValueAtTime(0.16, t + at + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.001, t + at + 0.09);
+    osc.connect(g).connect(out);
+    osc.start(t + at); osc.stop(t + at + 0.1);
+  });
 }
