@@ -213,7 +213,7 @@ ${box('Keys', `<table class="w-tbl" cellspacing="0" cellpadding="0">
 <tr><td><kbd>F</kbd></td><td>Open the case of the PC you are looking at</td></tr>
 <tr><td><kbd>T</kbd></td><td>Chat (it shows up in #lanparty98)</td></tr>
 <tr><td><kbd>I</kbd> <kbd>M</kbd> <kbd>H</kbd></td><td>Show or hide IRC, LANamp and Internet Explorer</td></tr>
-<tr><td><kbd>N</kbd></td><td>Voices on or off</td></tr>
+<tr><td><kbd>N</kbd></td><td>Noises on or off</td></tr>
 <tr><td><kbd>Tab</kbd></td><td>Free the mouse for the taskbar and windows. Click the room to walk again</td></tr>
 <tr><td><kbd>\`</kbd></td><td>Stand up from your PC</td></tr>
 </table>`)}

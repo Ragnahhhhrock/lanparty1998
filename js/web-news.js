@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-06', kind: 'fix', title: 'The regulars stop talking out loud',
+    text: 'Their lines are now text only, in the channel and the bubbles. The burps and snickers are still audible. N turns those off.',
+  },
+  {
     date: '1998-02-06', kind: 'fix', title: 'LANamp starts muted',
     text: 'The player now opens with the volume at zero so the room is quiet when you walk in. Drag the volume slider up to hear the playlist.',
   },
