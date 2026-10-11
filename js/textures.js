@@ -126,6 +126,61 @@ export function priceList() {
   return tex(c);
 }
 
+// the sticker on a 3.5" disk: marker pen on paper, with a coloured stripe along the top
+export function floppyLabel(text, stripe = '#e2231a', seed = 1) {
+  const [c, g] = canvas(128, 88);
+  const r = rand(seed);
+  g.fillStyle = '#e8e1cc'; g.fillRect(0, 0, 128, 88);                    // --paper
+  g.fillStyle = stripe; g.fillRect(0, 0, 128, 14);
+  g.fillStyle = '#808080'; for (let y = 44; y < 88; y += 16) g.fillRect(4, y, 120, 1); // --w98-shadow: ruled lines
+  g.font = `34px ${CRT_FONT}`;
+  const k = Math.min(1, 112 / Math.max(1, g.measureText(text).width));
+  g.font = `${Math.round(34 * k)}px ${CRT_FONT}`;
+  g.save(); g.translate(8, 42); g.rotate((r() - 0.5) * 0.08);
+  g.fillStyle = '#000080'; g.fillText(text, 0, 0);                       // --w98-title: blue biro
+  g.restore();
+  return tex(c);
+}
+
+// one side of a CD, drawn on a circle that maps onto a RingGeometry (or a cylinder cap).
+//   silver: pressed data side   cdr: burnt data side   burnt: marker pen on the label side
+//   printed: a pressed game disc, label side up
+export function discFace(kind = 'silver', text = '') {
+  const [c, g] = canvas(128, 128);
+  const disc = { silver: '#cfd3d8', cdr: '#7f9f8a', burnt: '#e8e1cc', printed: '#cfd3d8' }[kind]; // --disc-silver, --disc-cdr, --paper
+  g.beginPath(); g.arc(64, 64, 64, 0, Math.PI * 2); g.fillStyle = disc; g.fill();
+  if (kind === 'silver' || kind === 'cdr') {
+    g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.28)';
+    for (let r = 26; r < 62; r += 8) { g.beginPath(); g.arc(64, 64, r, 0, Math.PI * 2); g.stroke(); }
+  }
+  if (kind === 'printed') {
+    g.fillStyle = '#000080'; g.beginPath(); g.arc(64, 64, 46, 0.2, Math.PI - 0.2); g.fill(); // --w98-title band
+    g.fillStyle = '#e2231a'; g.beginPath(); g.arc(64, 64, 46, Math.PI + 0.2, -0.2); g.fill(); // --volt
+  }
+  if (text) {
+    g.save(); g.translate(64, 64); g.rotate(-0.45);
+    g.font = `30px ${CRT_FONT}`; g.textAlign = 'center';
+    g.fillStyle = kind === 'printed' ? '#ffffff' : '#000080'; g.fillText(text, 0, 8);
+    g.restore();
+  }
+  g.beginPath(); g.arc(64, 64, 18, 0, Math.PI * 2); g.fillStyle = '#e8e8e8'; g.fill(); // --w98-key: clear hub ring
+  g.beginPath(); g.arc(64, 64, 63, 0, Math.PI * 2); g.lineWidth = 2; g.strokeStyle = '#8f949a'; g.stroke(); // --disc-edge
+  return tex(c);
+}
+
+// the paper insert in a jewel case: a coloured band with the title in it
+export function jewelInsert(title, band = '#000080') {
+  const [c, g] = canvas(142, 124);
+  g.fillStyle = '#e8e1cc'; g.fillRect(0, 0, 142, 124);                   // --paper
+  g.fillStyle = band; g.fillRect(0, 0, 142, 44);
+  g.font = `30px ${CRT_FONT}`;
+  const k = Math.min(1, 126 / Math.max(1, g.measureText(title).width));
+  g.font = `${Math.round(30 * k)}px ${CRT_FONT}`;
+  g.fillStyle = '#ffffff'; g.fillText(title, 8, 32);
+  g.fillStyle = '#808080'; for (let y = 64; y < 124; y += 18) g.fillRect(8, y, 126, 1); // --w98-shadow
+  return tex(c);
+}
+
 // a government asset sticker on the borrowed switch
 export function assetTag() {
   const [c, g] = canvas(192, 80);

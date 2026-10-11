@@ -13,6 +13,7 @@ GROUPS = {
     "shell": ("w98-",),
     "crt": ("crt-", "phosphor", "dos-", "amber", "toast", "bsod"),
     "basement": ("basement", "wood", "carpet", "ceiling", "beige", "paper", "duct-", "cardboard", "pizza-", "pepperoni"),
+    "media": ("floppy-", "disk-", "disc-", "case-"),
     "brand": ("volt", "nacho", "cheese"),
     "people": ("link-led", "skin", "denim", "shoe", "hair", "clothes-", "neon-", "shirt-"),
     "font": ("font-",),

@@ -49,6 +49,21 @@
   --pizza-cheese: #f2c14e;
   --pepperoni: #b22a1e;
 
+  /* ---- Media: floppies, CDs and the boxes they live in ---- */
+  --floppy-black: #1c1c1f;  /* most disks are black */
+  --floppy-blue: #2b6fd6;   /* the coloured packs */
+  --floppy-red: #c0392b;
+  --floppy-yellow: #e8c21b;
+  --floppy-green: #3aa35a;
+  --floppy-grey: #8a8d92;
+  --disk-metal: #b9bdc2;    /* shutters on 3.5" disks, spindle posts */
+  --disk-case: #26262b;     /* black plastic library cases, tubs, jewel case trays */
+  --disk-smoke: #3a3d42;    /* smoked lids */
+  --case-clear: #dfe6ea;    /* jewel case lids */
+  --disc-silver: #cfd3d8;   /* CD data side */
+  --disc-edge: #8f949a;
+  --disc-cdr: #7f9f8a;      /* CD-R data side */
+
   /* ---- Parody brands (never use real brand names or marks) ---- */
   --volt: #e2231a;          /* Volt Cola, UI red, caffeine meter */
   --volt-can: #c4161c;      /* Volt Cola can */

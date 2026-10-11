@@ -51,6 +51,9 @@ Use tokens by name. Never introduce a raw hex value in CSS, canvas code or a tem
 ### Basement
 `--basement #0b0906` (page bg) · `--wood #4a2c17` · `--wood-dark #24150b` · `--carpet #3b2f2a` · `--ceiling #d9d4c7` · `--beige #d6cdb4` · `--beige-light #ebe4cf` · `--paper #e8e1cc` (text on dark basement bars)
 
+### Media
+`--floppy-black #1c1c1f` · `--floppy-blue #2b6fd6` · `--floppy-red #c0392b` · `--floppy-yellow #e8c21b` · `--floppy-green #3aa35a` · `--floppy-grey #8a8d92` (3.5" disks) · `--disk-metal #b9bdc2` · `--disk-case #26262b` · `--disk-smoke #3a3d42` · `--case-clear #dfe6ea` (cases, tubs, spindles) · `--disc-silver #cfd3d8` · `--disc-edge #8f949a` · `--disc-cdr #7f9f8a` (CDs)
+
 ### Brand accents
 `--volt #e2231a` (caffeine, UI red) · `--volt-can #c4161c` · `--volt-yellow #ffd400` · `--nacho #f28a1c` (snacks) · `--nacho-navy #1d1a5c` · `--cheese #ffcc00`
 

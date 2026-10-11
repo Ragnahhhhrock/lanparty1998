@@ -534,6 +534,174 @@ function buildCeilingGamer(scene, out) {
   out.taped = at;
 }
 
+// Floppies, CDs and the boxes they live in, scattered over the tables, the PC cases and the carpet.
+// Colours are tokens: --floppy-*, --disk-*, --disc-*, --case-clear. It is all decoration: nothing here is
+// interactive, so geometry and materials are shared.
+const FL = { w: 0.09, t: 0.0034, d: 0.094 }; // a 3.5" disk, in metres
+function buildMedia(scene, out) {
+  const rnd = (() => { let s = 1998; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); })();
+  const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, ...o });
+  const clear = (color, opacity) => new THREE.MeshStandardMaterial({ color, roughness: 0.2, transparent: true, opacity, depthWrite: false });
+  const put = (parent, obj, x, y, z, yaw = 0, tx = 0, tz = 0) => { obj.position.set(x, y, z); obj.rotation.set(tx, yaw, tz); parent.add(obj); return obj; };
+
+  const caseDark = std(0x26262b, { roughness: 0.4 });                 // --disk-case
+  const smoke = clear(0x3a3d42, 0.55);                                // --disk-smoke
+  const jewelClear = clear(0xdfe6ea, 0.28);                           // --case-clear
+  const metal = std(0xb9bdc2, { metalness: 0.8, roughness: 0.35 });   // --disk-metal
+  const cardboard = std(0xb8935a, { roughness: 0.95 });               // --cardboard
+
+  // ---- 3.5" floppies: black mostly, the odd coloured one, each with a scribbled label
+  const shells = [0x1c1c1f, 0x2b6fd6, 0xc0392b, 0xe8c21b, 0x3aa35a, 0x8a8d92].map((c) => std(c, { roughness: 0.5 })); // --floppy-*
+  const STRIPE = ['#e2231a', '#2b6fd6', '#e8c21b', '#3aa35a', '#f28a1c'];
+  const LABELS = ['DOOM2.WAD', 'QUAKE', 'NETFRAG', 'AUTOEXEC', 'MP3 TUNES', 'WIN98 BOOT', 'KEEN SAVES', 'DRIVERS', 'GAMES 1', 'WARP.EXE', 'IPX FIX', 'DO NOT ERASE']
+    .map((text, i) => std(0xffffff, { map: T.floppyLabel(text, STRIPE[i % STRIPE.length], i + 1), roughness: 0.8 }));
+  const bodyGeo = new THREE.BoxGeometry(FL.w, FL.t, FL.d);
+  const shutGeo = new THREE.BoxGeometry(0.036, FL.t + 0.0008, 0.021);
+  const labGeo = new THREE.PlaneGeometry(0.058, 0.04);
+  const floppy = (shell, label) => { // lies flat, label up, the metal shutter toward -z
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(bodyGeo, shells[shell % shells.length]));
+    g.add(put(g, new THREE.Mesh(shutGeo, metal), 0.012, 0, -0.0335));
+    g.add(put(g, new THREE.Mesh(labGeo, LABELS[label % LABELS.length]), 0, FL.t / 2 + 0.0002, 0.027, 0, -Math.PI / 2));
+    return g;
+  };
+  const pick = () => [0, 0, 0, 1, 2, 3, 4, 5][Math.floor(rnd() * 8)];
+  const loose = (parent, x, y, z, yaw) => put(parent, floppy(pick(), Math.floor(rnd() * LABELS.length)), x, y + FL.t / 2, z, yaw);
+  const stack = (parent, x, y, z, n, yaw) => {
+    for (let k = 0; k < n; k++) put(parent, floppy(pick(), Math.floor(rnd() * LABELS.length)), x + (rnd() - 0.5) * 0.012, y + FL.t / 2 + k * FL.t, z + (rnd() - 0.5) * 0.012, yaw + (rnd() - 0.5) * 0.7);
+    return y + n * FL.t;
+  };
+
+  // ---- CDs
+  const ringGeo = new THREE.RingGeometry(0.0075, 0.06, 40);
+  const faces = {
+    silver: T.discFace('silver'), cdr: T.discFace('cdr'), burnt: T.discFace('burnt', 'MIX CD'),
+    burnt2: T.discFace('burnt', 'DOOM LVLS'), printed: T.discFace('printed', 'NETFRAG'),
+  };
+  const discMats = Object.fromEntries(Object.entries(faces).map(([k, map]) => [k, new THREE.MeshStandardMaterial({ map, side: THREE.DoubleSide, roughness: 0.3, metalness: 0.5 })]));
+  const disc = (kind) => { const m = new THREE.Mesh(ringGeo, discMats[kind]); m.rotation.x = -Math.PI / 2; return m; };
+  const cd = (parent, kind, x, y, z, yaw) => { const g = new THREE.Group(); g.add(disc(kind)); return put(parent, g, x, y + 0.0008, z, yaw); };
+
+  // a jewel case, lying flat: black tray, paper insert, a disc, clear lid
+  const INSERTS = [['NETFRAG 98', '#000080'], ['MIX CD 4', '#e2231a'], ['SOUNDS OF', '#3aa35a'], ['GAME PACK', '#2b6fd6']];
+  const jewel = (n, kind = 'silver') => {
+    const [title, band] = INSERTS[n % INSERTS.length];
+    const g = new THREE.Group();
+    g.add(box(0.14, 0.002, 0.124, caseDark, 0, 0.001, 0));
+    g.add(put(g, new THREE.Mesh(new THREE.PlaneGeometry(0.138, 0.12), new THREE.MeshStandardMaterial({ map: T.jewelInsert(title, band), roughness: 0.8 })), 0, 0.0022, 0, 0, -Math.PI / 2));
+    const d = new THREE.Group(); d.add(disc(kind)); put(g, d, 0, 0.0045, 0.002, 0.6);
+    g.add(box(0.142, 0.0035, 0.125, jewelClear, 0, 0.0075, 0));
+    return g;
+  };
+
+  // a 10-disk library case: black base, smoked lid on a hinge, disks lying in it
+  const diskCase = (open, n) => {
+    const g = new THREE.Group();
+    const W = 0.102, D = 0.106, H = 0.03, wl = 0.004;
+    g.add(box(W, wl, D, caseDark, 0, wl / 2, 0));
+    g.add(box(wl, H, D, caseDark, -W / 2 + wl / 2, H / 2, 0), box(wl, H, D, caseDark, W / 2 - wl / 2, H / 2, 0));
+    g.add(box(W - 2 * wl, H, wl, caseDark, 0, H / 2, -D / 2 + wl / 2), box(W - 2 * wl, H, wl, caseDark, 0, H / 2, D / 2 - wl / 2));
+    stack(g, 0, wl, 0, n, 0);
+    const hinge = new THREE.Group();
+    hinge.position.set(0, H, D / 2);
+    hinge.rotation.x = open ? 1.8 : 0;
+    hinge.add(box(W, 0.004, D, smoke, 0, 0, -D / 2));
+    hinge.add(put(hinge, new THREE.Mesh(new THREE.PlaneGeometry(0.07, 0.03), LABELS[8]), 0, 0.0025, -0.03, 0, -Math.PI / 2));
+    g.add(hinge);
+    return g;
+  };
+
+  // a cardboard ten-pack of blank disks
+  const packLabel = std(0xffffff, { map: T.floppyLabel('10 x HD', '#2b6fd6', 40), roughness: 0.8 });
+  const pack = () => {
+    const g = new THREE.Group();
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.097, 0.035, 0.097), [cardboard, cardboard, packLabel, cardboard, cardboard, cardboard]);
+    m.position.y = 0.0175; g.add(m);
+    return g;
+  };
+
+  // a flip-top tub: forty disks stood on end under a smoked lid
+  const tub = () => {
+    const g = new THREE.Group();
+    const W = 0.19, D = 0.145;
+    g.add(box(W, 0.045, D, caseDark, 0, 0.0225, 0));
+    for (let k = 0; k < 14; k++) {
+      const f = floppy(pick(), k);
+      put(g, f, -W / 2 + 0.014 + k * 0.0122, 0.065, (rnd() - 0.5) * 0.006, 0, 0, Math.PI / 2 + (rnd() - 0.5) * 0.1);
+    }
+    g.add(box(W, 0.07, D, smoke, 0, 0.08, 0));
+    g.add(box(0.03, 0.012, 0.01, caseDark, 0, 0.045, -D / 2 - 0.004));
+    g.add(put(g, new THREE.Mesh(new THREE.PlaneGeometry(0.09, 0.04), LABELS[10]), 0, 0.022, -D / 2 - 0.0006, Math.PI, 0));
+    return g;
+  };
+
+  // a CD spindle: a stack on a post under a clear dome
+  const spindle = () => {
+    const g = new THREE.Group();
+    const part = (geo, mat, y) => { const m = new THREE.Mesh(geo, mat); m.position.y = y; g.add(m); return m; };
+    part(new THREE.CylinderGeometry(0.066, 0.066, 0.006, 24), caseDark, 0.003);
+    part(new THREE.CylinderGeometry(0.06, 0.06, 0.03, 32), [std(0x8f949a, { metalness: 0.5 }), discMats.printed, std(0x8f949a)], 0.021); // --disc-edge
+    part(new THREE.CylinderGeometry(0.0055, 0.0055, 0.05, 8), caseDark, 0.031);
+    part(new THREE.CylinderGeometry(0.064, 0.064, 0.05, 28), jewelClear, 0.031);
+    return g;
+  };
+
+  // ---- the PC stations: tower tops, the table round the keyboard, a drive tray left out, the carpet and the chair
+  // spots are in the station's own space (+z toward the person sitting)
+  const TOWER_TOP = TABLE_Y + 0.44;
+  const PLAN = [
+    { stack: 3, tray: true, floppies: [[0.31, 0.03, 0.4]], cds: [[0.52, 0.27, 'silver', 1.1]], floor: [['f', 0.86, 0.64, 1.1]] },
+    { stack: 1, topCd: 'burnt', floppies: [[-0.33, -0.2, 2.0]], jewel: [-0.44, 0.27, 0.25, 1], seat: 'f' },
+    { stack: 4, tray: true, floppies: [[0.31, 0.03, 2.7], [-0.4, -0.34, 0.9]], floor: [['cd', -0.52, 0.58, 0.4, 'cdr']] },
+    { stack: 2, topCd: 'burnt2', floppies: [[0.31, 0.04, 5.2]], jewel: [-0.44, 0.27, -0.2, 0], cds: [[0.52, 0.27, 'burnt', 2.2]], floor: [['f', -0.3, 0.7, 0.2]] },
+    { stack: 0, tray: true, floppies: [[0.31, 0.03, 1.4], [-0.32, -0.2, 3.9]], onKeys: 'printed', seat: 'cd' },
+    { stack: 2, floppies: [[-0.4, -0.34, 4.4]], jewel: [-0.44, 0.27, 0.5, 2], cds: [[0.52, 0.27, 'printed', 0.7]], floor: [['cd', 0.7, 0.5, 2.1, 'silver']] },
+  ];
+  out.stations.forEach((st, i) => {
+    const g = st.group, P = PLAN[i];
+    if (P.stack) {
+      const top = stack(g, 0.52, TOWER_TOP, -0.1, P.stack, 0.3 + i);
+      if (P.topCd) cd(g, P.topCd, 0.5, top, -0.1, 0.9);
+    } else cd(g, 'cdr', 0.52, TOWER_TOP, -0.1, 0.4);
+    if (P.tray && i !== BURNER.pc) { // the CD-ROM tray left sticking out of the front, with a disc in it
+      g.add(box(0.12, 0.003, 0.12, beigeDark, 0.52, TABLE_Y + 0.376, 0.18));
+      cd(g, 'silver', 0.52, TABLE_Y + 0.378, 0.19, 0.3 + i);
+    }
+    for (const [x, z, yaw] of P.floppies ?? []) loose(g, x, TABLE_Y, z, yaw);
+    for (const [x, z, kind, yaw] of P.cds ?? []) cd(g, kind, x, TABLE_Y, z, yaw);
+    if (P.jewel) put(g, jewel(P.jewel[3], i % 2 ? 'cdr' : 'silver'), P.jewel[0], TABLE_Y, P.jewel[1], P.jewel[2]);
+    if (P.onKeys) cd(g, P.onKeys, -0.02, TABLE_Y + 0.0265, 0.24, 0.8); // on the keyboard, naturally
+    for (const [type, x, z, yaw, kind] of P.floor ?? []) {
+      if (type === 'f') loose(g, x, 0.003, z, yaw); else cd(g, kind, x, 0.003, z, yaw);
+    }
+    if (P.seat === 'f') put(st.chair, floppy(0, 5), 0.05, 0.465 + FL.t / 2 + 0.0004, 0.0, 0.4);
+    if (P.seat === 'cd') cd(st.chair, 'cdr', -0.03, 0.465, -0.02, 0.7);
+  });
+
+  // ---- between the machines, in the gaps the pizza boxes leave
+  put(scene, diskCase(true, 7), 0.95, TABLE_Y, -4.56, 0.12);
+  put(scene, diskCase(false, 5), -2.0, TABLE_Y, -4.56, -0.1);
+  put(scene, pack(), -0.85, TABLE_Y, -4.56, 0.3);
+  put(scene, diskCase(false, 8), 0.95, TABLE_Y, 4.56, 0.2);
+  put(scene, diskCase(true, 4), 2.0, TABLE_Y, 4.56, 3.0);
+  put(scene, jewel(3, 'cdr'), -0.85, TABLE_Y, 4.56, 3.3);
+  put(scene, tub(), 3.85, TABLE_Y, -4.25, 0.05);            // the back table's far end
+  put(scene, spindle(), -3.85, TABLE_Y, 4.25, 0);           // the front table's far end
+  loose(scene, 2.0, TABLE_Y, -4.0, 0.9); loose(scene, -2.05, TABLE_Y, 4.0, 2.3);
+
+  // ---- the snack table: a spindle, a case and a couple of loose disks round the Nachoz
+  put(scene, spindle(), -5.4, TABLE_Y, -0.46, 0);
+  put(scene, diskCase(true, 6), -5.3, TABLE_Y, -1.02, Math.PI / 2 + 0.15);
+  loose(scene, -5.25, TABLE_Y, 0.04, 0.7); loose(scene, -5.22, TABLE_Y + FL.t, 0.04, 0.2);
+  cd(scene, 'burnt', -5.28, TABLE_Y, 0.2, 1.9);
+
+  // ---- on the carpet: dropped, kicked, stood on
+  loose(scene, -1.0, 0.003, 0.8, 0.4); loose(scene, 2.3, 0.003, -1.1, 2.0); loose(scene, -3.3, 0.003, -2.9, 5.5);
+  cd(scene, 'silver', 0.4, 0.003, 1.6, 1.0); cd(scene, 'burnt2', 3.3, 0.003, 2.3, 0.2); cd(scene, 'cdr', -2.2, 0.003, -1.6, 2.7);
+  put(scene, jewel(0), 3.6, 0.005, 1.0, 0.5, 0, 0.0);
+  put(scene, pack(), -4.4, 0, 2.7, 0.8);
+}
+
 export function buildRoom(scene) {
   const out = { stations: [], interactables: [], colliders: [], screens: [], hddLeds: [] };
   const { minX, maxX, minZ, maxZ, height } = ROOM;
@@ -689,6 +857,7 @@ export function buildRoom(scene) {
   buildDoor(scene, out, wallMat.map);
   buildPizza(scene, out);
   buildCeilingGamer(scene, out);
+  buildMedia(scene, out);
 
   // posters and the scoreboard
   const posterMat = (t) => new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 });
