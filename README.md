@@ -50,6 +50,7 @@ A 3D basement LAN party in the browser. Walk around with everyone else who's onl
 - **Posters.** Besides the LAN party flyers there's a DUKE NUKEM 3D poster, a Y2K countdown, a 56K modem poster and an invented adventure game with a pixel treasure chest. Duke Nukem is named in text only: there are no characters or box art, and the game isn't bundled or playable here.
 - **#lanparty98.** A mIRC-style window (top right, **I** toggles it) where the regulars tell dumb jokes and mock each other, and pile on when something happens: a blue screen, a tripped cable, midnight, someone walking in. Chat (**T**) shows up there too and works offline. `js/irc.js` holds the banter, tested by `node tools/irc.test.mjs`.
 - **The crowd.** Everyone is dressed as a 90s teen: goths in trench coats, surfers, hip hop kids, ravers, grunge kids and nerds. A look is picked from each player's id, so it is the same on everyone's screen: height, build, hair, facial hair, glasses, hats, chains and shoes all vary. Macca and four regulars from the IRC channel (xX_Ghoul_Xx, PhatBass, K-Rad, n00bslayer) stand around the room.
+- **LANamp.** A Winamp-style player (bottom right; **M** shows or hides it; **Z X C V B** are previous, play, pause, stop, next) plays eight original tracks, two each of hip hop, drum and bass, EDM and rock, synthesised live in the browser from patterns in `js/music.js`: no samples and no audio files. The spectrum and the clock are live, and the regulars nod along to the beat. `node tools/music.test.mjs` checks the track data.
 
 ### Deathmatch networking
 

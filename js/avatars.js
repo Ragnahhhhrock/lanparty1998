@@ -279,7 +279,14 @@ export function spawnNpc(scene, { name, color, x, z, yaw, arch }) {
   scene.add(a.group);
   a.rest = yaw;
   a.phase = (name.length * 1.7) % 6;
-  a.idle = (t) => { a.group.rotation.y = a.rest + Math.sin(t * 0.7 + a.phase) * 0.08; };
+  const dance = { raver: 1.7, hiphop: 1.2, surfer: 1, grunge: 0.8, nerd: 0.5, goth: 0.4 }[a.look.arch];
+  // groove is 0..1 loudness from the music, bpm the tempo: everyone nods along, ravers more than goths
+  a.idle = (t, groove = 0, bpm = 120) => {
+    a.group.rotation.y = a.rest + Math.sin(t * 0.7 + a.phase) * 0.08;
+    const beat = Math.abs(Math.sin(t * Math.PI * bpm / 120 + a.phase));
+    a.torso.position.y = 0.84 + beat * groove * dance * 0.025;
+    a.torso.rotation.z = Math.sin(t * Math.PI * bpm / 240 + a.phase) * groove * dance * 0.08;
+  };
   return a;
 }
 

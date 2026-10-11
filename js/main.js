@@ -10,6 +10,8 @@ import { analytics } from './analytics.js';
 import { Party, BURNER, DISCS, NET, SHOP, PC_COUNT, OC, HEAT, RAM, NIGHT, SEC_PER_GAME_MIN, SHARE_STEPS, celsius } from './party.js';
 import * as dialog from './dialog.js';
 import { Banter, IrcView, REGULARS } from './irc.js';
+import { Player } from './music.js';
+import { initLanamp } from './lanamp.js';
 
 const $ = (id) => document.getElementById(id);
 const ui = {
@@ -92,6 +94,7 @@ ui.enter.addEventListener('click', () => {
   ui.chat.hidden = false;
   mode = 'walk';
   sfx.startAudio();
+  startMusic();
   lockPointer();
   analytics.enterParty();
   link.connect(name);
@@ -122,6 +125,8 @@ window.addEventListener('keydown', (e) => {
   if (mode !== 'walk') return;
   if (e.code === 'KeyT') { e.preventDefault(); openChat(); return; }
   if (e.code === 'KeyI') { ircBox.classList.toggle('off'); return; }
+  if (e.code === 'KeyM') { $('lanamp').classList.toggle('off'); return; }
+  if (amp?.keys[e.code]) { amp.keys[e.code](); return; }
   keys.add(e.code);
   if (e.code === 'KeyE' && target) interact(target);
   if (e.code === 'KeyF' && target?.station) openPcMenu(target.station);
@@ -594,6 +599,29 @@ function walk(dt) {
   }
 }
 
+/* ---------- LANamp: the room's music ---------- */
+let music = null, amp = null;
+function startMusic() {
+  const ctx = sfx.audioContext();
+  if (music || !ctx) return;
+  music = new Player(ctx);
+  amp = initLanamp($('lanamp'), music);
+  music.play(Math.floor(Math.random() * 8)); // the Walk in click counts as the user gesture
+}
+
+/* ---------- #lanparty98: the group's IRC channel ---------- */
+const ircBox = $('irc');
+const irc = new IrcView(ircBox, [...REGULARS, 'YOU']);
+const banter = new Banter({ me: 'YOU' });
+const ircStamp = () => { const t = ui.clock.textContent.split(' ')[0]; return t; };
+const ircSay = (nick, text) => irc.add(nick, text, ircStamp());
+const ircNote = (text) => irc.note(text, ircStamp());
+ircNote('Now talking in #lanparty98');
+function ircMe(name) { // you picked a handle: you're in the channel too
+  banter.me = name;
+  irc.setNicks([...REGULARS, ...[...link.players.values()].map((p) => p.name), name]);
+}
+
 /* ---------- loop ---------- */
 const clock = new THREE.Clock();
 let screenTimer = 0, statTimer = 0, sendTimer = 0;
@@ -606,8 +634,10 @@ function frame() {
   room.updateFan(dt, party.fan.on, party.fanSweep());
   room.door.update(dt);
   if (mode !== 'intro') for (const m of banter.tick(dt)) ircSay(m.nick, m.text);
-  if (macca.group.visible) macca.idle(now);
-  for (const r of regulars) r.idle(now);
+  const groove = music?.level() ?? 0, bpm = music?.track.bpm ?? 120;
+  amp?.update(dt);
+  if (macca.group.visible) macca.idle(now, groove, bpm);
+  for (const r of regulars) r.idle(now, groove, bpm);
   if (mode !== 'intro') party.tick(dt, { seatedPc: seatedAt?.index ?? null });
   if (link.online && mode === 'walk' && (sendTimer += dt) > 0.1) { sendTimer = 0; link.pos(player.pos.x, player.pos.z, player.yaw); }
 
@@ -845,19 +875,6 @@ function setNetStatus() {
   const n = link.players.size + 1;
   ui.netstatus.textContent = `${n} in the room${ROOM_NAME !== 'basement' ? ` · ${ROOM_NAME}` : ''} · ${NET[party.net].short}${party.netDown() ? ' · CABLE FAULT' : ''}`;
   ui.netstatus.classList.add('online');
-}
-
-/* ---------- #lanparty98: the group's IRC channel ---------- */
-const ircBox = $('irc');
-const irc = new IrcView(ircBox, [...REGULARS, 'YOU']);
-const banter = new Banter({ me: 'YOU' });
-const ircStamp = () => { const t = ui.clock.textContent.split(' ')[0]; return t; };
-const ircSay = (nick, text) => irc.add(nick, text, ircStamp());
-const ircNote = (text) => irc.note(text, ircStamp());
-ircNote('Now talking in #lanparty98');
-function ircMe(name) { // you picked a handle: you're in the channel too
-  banter.me = name;
-  irc.setNicks([...REGULARS, ...[...link.players.values()].map((p) => p.name), name]);
 }
 
 function chatLine(html, sys = false) {

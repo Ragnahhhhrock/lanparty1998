@@ -1,6 +1,8 @@
 // Tiny synthesised sound kit: fluorescent hum, can fizz, chip crunch. No audio files.
 let ctx, master;
 
+export const audioContext = () => ctx;
+
 export function startAudio() {
   if (ctx) { ctx.resume(); return; }
   try {

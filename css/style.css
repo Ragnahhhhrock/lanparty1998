@@ -74,6 +74,30 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
   font: var(--text-crt-sm)/1.1 var(--font-crt); }
 @media (max-width: 700px) { #irc { display: none; } }
 
+/* ---- LANamp: the music player ---- */
+#lanamp { position: absolute; right: var(--space-4); bottom: var(--space-4); width: 275px; max-width: calc(100vw - 2 * var(--gutter)); background: var(--w98-shadow); box-shadow: var(--bevel-raised); padding: 3px; color: var(--phosphor); }
+#lanamp.off { display: none; }
+.amp-title { background: var(--title-gradient); color: var(--w98-light); font: var(--text-ui-xs)/1 var(--font-ui); font-weight: bold; letter-spacing: .1em; padding: 3px 6px; display: flex; justify-content: space-between; }
+.amp-main { background: var(--w98-dark); padding: var(--space-2); display: grid; gap: var(--space-1h); margin-top: 2px; }
+.amp-screen { display: flex; gap: var(--space-2); align-items: center; background: var(--crt-black); box-shadow: var(--bevel-sunken); padding: var(--space-1); }
+#amp-vis { width: 76px; height: 28px; image-rendering: pixelated; }
+#amp-time { font: var(--text-crt-xl)/1 var(--font-crt); color: var(--phosphor); letter-spacing: .05em; }
+#amp-marquee { overflow: hidden; white-space: nowrap; background: var(--crt-black); box-shadow: var(--bevel-sunken); padding: 0 var(--space-1); font: var(--text-crt-sm)/1.3 var(--font-crt); color: var(--phosphor); }
+#amp-song { display: inline-block; padding-left: 100%; animation: amp-scroll 14s linear infinite; }
+@keyframes amp-scroll { to { transform: translateX(-100%); } }
+.amp-info { display: flex; justify-content: space-between; font: var(--text-crt-sm)/1 var(--font-crt); color: var(--amber); }
+.amp-row { display: flex; gap: var(--space-0); align-items: center; flex-wrap: wrap; pointer-events: auto; }
+.amp-row button { font: var(--text-crt-sm)/1 var(--font-crt); background: var(--w98-face); color: var(--w98-text); border: 0; padding: var(--space-1) var(--space-1h); box-shadow: var(--bevel-raised); cursor: pointer; }
+.amp-row button:active, .amp-row button[aria-pressed="true"] { box-shadow: var(--bevel-pressed); }
+.amp-row button[aria-pressed="true"] { color: var(--w98-title); }
+#amp-vol { width: 64px; margin-left: auto; accent-color: var(--phosphor); }
+#amp-list { margin: 2px 0 0; padding: var(--space-1) var(--space-1) var(--space-1) var(--space-6); background: var(--crt-black); box-shadow: var(--bevel-sunken); max-height: 160px; overflow: hidden;
+  font: var(--text-crt-sm)/1.2 var(--font-crt); color: var(--phosphor); pointer-events: auto; }
+#amp-list li { cursor: pointer; display: list-item; }
+#amp-list li.now { color: var(--w98-light); background: var(--w98-title); margin-left: calc(-1 * var(--space-6)); padding-left: var(--space-6); }
+@media (max-width: 700px) { #lanamp { display: none; } }
+@media (prefers-reduced-motion: reduce) { #amp-song { animation: none; padding-left: 0; } }
+
 /* ---- Your monitor ---- */
 #monitor { position: fixed; z-index: var(--z-monitor); background: var(--crt-black); overflow: hidden; border-radius: 6px / 8px; }
 #dos { position: absolute; inset: 0; background: var(--crt-black); }
