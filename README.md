@@ -48,6 +48,7 @@ A 3D basement LAN party in the browser. Walk around with everyone else who's onl
 - **Trip hazards.** The cat5 leads (and the coax) lie across the floor. The cables are gaffer-taped, so most crossings are fine, but each time you step over one it is a roll (about 30%, worse after a few cans of Volt). Trip and you stumble, and the lead comes out of the back of its PC. Press **F** at that PC to plug it back in, or watch where you walk.
 - **The door.** There's a door in the back wall, with a landing and a staircase up to the rest of the house. **E** opens and closes it, and you can step onto the landing when it's open. Mum is upstairs and says so. Other players see you stop at the doorway.
 - **Posters.** Besides the LAN party flyers there's a DUKE NUKEM 3D poster, a Y2K countdown, a 56K modem poster and an invented adventure game with a pixel treasure chest. Duke Nukem is named in text only: there are no characters or box art, and the game isn't bundled or playable here.
+- **#lanparty98.** A mIRC-style window (top right, **I** toggles it) where the regulars tell dumb jokes and mock each other, and pile on when something happens: a blue screen, a tripped cable, midnight, someone walking in. Chat (**T**) shows up there too and works offline. `js/irc.js` holds the banter, tested by `node tools/irc.test.mjs`.
 
 ### Deathmatch networking
 

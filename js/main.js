@@ -9,6 +9,7 @@ import * as sfx from './sfx.js';
 import { analytics } from './analytics.js';
 import { Party, BURNER, DISCS, NET, SHOP, PC_COUNT, OC, HEAT, RAM, NIGHT, SEC_PER_GAME_MIN, SHARE_STEPS, celsius } from './party.js';
 import * as dialog from './dialog.js';
+import { Banter, IrcView, REGULARS } from './irc.js';
 
 const $ = (id) => document.getElementById(id);
 const ui = {
@@ -73,6 +74,7 @@ ui.enter.addEventListener('click', () => {
   const name = ui.handle.value.trim().toUpperCase().slice(0, 12) || `PLAYER${Math.floor(Math.random() * 90 + 10)}`;
   try { localStorage.setItem('lan98-handle', name); } catch { /* private mode */ }
   myName = name;
+  ircMe(name);
   ui.intro.hidden = true;
   ui.hud.hidden = false;
   ui.chat.hidden = false;
@@ -106,7 +108,8 @@ window.addEventListener('keydown', (e) => {
     return; // everything else belongs to DOOM
   }
   if (mode !== 'walk') return;
-  if (e.code === 'KeyT' && link.online) { e.preventDefault(); openChat(); return; }
+  if (e.code === 'KeyT') { e.preventDefault(); openChat(); return; }
+  if (e.code === 'KeyI') { ircBox.classList.toggle('off'); return; }
   keys.add(e.code);
   if (e.code === 'KeyE' && target) interact(target);
   if (e.code === 'KeyF' && target?.station) openPcMenu(target.station);
@@ -176,7 +179,7 @@ function useDoor() {
   const d = room.door;
   if (d.open && player.pos.z < ROOM.minZ + 0.3) { toast("You're standing in the doorway."); return; }
   sfx.door();
-  if (d.toggle()) toast(MUM[doorOpens++ % MUM.length]);
+  if (d.toggle()) { toast(MUM[doorOpens++ % MUM.length]); banter.react('door'); }
 }
 
 /* ---------- errands: little message boxes ---------- */
@@ -590,6 +593,7 @@ function frame() {
   crowd.update(dt, link.players);
   room.updateFan(dt, party.fan.on, party.fanSweep());
   room.door.update(dt);
+  if (mode !== 'intro') for (const m of banter.tick(dt)) ircSay(m.nick, m.text);
   if (macca.group.visible) macca.idle(now);
   if (mode !== 'intro') party.tick(dt, { seatedPc: seatedAt?.index ?? null });
   if (link.online && mode === 'walk' && (sendTimer += dt) > 0.1) { sendTimer = 0; link.pos(player.pos.x, player.pos.z, player.yaw); }
@@ -708,6 +712,7 @@ party.addEventListener('net', (e) => {
 party.addEventListener('crash', (e) => {
   const st = room.stations[e.detail.pc];
   const msg = `${st.name}: a fatal exception 0E has occurred.`;
+  banter.react('crash', link.occupant(e.detail.pc)?.name ?? (seatedAt?.index === e.detail.pc ? myName : st.name));
   toast(msg); chatLine(msg, true);
   refreshLinks();
   if (seatedAt?.index === e.detail.pc) {
@@ -716,6 +721,7 @@ party.addEventListener('crash', (e) => {
   }
 });
 party.addEventListener('reboot', refreshLinks);
+party.addEventListener('hot', (e) => banter.react('hot', room.stations[e.detail.pc].name));
 party.addEventListener('hot', (e) => chatLine(`${room.stations[e.detail.pc].name} is running hot. Is the fan on?`, true));
 party.addEventListener('oc', (e) => { toast(`${room.stations[e.detail.pc].name}: ${OC[e.detail.level].label}.`); refreshLinks(); });
 party.addEventListener('fan-on', () => { toast('Fan on.'); chatLine('The pedestal fan is spinning again.', true); });
@@ -734,6 +740,7 @@ const ANNOUNCE_LINES = {
 party.addEventListener('announce', (e) => {
   chatLine(ANNOUNCE_LINES[e.detail.id], true);
   if (e.detail.id === 'midnight') {
+    banter.react('midnight');
     const n = party.starcraftBoxes();
     toast(n ? `StarCraft is on. ${n} PC${n > 1 ? 's have' : ' has'} the memory.` : 'StarCraft is on. Nobody has the 32MB for it.');
     refreshLinks();
@@ -772,6 +779,7 @@ party.addEventListener('trip', (e) => {
   const st = room.stations[e.detail.pc ?? 0];
   const out = e.detail.kind === 'fan' ? "The fan's plug comes out of the wall." : e.detail.kind === 'coax' ? `The coax pops off ${st.name}. Everybody is offline.` : `${st.name} has lost its link.`;
   const line = `${TRIP_LINES[party.tripped % TRIP_LINES.length]} ${out}`;
+  banter.react('trip', myName);
   toast(line); chatLine(line, true);
   analytics.tripCable(e.detail.kind, party.tripped);
 });
@@ -826,6 +834,19 @@ function setNetStatus() {
   ui.netstatus.classList.add('online');
 }
 
+/* ---------- #lanparty98: the group's IRC channel ---------- */
+const ircBox = $('irc');
+const irc = new IrcView(ircBox, [...REGULARS, 'YOU']);
+const banter = new Banter({ me: 'YOU' });
+const ircStamp = () => { const t = ui.clock.textContent.split(' ')[0]; return t; };
+const ircSay = (nick, text) => irc.add(nick, text, ircStamp());
+const ircNote = (text) => irc.note(text, ircStamp());
+ircNote('Now talking in #lanparty98');
+function ircMe(name) { // you picked a handle: you're in the channel too
+  banter.me = name;
+  irc.setNicks([...REGULARS, ...[...link.players.values()].map((p) => p.name), name]);
+}
+
 function chatLine(html, sys = false) {
   const div = document.createElement('div');
   if (sys) div.className = 'sys';
@@ -837,6 +858,7 @@ function chatLine(html, sys = false) {
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function openChat() {
+  if (mode !== 'walk') return;
   keys.clear();
   if (document.pointerLockElement) document.exitPointerLock();
   ui.chatForm.hidden = false;
@@ -852,7 +874,10 @@ function closeChat() {
 ui.chatForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const text = ui.chatInput.value.trim();
-  if (text) link.send({ t: 'chat', text });
+  if (text) {
+    if (link.online) link.send({ t: 'chat', text });
+    else { ircSay(myName, text); chatLine(`<b>${esc(myName)}:</b> ${esc(text)}`); banter.heard(myName, text); }
+  }
   closeChat();
 });
 ui.chatInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); closeChat(); } });
@@ -877,6 +902,7 @@ link.addEventListener('join', (e) => {
   crowd.add(e.detail);
   setNetStatus();
   chatLine(`${esc(e.detail.name)} walked in.`, true);
+  ircNote(`${e.detail.name} has joined #lanparty98`); ircMe(myName); banter.react('join', e.detail.name);
   sfx.crunch();
 });
 link.addEventListener('leave', (e) => {
@@ -884,6 +910,7 @@ link.addEventListener('leave', (e) => {
   setNetStatus();
   refreshStations();
   chatLine(`${esc(e.detail.name)} left.`, true);
+  ircNote(`${e.detail.name} has left #lanparty98 (Ping timeout)`); ircMe(myName);
 });
 link.addEventListener('seat', (e) => {
   if (e.detail.id !== link.me?.id) crowd.seat(e.detail);
@@ -899,6 +926,8 @@ link.addEventListener('denied', (e) => {
 link.addEventListener('chat', (e) => {
   const p = e.detail.id === link.me?.id ? link.me : link.players.get(e.detail.id);
   chatLine(`<b style="color:${esc(p?.color ?? '#fff')}">${esc(e.detail.name)}:</b> ${esc(e.detail.text)}`);
+  ircSay(e.detail.name, e.detail.text);
+  banter.heard(e.detail.name, e.detail.text);
 });
 
 let lastMatch = null;
