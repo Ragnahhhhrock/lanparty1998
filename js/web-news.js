@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-06', kind: 'new', title: 'Boxes all over the place',
+    text: 'Sixteen more game boxes have come off the shelf and are lying around: on the tables, the snack table, a chair, the middle couch cushion and the carpet, a couple stacked. Nobody owns up to leaving them.',
+  },
+  {
     date: '1998-02-06', kind: 'new', title: 'The games, in their boxes',
     text: 'There is a shelf on the left wall by the front corner with a box for each game on the PCs: DOOM, Heretic, Hexen, Quake and Descent. The pictures on the front are ours, not the real covers. Turn one round for the system requirements.',
     link: ['/games.htm', 'All the games'],

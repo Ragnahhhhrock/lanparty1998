@@ -1126,11 +1126,22 @@ function buildMedia(scene, out) {
 // js/games.js, in the same order. The box art is invented (see textures.js gameBoxFront). Decoration only.
 // Colours are tokens: --wood and --wood-dark for the shelf.
 const BOX = { w: 0.2, h: 0.28, d: 0.05 };
+const boxMatCache = {};
+function gameBoxMats(id) { // +x, -x, +y, -y, +z, -z: spine and the other side, top, bottom, front, back
+  return boxMatCache[id] ??= (() => {
+    const cardboard = new THREE.MeshStandardMaterial({ color: 0xb8935a, roughness: 0.95 }); // --cardboard
+    return [
+      new THREE.MeshStandardMaterial({ map: T.gameBoxSpine(id), roughness: 0.7 }),
+      cardboard, cardboard, cardboard,
+      new THREE.MeshStandardMaterial({ map: T.gameBoxFront(id), roughness: 0.55 }),
+      new THREE.MeshStandardMaterial({ map: T.gameBoxBack(id), roughness: 0.7 }),
+    ];
+  })();
+}
 function buildGameShelf(scene) {
   const { minX } = ROOM;
   const wood = new THREE.MeshStandardMaterial({ color: 0x4a2c17, roughness: 0.8 });       // --wood
   const woodDark = new THREE.MeshStandardMaterial({ color: 0x24150b, roughness: 0.85 });  // --wood-dark
-  const cardboard = new THREE.MeshStandardMaterial({ color: 0xb8935a, roughness: 0.95 }); // --cardboard
   const SHELF_Y = 1.05, GAP = 0.07, n = GAME_IDS.length;
   const len = n * BOX.w + (n + 1) * GAP, z0 = 4.15 - len / 2;
   scene.add(box(0.16, 0.03, len, wood, minX + 0.08, SHELF_Y - 0.015, z0 + len / 2));
@@ -1140,22 +1151,48 @@ function buildGameShelf(scene) {
     scene.add(box(0.14, 0.02, 0.03, woodDark, minX + 0.08, SHELF_Y - 0.04, z));
   }
   GAME_IDS.forEach((id, i) => {
-    const mats = [ // +x, -x, +y, -y, +z, -z: spine and the other side, top, bottom, front, back
-      new THREE.MeshStandardMaterial({ map: T.gameBoxSpine(id), roughness: 0.7 }),
-      cardboard,
-      cardboard, cardboard,
-      new THREE.MeshStandardMaterial({ map: T.gameBoxFront(id), roughness: 0.55 }),
-      new THREE.MeshStandardMaterial({ map: T.gameBoxBack(id), roughness: 0.7 }),
-    ];
     const g = new THREE.Group(); // origin: the box's bottom back edge, facing +x into the room
     g.position.set(minX + 0.03, SHELF_Y, z0 + GAP + BOX.w / 2 + i * (BOX.w + GAP));
     g.rotation.y = Math.PI / 2;
     const lean = new THREE.Group();
     lean.rotation.x = -0.08 - (i % 2) * 0.02; // leaning back on the wall, not quite in a line
-    lean.add(box(BOX.w, BOX.h, BOX.d, mats, 0, BOX.h / 2, BOX.d / 2));
+    lean.add(box(BOX.w, BOX.h, BOX.d, gameBoxMats(id), 0, BOX.h / 2, BOX.d / 2));
     g.add(lean);
     scene.add(g);
   });
+}
+
+// The rest of the boxes, left where people put them down: on the tables, a chair, the carpet and the couch, some
+// stacked, all flat with the picture up. [game, x, y, z, yaw]; the surface heights are the tables' and the seats'.
+// Decoration only, so nothing is interactive. The spots keep clear of the pizza boxes, cans, bags and disks.
+const BOX_SPOTS = [
+  // the back table
+  ['quake', -4.42, TABLE_Y, -4.2, 0.5], ['hexen', -1.9, TABLE_Y, -4.0, -0.4], ['doom', 4.35, TABLE_Y, -4.2, 2.3],
+  ['descent', 4.35, TABLE_Y + BOX.d, -4.2, 2.9],                                    // on top of that one
+  // the front table
+  ['heretic', -4.42, TABLE_Y, 4.15, 3.4], ['doom', 4.42, TABLE_Y, 4.2, 5.9], ['quake', 2.1, TABLE_Y, 4.0, 0.2],
+  // the snack table and the couch
+  ['hexen', -5.45, TABLE_Y, -1.6, 1.3], ['descent', 3.05, 0.41, -1.0, 0.7],
+  // the carpet
+  ['heretic', -2.3, 0.003, 0.3, 2.1], ['doom', 1.6, 0.003, -1.7, 4.4], ['quake', 1.45, 0.003 + BOX.d, -1.62, 4.9], // a pair, one on the other
+  ['descent', -4.6, 0.003, -1.9, 0.3], ['hexen', 1.0, 0.003, 2.7, 3.7], ['doom', -0.6, 0.003, -2.6, 1.1],
+];
+function buildLooseBoxes(scene, out) {
+  const flat = (id, x, y, z, yaw) => { // the picture faces up; local +z of the box becomes +y
+    const g = new THREE.Group();
+    g.position.set(x, y, z); g.rotation.y = yaw;
+    const m = box(BOX.w, BOX.h, BOX.d, gameBoxMats(id), 0, BOX.d / 2, 0);
+    m.rotation.x = -Math.PI / 2;
+    g.add(m);
+    scene.add(g);
+    return g;
+  };
+  for (const [id, x, y, z, yaw] of BOX_SPOTS) flat(id, x, y, z, yaw);
+  const seat = out.stations[0]?.chair; // PC-01's chair, a box left on the seat
+  if (seat) {
+    const g = flat('quake', 0.02, 0.465, 0.0, 0.3);
+    seat.add(g);
+  }
 }
 
 // Nachoz and Cheez Curlz, spilled everywhere: triangle chips, curls and cheese-dust crumbs lying on the desks, keyboards,
@@ -1391,6 +1428,7 @@ export function buildRoom(scene) {
   buildCeilingGamer(scene, out);
   buildMedia(scene, out);
   buildGameShelf(scene);
+  buildLooseBoxes(scene, out);
   buildChips(scene, out);
 
   // posters and the scoreboard
