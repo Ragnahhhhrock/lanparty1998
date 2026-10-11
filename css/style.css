@@ -95,7 +95,9 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 .amp-row button:active, .amp-row button[aria-pressed="true"] { box-shadow: var(--bevel-pressed); }
 .amp-row button[aria-pressed="true"] { color: var(--w98-title); }
 #amp-vol { width: 64px; margin-left: auto; accent-color: var(--phosphor); }
-#amp-list { margin: 2px 0 0; padding: var(--space-1) var(--space-1) var(--space-1) var(--space-6); background: var(--crt-black); box-shadow: var(--bevel-sunken); max-height: 160px; overflow: hidden;
+.amp-lib { gap: var(--space-1); }
+#amp-status { font: var(--text-crt-sm)/1 var(--font-crt); color: var(--amber); margin-left: auto; }
+#amp-list { margin: 2px 0 0; padding: var(--space-1) var(--space-1) var(--space-1) var(--space-6); background: var(--crt-black); box-shadow: var(--bevel-sunken); max-height: 160px; overflow-y: auto; scrollbar-color: var(--w98-face) var(--crt-black);
   font: var(--text-crt-sm)/1.2 var(--font-crt); color: var(--phosphor); pointer-events: auto; }
 #amp-list li { cursor: pointer; display: list-item; }
 #amp-list li.now { color: var(--w98-light); background: var(--w98-title); margin-left: calc(-1 * var(--space-6)); padding-left: var(--space-6); }

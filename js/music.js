@@ -2,6 +2,7 @@
 // in the browser from patterns. No samples, no audio files. Each track is a small config (tempo, key, chord
 // progression, lead riff, voices); the sequencer turns it into drums, bass, chords and a lead.
 // The track data and timing are DOM-free, so tools/music.test.mjs can check them.
+// The Player also plays the visitor's own MP3 files from their drive (see library.js and lanamp.js).
 
 const SCALE = [0, 2, 3, 5, 7, 8, 10]; // natural minor
 const hz = (m) => 440 * 2 ** ((m - 69) / 12);
@@ -50,7 +51,9 @@ export const TRACKS = [
   return { ...t, bars, trim: { hiphop: 1.3, dnb: 1, edm: 1.35, rock: 1 }[t.kind], seconds: Math.round(bars * 4 * 60 / t.bpm), sections: FORMS[t.form] };
 });
 
-export const fmtTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+export const fmtTime = (s) => (Number.isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}` : '--:--');
+// "Artist - Title", or just the title for a file with no artist tag
+export const trackLabel = (t) => (t.artist ? `${t.artist} - ${t.title}` : t.title);
 
 /* ---------- the instruments ---------- */
 export class Kit {
@@ -265,6 +268,8 @@ export function playStep(track, bar, step, t, kit) {
 }
 
 /* ---------- the player ---------- */
+// Plays the synthesised tape and, once the visitor adds a folder, their own MP3 files (tracks with a `file`).
+// Both go through the same mixer, so the spectrum and the room's dancing work for either.
 export class Player extends EventTarget {
   constructor(ctx) {
     super();
@@ -275,48 +280,106 @@ export class Player extends EventTarget {
     this.mix = ctx.createGain();
     this.mix.connect(comp); comp.connect(this.analyser); this.analyser.connect(this.out); this.out.connect(ctx.destination);
     this.kit = new Kit(ctx, this.mix);
+    this.tracks = TRACKS;
     this.index = 0; this.state = 'stopped';
     this.step = 0; this.elapsedBase = 0; this.resumeAt = 0;
     this.shuffle = false; this.repeat = false;
+    this.audio = null; this.url = null; this.fails = 0;
     this.freq = new Uint8Array(this.analyser.frequencyBinCount);
   }
-  get track() { return TRACKS[this.index]; }
-  get elapsed() { return this.state === 'playing' ? this.elapsedBase + (this.ctx.currentTime - this.resumeAt) : this.elapsedBase; }
+  get track() { return this.tracks[this.index]; }
+  get elapsed() {
+    if (this.track.file) return this.audio?.currentTime ?? 0;
+    return this.state === 'playing' ? this.elapsedBase + (this.ctx.currentTime - this.resumeAt) : this.elapsedBase;
+  }
+
+  // the <audio> element for MP3 files, wired into the mixer the first time it is needed
+  fileAudio() {
+    if (this.audio) return this.audio;
+    const a = this.audio = new Audio();
+    a.preload = 'auto';
+    this.ctx.createMediaElementSource(a).connect(this.mix);
+    a.addEventListener('loadedmetadata', () => {
+      if (this.track.file && Number.isFinite(a.duration)) { this.track.seconds = Math.round(a.duration); this.dispatchEvent(new Event('meta')); }
+    });
+    a.addEventListener('playing', () => { this.fails = 0; });
+    a.addEventListener('ended', () => {
+      if (!this.track.file || this.state !== 'playing') return;
+      this.state = 'stopped'; this.dispatchEvent(new Event('state'));
+      if (this.repeat) this.play(); else this.skip(1);
+    });
+    a.addEventListener('error', () => { // a file the browser can't decode: move on, but not forever
+      if (!this.track.file || this.state !== 'playing' || ++this.fails > this.tracks.length) return;
+      this.dispatchEvent(new Event('unplayable'));
+      this.skip(1);
+    });
+    return a;
+  }
+  // stop whatever is sounding, without touching the state
+  halt() {
+    clearInterval(this.timer);
+    this.audio?.pause();
+  }
+  // swap in a new playlist (the tape plus the visitor's files); the current song carries on if it is still there
+  setTracks(list) {
+    const cur = this.track, i = list.indexOf(cur);
+    this.tracks = list;
+    if (i >= 0) this.index = i;
+    else {
+      this.halt(); this.state = 'stopped'; this.index = 0; this.step = 0; this.elapsedBase = 0;
+      this.mix.gain.value = this.track.trim;
+      this.dispatchEvent(new Event('state'));
+    }
+    this.dispatchEvent(new Event('tracks'));
+    this.dispatchEvent(new Event('track'));
+  }
 
   play(i = this.index) {
     if (this.ctx.state === 'suspended') this.ctx.resume();
-    if (i !== this.index || this.state === 'stopped') {
+    const fresh = i !== this.index || this.state === 'stopped';
+    if (fresh) {
+      this.halt(); this.state = 'stopped';
       this.index = i; this.step = 0; this.elapsedBase = 0;
       this.mix.gain.value = this.track.trim;
       this.dispatchEvent(new Event('track'));
     }
     if (this.state === 'playing') return;
     this.state = 'playing';
-    this.next = this.ctx.currentTime + 0.08;
-    this.resumeAt = this.next;
-    this.timer = setInterval(() => this.schedule(), 30);
+    if (this.track.file) {
+      const a = this.fileAudio();
+      if (fresh) {
+        if (this.url) URL.revokeObjectURL(this.url);
+        this.url = URL.createObjectURL(this.track.file);
+        a.src = this.url;
+      }
+      a.play().catch(() => {}); // a rejected play() fires 'error' for files that can't be decoded
+    } else {
+      this.next = this.ctx.currentTime + 0.08;
+      this.resumeAt = this.next;
+      this.timer = setInterval(() => this.schedule(), 30);
+    }
     this.dispatchEvent(new Event('state'));
   }
   pause() {
     if (this.state !== 'playing') return;
     this.elapsedBase = this.elapsed;
-    this.state = 'paused'; clearInterval(this.timer);
+    this.state = 'paused'; this.halt();
     this.dispatchEvent(new Event('state'));
   }
   toggle() { this.state === 'playing' ? this.pause() : this.play(); }
   stop() {
-    clearInterval(this.timer);
+    this.halt();
+    if (this.audio && this.track.file) this.audio.currentTime = 0;
     this.state = 'stopped'; this.step = 0; this.elapsedBase = 0;
     this.dispatchEvent(new Event('state'));
   }
   skip(dir) {
+    const n = this.tracks.length;
     let i;
-    if (this.shuffle && TRACKS.length > 1) { do { i = Math.floor(Math.random() * TRACKS.length); } while (i === this.index); }
-    else i = (this.index + dir + TRACKS.length) % TRACKS.length;
-    const was = this.state === 'playing';
-    this.state = 'stopped'; clearInterval(this.timer);
-    this.play(i);
-    if (!was && this.state === 'playing') { /* skipping starts the tape, like the real thing */ }
+    if (this.shuffle && n > 1) { do { i = Math.floor(Math.random() * n); } while (i === this.index); }
+    else i = (this.index + dir + n) % n;
+    this.halt(); this.state = 'stopped';
+    this.play(i); // skipping starts the tape, like the real thing
   }
   setVolume(v) { this.out.gain.value = v * v; }
 
