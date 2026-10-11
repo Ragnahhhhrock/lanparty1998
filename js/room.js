@@ -889,7 +889,7 @@ function buildPizza(scene, out) {
   };
 }
 
-// The man taped to the ceiling. The duct, the tape and the pole are built here; main.js puts the man in.
+// The man taped to the ceiling. The duct and the tape are built here; main.js puts the man in.
 function buildCeilingGamer(scene, out) {
   const duct = new THREE.MeshStandardMaterial({ color: 0x9aa0a6, roughness: 0.4, metalness: 0.7 }); // --duct-silver
   const tape = new THREE.MeshStandardMaterial({ color: 0x5c6166, roughness: 0.35, metalness: 0.5 }); // --duct-tape
@@ -900,11 +900,6 @@ function buildCeilingGamer(scene, out) {
   // gaffer tape holding him to it: bands round his legs and chest, and straps up to the duct
   for (const dz of [0.15, -0.3, -0.75, -1.15]) scene.add(box(0.5, 0.36, 0.06, tape, at.x, at.y, at.z + dz));
   for (const dx of [-0.16, 0.16]) scene.add(box(0.07, 0.3, 0.01, tape, at.x + dx, at.y + 0.28, at.z - 0.3));
-  // the white pole he's holding on to
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.6, 12), new THREE.MeshStandardMaterial({ color: 0xececec, roughness: 0.6 })); // --clothes-white
-  pole.position.set(at.x + 0.55, 1.3, at.z - 1.0);
-  scene.add(pole);
-  out.colliders.push({ minX: at.x + 0.55 - 0.1, maxX: at.x + 0.55 + 0.1, minZ: at.z - 1.0 - 0.1, maxZ: at.z - 1.0 + 0.1 });
   const hit = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 1.8), new THREE.MeshBasicMaterial({ visible: false }));
   hit.position.set(at.x, at.y, at.z - 0.8);
   hit.userData.interact = { kind: 'taped' };

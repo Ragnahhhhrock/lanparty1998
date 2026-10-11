@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-06', kind: 'fix', title: 'The pole by the taped man is gone',
+    text: 'The white pole beside DUCTAPE has been taken out, and you can walk through where it stood. He is still taped to the duct. Nobody has explained that either.',
+  },
+  {
     date: '1998-02-06', kind: 'new', title: 'The regulars talk about their games',
     text: 'K-Rad, n00bslayer, xX_Ghoul_Xx and the couch now chat about what is on their screens: rocket jumps, missing keys, a ship stuck in a wall. It shows in the channel and in the bubbles over their heads. Sit down with a game and they bring it up.',
   },
