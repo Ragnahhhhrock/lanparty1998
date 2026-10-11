@@ -1004,6 +1004,73 @@ function buildMedia(scene, out) {
   put(scene, pack(), -4.4, 0, 2.7, 0.8);
 }
 
+// Nachoz and Cheez Curlz, spilled everywhere: triangle chips, curls and cheese-dust crumbs lying on the desks, keyboards,
+// chair seats, the snack table, the coffee table and the carpet. Colours are tokens: --nacho (chips), --curlz (curls),
+// --cheese (dust). It is all decoration, so nothing here is interactive and each kind is one instanced mesh per surface.
+function buildChips(scene, out) {
+  const rnd = (() => { let s = 1337; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); })();
+  const mat = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.85 });
+  const KINDS = {
+    nacho: { geo: new THREE.CylinderGeometry(0.019, 0.019, 0.003, 3), mat: mat(0xf28a1c), lift: 0.0015 },   // --nacho
+    curl: { geo: new THREE.TorusGeometry(0.011, 0.0055, 6, 12, Math.PI * 1.6).rotateX(-Math.PI / 2), mat: mat(0xffa51f), lift: 0.0055 }, // --curlz
+    crumb: { geo: new THREE.BoxGeometry(0.006, 0.003, 0.005), mat: mat(0xffcc00), lift: 0.0015 },           // --cheese
+  };
+  const dummy = new THREE.Object3D();
+
+  // Lay `counts` ({nacho, curl, crumb}) over a rectangle at height y, skipping any circle in `avoid` ([x, z, r]).
+  // Most pieces lie flat; the odd chip leans on its neighbour.
+  const spill = (parent, rect, y, counts, avoid = []) => {
+    const [x0, x1, z0, z1] = rect;
+    for (const [kind, n] of Object.entries(counts)) {
+      if (!n) continue;
+      const K = KINDS[kind];
+      const mesh = new THREE.InstancedMesh(K.geo, K.mat, n);
+      mesh.frustumCulled = false;
+      let placed = 0;
+      for (let tries = 0; placed < n && tries < n * 40; tries++) {
+        const x = x0 + rnd() * (x1 - x0), z = z0 + rnd() * (z1 - z0);
+        if (avoid.some(([ax, az, r]) => (x - ax) ** 2 + (z - az) ** 2 < r * r)) continue;
+        const lean = kind !== 'crumb' && rnd() < 0.18;
+        dummy.position.set(x, y + K.lift + (lean ? 0.004 : 0), z);
+        dummy.rotation.set(lean ? (rnd() - 0.5) * 0.7 : 0, rnd() * Math.PI * 2, lean ? (rnd() - 0.5) * 0.7 : 0);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(placed++, dummy.matrix);
+      }
+      mesh.count = placed;
+      parent.add(mesh);
+    }
+  };
+
+  // ---- each desk, in the station's own space: left of the keyboard, on the keyboard, on the mousepad, under the chair
+  out.stations.forEach((st, i) => {
+    const g = st.group;
+    spill(g, [-0.64, -0.3, 0.2, 0.37], TABLE_Y, { nacho: 2 + (i % 2), curl: 1 + (i % 3 === 0 ? 1 : 0), crumb: 6 }, [[-0.36, 0.12, 0.06]]);
+    spill(g, [-0.2, 0.18, 0.17, 0.31], TABLE_Y + 0.026, { crumb: 4 + (i % 3) });                    // between the keys
+    spill(g, [0.2, 0.46, 0.17, 0.33], TABLE_Y + 0.004, { nacho: i % 2 ? 0 : 1, curl: i % 2, crumb: 4 }, [[0.33, 0.26, 0.05]]);
+    spill(g, [-0.5, 0.5, 0.5, 1.3], 0.003, { nacho: 3, curl: 2, crumb: 9 });                          // the carpet round the chair
+    spill(st.chair, [-0.1, 0.1, -0.1, 0.1], 0.468, { nacho: i % 2, crumb: 3 });                        // sat on
+  });
+
+  // ---- the snack table: everything is open and nobody has used a bowl
+  spill(scene, [-5.78, -5.12, -1.78, 1.78], TABLE_Y, { nacho: 16, curl: 9, crumb: 42 }, [
+    [-5.56, -0.75, 0.22],                                                  // the Volt Cola crate
+    [-5.5, -0.2, 0.13], [-5.5, 0.04, 0.13], [-5.5, 0.28, 0.13],            // Nachoz bags
+    [-5.5, 0.55, 0.13], [-5.5, 0.79, 0.13],                                // Cheez Curlz bags
+    [-5.62, 0.98, 0.08], [-5.62, 1.22, 0.08], [-5.62, 1.46, 0.08],         // Citrus Zap two-litres
+    [-5.28, 1.05, 0.07], [-5.2, 1.32, 0.07], [-5.38, 1.6, 0.07], [-5.15, 1.68, 0.07], [-5.3, 1.78, 0.07], // cups
+    [-5.4, -0.46, 0.08], [-5.3, -1.02, 0.1], [-5.25, 0.04, 0.07], [-5.28, 0.2, 0.07], // spindle, case, disks
+  ]);
+  spill(scene, [-5.0, -4.2, -1.8, 1.8], 0.003, { nacho: 6, curl: 4, crumb: 16 });                       // trodden into the carpet in front
+
+  // ---- the lounge: the coffee table (round the bowl and the open bag) and the carpet by the couch
+  spill(scene, [3.88, 4.42, -1.6, -0.4], COFFEE.top, { nacho: 5, curl: 5, crumb: 14 }, [
+    [3.99, -0.55, 0.12], [4.34, -0.5, 0.12], [4.3, -0.95, 0.12], [3.97, -1.46, 0.09], [4.22, -1.52, 0.1],
+    [4.3, -0.72, 0.07], [3.9, -0.7, 0.07],
+  ]);
+  spill(scene, [3.2, 5.0, -2.0, 0.8], 0.003, { nacho: 6, curl: 4, crumb: 18 });
+  spill(scene, [3.4, 3.85, -0.5, -0.1], 0.003, { nacho: 2, crumb: 8 });                                // round the crushed bag
+}
+
 export function buildRoom(scene) {
   const out = { stations: [], interactables: [], colliders: [], screens: [], hddLeds: [] };
   const { minX, maxX, minZ, maxZ, height } = ROOM;
@@ -1191,6 +1258,7 @@ export function buildRoom(scene) {
   buildPizza(scene, out);
   buildCeilingGamer(scene, out);
   buildMedia(scene, out);
+  buildChips(scene, out);
 
   // posters and the scoreboard
   const posterMat = (t) => new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 });
