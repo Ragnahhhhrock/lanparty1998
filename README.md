@@ -49,6 +49,7 @@ A 3D basement LAN party in the browser. Walk around with everyone else who's onl
 - **The door.** There's a door in the back wall, with a landing and a staircase up to the rest of the house. **E** opens and closes it, and you can step onto the landing when it's open. Mum is upstairs and says so. Other players see you stop at the doorway.
 - **Posters.** Besides the LAN party flyers there's a DUKE NUKEM 3D poster, a Y2K countdown, a 56K modem poster and an invented adventure game with a pixel treasure chest. Duke Nukem is named in text only: there are no characters or box art, and the game isn't bundled or playable here.
 - **#lanparty98.** A mIRC-style window (top right, **I** toggles it) where the regulars tell dumb jokes and mock each other, and pile on when something happens: a blue screen, a tripped cable, midnight, someone walking in. Chat (**T**) shows up there too and works offline. `js/irc.js` holds the banter, tested by `node tools/irc.test.mjs`.
+- **The crowd.** Everyone is dressed as a 90s teen: goths in trench coats, surfers, hip hop kids, ravers, grunge kids and nerds. A look is picked from each player's id, so it is the same on everyone's screen: height, build, hair, facial hair, glasses, hats, chains and shoes all vary. Macca and four regulars from the IRC channel (xX_Ghoul_Xx, PhatBass, K-Rad, n00bslayer) stand around the room.
 
 ### Deathmatch networking
 
