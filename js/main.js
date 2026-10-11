@@ -7,14 +7,14 @@ import { RoomLink, ROOM_NAME } from './net.js';
 import { Crowd } from './avatars.js';
 import * as sfx from './sfx.js';
 import { analytics } from './analytics.js';
-import { Party, BURNER, DISCS, NET, SHOP, PC_COUNT } from './party.js';
+import { Party, BURNER, DISCS, NET, SHOP, PC_COUNT, OC, HEAT, celsius } from './party.js';
 import * as dialog from './dialog.js';
 
 const $ = (id) => document.getElementById(id);
 const ui = {
   intro: $('intro'), enter: $('enter-btn'), hud: $('hud'), prompt: $('prompt'), toast: $('toast'),
   caffeine: $('m-caffeine'), snacks: $('m-snacks'), cash: $('m-cash'), clock: $('clock'),
-  monitor: $('monitor'), dos: $('dos'), dust: $('dust'),
+  monitor: $('monitor'), dos: $('dos'), dust: $('dust'), bsod: $('bsod'),
   seatedBar: $('seated-bar'), stand: $('stand-btn'), drink: $('drink-btn'), eat: $('eat-btn'), seatedStatus: $('seated-status'),
   handle: $('handle'), netstatus: $('netstatus'),
   chat: $('chat'), chatLog: $('chat-log'), chatForm: $('chat-form'), chatInput: $('chat-input'),
@@ -92,6 +92,7 @@ window.addEventListener('keydown', (e) => {
   if (dialog.isOpen()) return; // the message box owns the keyboard
   if (mode === 'seated') {
     if (e.code === 'Backquote') { e.preventDefault(); e.stopPropagation(); standUp(); }
+    else if (!ui.bsod.hidden) { e.preventDefault(); e.stopPropagation(); recoverFromCrash(); } // any key
     return; // everything else belongs to DOOM
   }
   if (mode !== 'walk') return;
@@ -123,6 +124,7 @@ const PROMPTS = {
     const fiddle = party.pcs[t.station.index].linkDown ? 'F · Cable is out' : 'F · Open the case';
     return who ? `${t.station.name} · ${who.name}'s sitting here  ·  ${fiddle}` : `E · Sit down at ${t.station.name}  ·  ${fiddle}`;
   },
+  fan: () => `E · Turn the fan ${party.fan.on ? 'off' : 'on'}`,
   shop: () => 'E · Read the computer shop price list',
   phone: () => 'E · Ring Dazza',
   drink: () => 'E · Crack a Volt Cola',
@@ -139,6 +141,7 @@ function interact(t) {
   else if (t.kind === 'eat') eat();
   else if (t.kind === 'burner') openBurner();
   else if (t.kind === 'shop') openShop();
+  else if (t.kind === 'fan') party.setFan(!party.fan.on, 'switch');
   else if (t.kind === 'phone') openPhone();
 }
 
@@ -171,8 +174,17 @@ function openPcMenu(station) {
       } else {
         lines.push(`${NET[party.net].label}: link light is on.`);
       }
+      const pc = party.pcs[i];
+      let progress = null;
+      if (pc.crashed) lines.push('This box has blue screened. Sit down and press a key.');
+      else {
+        lines.push(`CPU: ${OC[pc.oc].label}. Case temperature ${celsius(pc.heat)}°C${party.fan.on ? '' : ', and the fan is off'}.`);
+        progress = pc.heat / HEAT.crash;
+        const next = OC[(pc.oc + 1) % OC.length];
+        buttons.push({ label: pc.oc === OC.length - 1 ? `Put the jumpers back (${next.mhz}MHz)` : `Move the jumpers (${next.mhz}MHz)`, run: () => party.cycleOverclock(i), keep: true });
+      }
       buttons.push({ label: 'Close' });
-      return { lines, progress: null, buttons };
+      return { lines, progress, buttons };
     },
   });
 }
@@ -322,8 +334,11 @@ function sitDown(station) {
       analytics.gameStart(pc.kind === 'solo' ? 'DOOM' : 'DOOM deathmatch');
       if (mode === 'seated') ui.seatedStatus.textContent = seatedStatusText();
     };
-    bootForMatch();
-    ui.seatedStatus.textContent = seatedStatusText();
+    if (party.pcs[station.index].crashed) showCrash(); // somebody left it blue screened
+    else {
+      bootForMatch();
+      ui.seatedStatus.textContent = seatedStatusText();
+    }
     updateDM();
   });
   sitDown.station = station;
@@ -334,6 +349,7 @@ function standUp() {
   if (mode !== 'seated') return;
   const station = sitDown.station;
   pc.pause();
+  ui.bsod.hidden = true;
   analytics.standUp(pc.kind === 'join' || pc.kind === 'host' ? 'DOOM deathmatch' : 'DOOM');
   if (document.pointerLockElement) document.exitPointerLock();
   ui.monitor.hidden = true;
@@ -355,6 +371,23 @@ function standUp() {
     lockPointer();
   });
 }
+
+// A blue screen over your DOS window. Any key (or a click) restarts DOOM, with the case still hot.
+function showCrash() {
+  ui.bsod.hidden = false;
+  pc.pause();
+  ui.seatedStatus.textContent = 'Press any key to continue';
+}
+
+async function recoverFromCrash() {
+  if (!seatedAt || ui.bsod.hidden) return;
+  ui.bsod.hidden = true;
+  party.reboot(seatedAt.index);
+  ui.seatedStatus.textContent = 'Rebooting...';
+  await pc.shutdown();
+  if (mode === 'seated') bootForMatch();
+}
+ui.bsod.addEventListener('click', recoverFromCrash);
 
 function placeMonitorOverlay(station) {
   // project the four corners of the CRT glass and lay the DOS canvas over them
@@ -395,7 +428,7 @@ const trip = { t: 0, cool: 0, on: false, dir: new THREE.Vector3() };
 
 function cableUnderfoot() {
   for (const c of room.floorCables) {
-    const gone = c.kind === 'coax'
+    const gone = c.kind === 'fan' ? false : c.kind === 'coax'
       ? party.net !== 'coax' || party.pcs[PC_COUNT - 1].linkDown  // the coax across the floor is the cable to PC-06
       : party.net === 'coax' || party.pcs[c.pc].linkDown;         // an unplugged lead isn't lying there any more
     if (gone) continue;
@@ -460,6 +493,7 @@ function frame() {
   const now = performance.now() / 1000;
 
   crowd.update(dt, link.players);
+  room.updateFan(dt, party.fan.on, party.fanSweep());
   if (mode !== 'intro') party.tick(dt, { seatedPc: seatedAt?.index ?? null });
   if (link.online && mode === 'walk' && (sendTimer += dt) > 0.1) { sendTimer = 0; link.pos(player.pos.x, player.pos.z, player.yaw); }
 
@@ -538,6 +572,8 @@ function refreshLinks() {
   room.stations.forEach((st, i) => {
     room.setLoose(i, party.pcs[i].linkDown);
     st.screen.linkDown = !party.pcLinkUp(i);
+    st.screen.crashed = party.pcs[i].crashed;
+    st.screen.oc = party.pcs[i].oc;
   });
   setNetStatus();
 }
@@ -559,11 +595,30 @@ party.addEventListener('net', (e) => {
   else { toast(lines[e.detail.net]); chatLine(lines[e.detail.net], true); }
   linkChanged();
 });
+party.addEventListener('crash', (e) => {
+  const st = room.stations[e.detail.pc];
+  const msg = `${st.name}: a fatal exception 0E has occurred.`;
+  toast(msg); chatLine(msg, true);
+  refreshLinks();
+  if (seatedAt?.index === e.detail.pc) {
+    if (inMatch()) link.send({ t: isHost() ? 'dm_end' : 'dm_leave' }); // IPX does not survive a blue screen
+    if (mode === 'seated') showCrash();
+  }
+});
+party.addEventListener('reboot', refreshLinks);
+party.addEventListener('hot', (e) => chatLine(`${room.stations[e.detail.pc].name} is running hot. Is the fan on?`, true));
+party.addEventListener('oc', (e) => { toast(`${room.stations[e.detail.pc].name}: ${OC[e.detail.level].label}.`); refreshLinks(); });
+party.addEventListener('fan-on', () => { toast('Fan on.'); chatLine('The pedestal fan is spinning again.', true); });
+party.addEventListener('fan-off', (e) => {
+  if (e.detail.why === 'tripped') { chatLine('The fan has lost its power.', true); return; }
+  const msg = e.detail.why === 'knocked' ? "Somebody kicked the fan's plug out." : 'Fan off.';
+  toast(msg); chatLine(msg, true);
+});
 party.addEventListener('dad-warning', () => chatLine("Dazza's dad: \"I need that switch back by six.\"", true));
 const TRIP_LINES = ['You trip over the cat5.', 'Your foot finds the cable. Of course it does.', 'Cable. Floor. Face.'];
 party.addEventListener('trip', (e) => {
-  const st = room.stations[e.detail.pc];
-  const out = e.detail.kind === 'coax' ? `The coax pops off ${st.name}. Everybody is offline.` : `${st.name} has lost its link.`;
+  const st = room.stations[e.detail.pc ?? 0];
+  const out = e.detail.kind === 'fan' ? "The fan's plug comes out of the wall." : e.detail.kind === 'coax' ? `The coax pops off ${st.name}. Everybody is offline.` : `${st.name} has lost its link.`;
   const line = `${TRIP_LINES[party.tripped % TRIP_LINES.length]} ${out}`;
   toast(line); chatLine(line, true);
   analytics.tripCable(e.detail.kind, party.tripped);
@@ -583,7 +638,7 @@ party.addEventListener('burn-done', (e) => {
   chatLine(`The CD-R finally spat out a ${DISCS[e.detail.kind].name}. +$${e.detail.pays}.`, true);
 });
 party.addEventListener('coaster', (e) => {
-  const why = e.detail.reason === 'underrun' ? 'Buffer underrun. That one is a coaster.' : 'Write cancelled. That disc is a coaster now.';
+  const why = { underrun: 'Buffer underrun. That one is a coaster.', crash: 'PC-04 blue screened mid-write. Coaster.' }[e.detail.reason] ?? 'Write cancelled. That disc is a coaster now.';
   toast(why);
   chatLine(why, true);
 });

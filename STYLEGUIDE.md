@@ -46,6 +46,7 @@ Use tokens by name. Never introduce a raw hex value in CSS, canvas code or a tem
 | `--dos-grey` | `#aaaaaa` | Default DOS text |
 | `--amber` | `#ffcc00` | CRT titles and highlights |
 | `--toast` | `#ffe066` | In-world announcements (with hard black shadow) |
+| `--bsod` | `#0000aa` | The Win98 fatal exception screen, white VT323 text on it |
 
 ### Basement
 `--basement #0b0906` (page bg) · `--wood #4a2c17` · `--wood-dark #24150b` · `--carpet #3b2f2a` · `--ceiling #d9d4c7` · `--beige #d6cdb4` · `--beige-light #ebe4cf` · `--paper #e8e1cc` (text on dark basement bars)

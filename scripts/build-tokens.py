@@ -11,7 +11,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 GROUPS = {
     "shell": ("w98-",),
-    "crt": ("crt-", "phosphor", "dos-", "amber", "toast"),
+    "crt": ("crt-", "phosphor", "dos-", "amber", "toast", "bsod"),
     "basement": ("basement", "wood", "carpet", "ceiling", "beige", "paper"),
     "brand": ("volt", "nacho", "cheese"),
     "people": ("link-led", "skin", "denim", "shoe", "hair", "shirt-"),

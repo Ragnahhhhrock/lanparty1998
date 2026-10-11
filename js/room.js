@@ -232,6 +232,65 @@ function buildNetwork(scene, out) {
   };
 }
 
+// The pedestal fan: it sweeps between the two rows of PCs, and it plugs in across the floor.
+// Its head angle follows party.fanSweep(): -1 faces the back row, +1 the front row.
+function buildFan(scene, out) {
+  const FAN_AT = new THREE.Vector3(3.9, 0, 0.3);
+  const g = new THREE.Group();
+  g.position.copy(FAN_AT);
+  const cyl = (rt, rb, h, mat, y) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, 16), mat); m.position.y = y; return m; };
+  g.add(cyl(0.2, 0.22, 0.04, black, 0.02));
+  g.add(cyl(0.016, 0.016, 1.0, steel, 0.52));
+  const head = new THREE.Group();
+  head.position.y = 1.08;
+  head.add(box(0.13, 0.13, 0.16, beige, 0, 0, -0.04));
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.006, 6, 32), steel);
+  ring.position.z = 0.08;
+  head.add(ring);
+  const back = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.006, 6, 32), steel);
+  back.position.z = -0.04;
+  head.add(back);
+  for (let k = 0; k < 6; k++) { // the cage wires
+    const a = (k / 6) * Math.PI;
+    const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.0025, 0.0025, 0.42, 4), steel);
+    wire.rotation.z = a; wire.position.z = 0.08;
+    head.add(wire);
+  }
+  const blades = new THREE.Group();
+  blades.position.z = 0.04;
+  for (let k = 0; k < 3; k++) {
+    const blade = box(0.17, 0.05, 0.004, beigeDark, 0.09, 0, 0);
+    const arm = new THREE.Group();
+    arm.rotation.z = (k * Math.PI * 2) / 3;
+    arm.add(blade);
+    blades.add(arm);
+  }
+  head.add(blades);
+  g.add(head);
+  scene.add(g);
+
+  // the lead, across the floor to a wall socket on the right
+  const lead = [new THREE.Vector3(FAN_AT.x, 0.03, FAN_AT.z), new THREE.Vector3(FAN_AT.x + 0.2, 0.012, FAN_AT.z), new THREE.Vector3(5.95, 0.012, FAN_AT.z)];
+  const path = new THREE.CurvePath();
+  for (let i = 1; i < lead.length; i++) path.add(new THREE.LineCurve3(lead[i - 1], lead[i]));
+  scene.add(new THREE.Mesh(new THREE.TubeGeometry(path, 24, 0.005, 5), new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.5 })));
+  out.floorCables.push({ pc: null, kind: 'fan', pts: Array.from({ length: 24 }, (_, k) => new THREE.Vector3(FAN_AT.x + 0.2 + (5.95 - FAN_AT.x - 0.2) * (k / 23), 0.012, FAN_AT.z)) });
+
+  g.traverse((o) => { o.userData.interact = { kind: 'fan' }; });
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.3, 0.5), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.set(FAN_AT.x, 0.65, FAN_AT.z);
+  hit.userData.interact = { kind: 'fan' };
+  scene.add(hit);
+  out.interactables.push(g, hit);
+  out.colliders.push({ minX: FAN_AT.x - 0.22, maxX: FAN_AT.x + 0.22, minZ: FAN_AT.z - 0.22, maxZ: FAN_AT.z + 0.22 });
+
+  // sweep: the head turns toward whichever row it is cooling; the blades spin when it's plugged in
+  out.updateFan = (dt, on, sweep) => {
+    head.rotation.y = -Math.PI / 2 + sweep * (Math.PI / 2) * 0.9;
+    if (on) blades.rotation.z -= dt * 24;
+  };
+}
+
 // the things on the snack table and the wall you use to get stuff done
 function buildErrands(scene, out) {
   // the computer shop's price list, to order from
@@ -414,6 +473,7 @@ export function buildRoom(scene) {
 
   buildNetwork(scene, out);
   buildErrands(scene, out);
+  buildFan(scene, out);
 
   // posters and the scoreboard
   const posterMat = (t) => new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 });

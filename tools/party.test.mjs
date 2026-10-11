@@ -1,6 +1,6 @@
 // Logic tests for js/party.js. Run: node tools/party.test.mjs
 import assert from 'node:assert/strict';
-import { Party, BURNER, DISCS, SEC_PER_GAME_MIN, SHOP, DAD, PC_COUNT } from '../js/party.js';
+import { Party, BURNER, DISCS, SEC_PER_GAME_MIN, SHOP, DAD, PC_COUNT, OC, HEAT, FAN } from '../js/party.js';
 
 const run = (p, seconds, ctx = {}) => { for (let i = 0; i < seconds * 10; i++) p.tick(0.1, ctx); };
 let n = 0;
@@ -173,6 +173,127 @@ test('a plugged-back-in lead works again', () => {
   p.tripOver('cat5', 0);
   p.fixLink(0);
   assert.ok(p.pcLinkUp(0));
+});
+
+// ---- heat, the fan and the blue screen ----
+test('a stock PC never gets hot, with the fan on or off', () => {
+  for (const on of [true, false]) {
+    const p = new Party({ rng: () => 0.99 });
+    p.setFan(on);
+    run(p, 600);
+    assert.equal(p.pcs[0].heat, 0);
+    assert.equal(p.pcs[0].crashed, false);
+  }
+});
+
+test('an overclocked PC is fine as long as the fan keeps turning', () => {
+  for (const level of [1, 2]) {
+    const p = new Party({ rng: () => 0.99 });
+    p.nextKnock = Infinity; // nobody kicks the plug in this one
+    p.setOverclock(2, level);
+    p.setOverclock(4, level);
+    run(p, 900);
+    assert.equal(p.pcs[2].crashed, false, `back row, level ${level}`);
+    assert.equal(p.pcs[4].crashed, false, `front row, level ${level}`);
+  }
+});
+
+test('turn the fan off and the overclocked PC blue screens', () => {
+  const p = new Party({ rng: () => 0.99 });
+  p.setOverclock(1, 1);
+  p.setFan(false);
+  const seen = [];
+  p.addEventListener('hot', () => seen.push('hot'));
+  p.addEventListener('crash', (e) => seen.push(`crash:${e.detail.pc}`));
+  run(p, 200);
+  assert.equal(p.pcs[1].crashed, false, 'a modest overclock lasts a few minutes');
+  run(p, 150);
+  assert.equal(p.pcs[1].crashed, true);
+  assert.deepEqual(seen, ['hot', 'crash:1']);
+});
+
+test('the heavy overclock goes in about two minutes without the fan', () => {
+  const p = new Party({ rng: () => 0.99 });
+  p.setOverclock(0, 2);
+  p.setFan(false);
+  run(p, 100);
+  assert.equal(p.pcs[0].crashed, false);
+  run(p, 40);
+  assert.equal(p.pcs[0].crashed, true);
+});
+
+test('rebooting leaves the case hot, so a PC with no fan crashes again soon', () => {
+  const p = new Party({ rng: () => 0.99 });
+  p.setOverclock(0, 2);
+  p.setFan(false);
+  run(p, 150);
+  assert.ok(p.reboot(0));
+  assert.equal(p.pcs[0].heat, HEAT.afterReboot);
+  run(p, 60);
+  assert.equal(p.pcs[0].crashed, true);
+});
+
+test('a crashed PC stops cooling or heating, and reboot only works on a crashed PC', () => {
+  const p = new Party({ rng: () => 0.99 });
+  assert.equal(p.reboot(3), false);
+});
+
+test('the fan gets knocked out, but only once somebody has overclocked', () => {
+  const quiet = new Party({ rng: () => 0.5 });
+  run(quiet, 1200);
+  assert.equal(quiet.fan.on, true);
+  const p = new Party({ rng: () => 0.5 });
+  p.setOverclock(0, 1);
+  const why = [];
+  p.addEventListener('fan-off', (e) => why.push(e.detail.why));
+  run(p, 1200);
+  assert.equal(p.fan.on, false);
+  assert.deepEqual(why, ['knocked']);
+});
+
+test('tripping over the fan lead pulls the plug', () => {
+  const p = new Party();
+  assert.ok(p.tripOver('fan', null));
+  assert.equal(p.fan.on, false);
+  assert.equal(p.netDown(), false, 'the network is fine');
+});
+
+test('the fan only sweeps while it is on', () => {
+  const p = new Party({ rng: () => 0.99 });
+  p.setFan(false);
+  const phase = p.fan.phase;
+  run(p, 30);
+  assert.equal(p.fan.phase, phase);
+  p.setFan(true);
+  run(p, FAN.period / 4);
+  assert.ok(Math.abs(p.fanSweep() - 1) < 0.01, 'a quarter of the way round it faces the front row');
+});
+
+test('the back row is cooled when the fan faces back, and the front row when it faces front', () => {
+  const p = new Party({ rng: () => 0.99 });
+  run(p, FAN.period / 4);           // facing the front row
+  assert.ok(p.fanFactor(4) > p.fanFactor(1));
+  run(p, FAN.period / 2);           // now facing the back row
+  assert.ok(p.fanFactor(1) > p.fanFactor(4));
+});
+
+test('overclock levels cycle round to stock', () => {
+  const p = new Party();
+  p.cycleOverclock(0); p.cycleOverclock(0); p.cycleOverclock(0);
+  assert.equal(p.pcs[0].oc, 0);
+  assert.equal(OC.length, 3);
+});
+
+test('the burner PC blue screening mid-write makes a coaster', () => {
+  const p = new Party({ rng: () => 0.99 });
+  p.nextKnock = Infinity;
+  p.setOverclock(BURNER.pc, 2);
+  p.setFan(false);
+  p.startBurn();
+  run(p, 140);
+  assert.equal(p.pcs[BURNER.pc].crashed, true);
+  assert.equal(p.job, null);
+  assert.equal(p.coasters, 1);
 });
 
 console.log(`${n} passed`);

@@ -22,6 +22,16 @@ export const SHOP = { hubCost: 45, hubDelay: 10 };            // the hub: shop p
 export const DAD = { delay: 20, warnAt: 5 * 60 + 30, returnAt: 6 * 60 }; // the switch is on loan until 6:00 AM
 export const COAX_FAULT_EVERY = [6, 12];                      // game minutes between dodgy T-connectors
 
+// Overclocking: more MHz, more heat. A stock box cools down on its own; the others need the fan.
+export const OC = [
+  { label: 'Pentium II 300', mhz: 300, heat: -0.6 },
+  { label: 'Pentium II 300 at 450 (100MHz bus)', mhz: 450, heat: 0.35 },
+  { label: 'Pentium II 300 at 504 (112MHz bus, extra volts)', mhz: 504, heat: 0.8 },
+];
+export const FAN = { cool: 1.4, period: 14, knockEvery: [9, 16] }; // heat/s at best, seconds per sweep, game minutes between knocks
+export const HEAT = { crash: 100, warn: 75, ok: 60, afterReboot: 70 };
+export const celsius = (heat) => Math.round(28 + heat * 0.5);
+
 export const DISCS = {
   MIX: { name: 'MIX CD', pays: 10 },
 };
@@ -39,7 +49,9 @@ export class Party extends EventTarget {
     this.job = null;       // the burn in progress: { kind, left, total, abused }
 
     this.net = 'coax';     // coax -> hub -> (borrowed) switch
-    this.pcs = Array.from({ length: PC_COUNT }, () => ({ linkDown: false }));
+    this.pcs = Array.from({ length: PC_COUNT }, () => ({ linkDown: false, oc: 0, heat: 0, crashed: false, hot: false }));
+    this.fan = { on: true, phase: 0 };
+    this.nextKnock = this.now + this.knockGap();
     this.orders = [];      // things on their way: { what: 'hub' | 'switch', at }
     this.dadLent = false;  // the switch only goes on loan once
     this.warned = false;
@@ -49,6 +61,69 @@ export class Party extends EventTarget {
 
   // minutes since midnight of the party day, continuing past 24:00
   clockMinutes() { return this.start + this.now; }
+
+  knockGap() { const [a, b] = FAN.knockEvery; return a + this.rng() * (b - a); }
+
+  /* ---- heat, the fan and the blue screen ---- */
+
+  // -1 (fan facing the back row, PCs 1-3) to +1 (fan facing the front row, PCs 4-6)
+  fanSweep() { return Math.sin(this.fan.phase); }
+
+  // how much of the fan's blast PC i is getting right now. It sweeps, so never none and never all.
+  fanFactor(i) {
+    const side = i < PC_COUNT / 2 ? -1 : 1;
+    return 0.45 + 0.55 * Math.max(0, side * this.fanSweep());
+  }
+
+  setFan(on, why = 'switch') {
+    if (this.fan.on === on) return false;
+    this.fan.on = on;
+    this.emit(on ? 'fan-on' : 'fan-off', { why });
+    return true;
+  }
+
+  setOverclock(i, level) {
+    const pc = this.pcs[i];
+    pc.oc = Math.max(0, Math.min(OC.length - 1, level));
+    this.emit('oc', { pc: i, level: pc.oc });
+  }
+  cycleOverclock(i) { this.setOverclock(i, (this.pcs[i].oc + 1) % OC.length); }
+
+  reboot(i) {
+    const pc = this.pcs[i];
+    if (!pc.crashed) return false;
+    pc.crashed = false;
+    pc.heat = HEAT.afterReboot; // the case is still hot
+    this.emit('reboot', { pc: i });
+    return true;
+  }
+
+  tickHeat(dt) {
+    if (this.fan.on) this.fan.phase += (dt * 2 * Math.PI) / FAN.period;
+    this.pcs.forEach((pc, i) => {
+      if (pc.crashed) return;
+      let rate = OC[pc.oc].heat;
+      if (this.fan.on) rate -= FAN.cool * this.fanFactor(i);
+      pc.heat = Math.max(0, Math.min(HEAT.crash, pc.heat + rate * dt));
+      if (!pc.hot && pc.heat >= HEAT.warn) { pc.hot = true; this.emit('hot', { pc: i }); }
+      if (pc.hot && pc.heat < HEAT.ok) pc.hot = false;
+      if (pc.heat >= HEAT.crash) {
+        pc.crashed = true;
+        pc.hot = false;
+        this.emit('crash', { pc: i });
+        if (i === BURNER.pc && this.job) { // blue screen in the middle of a write
+          this.job = null;
+          this.coasters++;
+          this.emit('coaster', { reason: 'crash' });
+        }
+      }
+    });
+    // somebody kicks the fan's plug out. Only worth a mention once someone's overclocked.
+    if (this.now >= this.nextKnock) {
+      if (this.fan.on && this.pcs.some((pc) => pc.oc > 0)) this.setFan(false, 'knocked');
+      this.nextKnock = this.now + this.knockGap();
+    }
+  }
 
   faultGap() { const [a, b] = COAX_FAULT_EVERY; return a + this.rng() * (b - a); }
 
@@ -76,6 +151,12 @@ export class Party extends EventTarget {
   // out of one PC. On coax it is the cable to PC-06, the end that runs across the floor, and
   // that takes the whole segment down.
   tripOver(kind, pc) {
+    if (kind === 'fan') { // the fan's lead runs across the floor too
+      this.tripped++;
+      const dropped = this.setFan(false, 'tripped');
+      this.emit('trip', { kind, pc: null, dropped });
+      return dropped;
+    }
     const i = kind === 'coax' ? PC_COUNT - 1 : pc;
     this.tripped++;
     const dropped = this.dropLink(i, 'tripped');
@@ -175,6 +256,7 @@ export class Party extends EventTarget {
   tick(dt, ctx = {}) {
     this.now += dt / SEC_PER_GAME_MIN;
     this.tickNetwork();
+    this.tickHeat(dt);
     if (this.job) {
       // sitting at the burner and playing DOOM starves the write buffer
       if (ctx.seatedPc === BURNER.pc) {

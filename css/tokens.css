@@ -31,6 +31,7 @@
   --dos-grey: #aaaaaa;      /* default DOS text */
   --amber: #ffcc00;         /* CRT highlights, network titles */
   --toast: #ffe066;         /* in-world announcements */
+  --bsod: #0000aa;          /* the Win98 fatal exception screen */
 
   /* ---- Basement: the room the UI floats over ---- */
   --basement: #0b0906;      /* page background, deepest shadow */

@@ -222,7 +222,7 @@ export class Screen {
     const g = this.g, t = time + this.t0;
     g.save();
     // the burner PC shows its write progress while nobody is sitting at it
-    this[this.burn && this.free ? 'burning' : this.mode]?.(g, t);
+    this[this.crashed ? 'bsod' : this.burn && this.free ? 'burning' : this.mode]?.(g, t);
     if (this.linkDown) { // the Win98 tray balloon, big enough to read from across the room
       g.fillStyle = '#ffcc00'; g.fillRect(0, 0, W, 26);                      // --amber
       this.text(g, 'NETWORK CABLE DISCONNECTED', 8, 20, '#000000', 20);
@@ -279,7 +279,7 @@ export class Screen {
   bios(g, t) {
     g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
     this.text(g, 'Award Modular BIOS v4.51PG', 8, 20);
-    this.text(g, 'Pentium II-MMX CPU at 300MHz', 8, 46);
+    this.text(g, `Pentium II-MMX CPU at ${[300, 450, 504][this.oc | 0]}MHz`, 8, 46);
     const mem = Math.min(65536, Math.floor((t % 9) * 16000));
     this.text(g, `Memory Test : ${mem}K ${mem >= 65536 ? 'OK' : ''}`, 8, 64);
     if (t % 9 > 5) this.text(g, 'Starting Windows 98...', 8, 110);
@@ -320,6 +320,15 @@ export class Screen {
     this.text(g, `${Math.floor(b.pct * 100)}%  ·  ${Math.floor(b.secondsLeft / 60)}:${String(Math.floor(b.secondsLeft % 60)).padStart(2, '0')} left`, 10, 128, '#9dff7a', 22);
     if (Math.floor(t * 1.5) % 2) this.text(g, 'DO NOT USE THIS PC WHILE WRITING', 10, 170, '#ffcc00', 20);
     this.text(g, 'Buffer: OK', 10, H - 14, '#777777', 16);
+  }
+
+  bsod(g, t) {
+    g.fillStyle = '#0000aa'; g.fillRect(0, 0, W, H);                       // --bsod
+    g.fillStyle = '#c0c0c0'; g.fillRect(W / 2 - 34, 22, 68, 18);           // --w98-face
+    this.text(g, 'Windows', W / 2 - 28, 37, '#0000aa', 18);
+    const lines = ['A fatal exception 0E has', 'occurred at 0028:C0011E36 in', 'VXD VMM(01) + 00010E36. The', 'current application will be', 'terminated.', '', '*  Press any key to terminate', '   the current application.', '*  Press CTRL+ALT+DEL again to', '   restart your computer.'];
+    lines.forEach((ln, i) => this.text(g, ln, 12, 66 + i * 15, '#ffffff', 16));
+    if (Math.floor(t * 2) % 2) this.text(g, 'Press any key to continue _', 12, H - 14, '#ffffff', 16);
   }
 
   mine(g, t) { // your PC while you're standing
