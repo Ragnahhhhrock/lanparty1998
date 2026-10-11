@@ -45,6 +45,14 @@ export function fizz() {
   burst(t + 0.05, 1.1, 6000, 0.7, 0.25, 'highpass'); // the hiss
 }
 
+// a shin meeting a cable: a low thump and a rattle of plastic
+export function thud() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  burst(t, 0.22, 140, 1.1, 1.0, 'lowpass');
+  burst(t + 0.04, 0.12, 900, 1.2, 0.35);
+}
+
 export function crunch() {
   if (!ctx) return;
   const t = ctx.currentTime;

@@ -41,6 +41,7 @@ A 3D basement LAN party in the browser. Walk around with everyone else who's onl
 - **The CD burner.** PC-04 has the only CD-R drive and it writes at 2x: a 74 minute disc is a 37 minute write (about six real minutes; a game minute is ten real seconds). Walk up to the drive and press **E**. A blank costs $4, mates pay $10 for a MIX CD. Sit at PC-04 and play while it's writing and it makes a coaster.
 
 - **The network.** You start on 10BASE2 coax: one cable runs under the tables and across the floor, with a T-connector at every tower. Every few minutes one works itself loose and the whole segment goes down (and so does your deathmatch). Look at the PC with the tilted T-connector, press **F** and re-seat it. Read the computer shop price list on the snack table and order an 8-port hub ($45); it arrives ten game minutes later and cat5 runs to the hub. Then ring Dazza (the wall phone): his dad works in IT for the government and will lend a 16-port switch, with an asset sticker on it, until 6:00 AM, when it goes back. A coax fault disconnects everyone at once, a hub or switch only the one PC.
+- **Trip hazards.** The cat5 leads (and the coax) lie across the floor. The cables are gaffer-taped, so most crossings are fine, but each time you step over one it is a roll (about 30%, worse after a few cans of Volt). Trip and you stumble, and the lead comes out of the back of its PC. Press **F** at that PC to plug it back in, or watch where you walk.
 
 ### Deathmatch networking
 
@@ -101,4 +102,5 @@ Sent from `js/analytics.js`:
 | `sit_down` | `station` |
 | `game_start` | `game_name`, `games_total` (once per emulator boot) |
 | `stand_up` | `game_name`, `play_seconds` |
+| `trip_cable` | `cable` (`cat5` or `coax`), `trips_total` |
 | `party_summary` | `cans_total`, `handfuls_total`, `games_total`, `play_seconds` (on tab close) |

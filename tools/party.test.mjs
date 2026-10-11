@@ -151,4 +151,28 @@ test('coax faults stop once you are off coax', () => {
   assert.ok(p.pcs.every((x) => !x.linkDown));
 });
 
+test('tripping over a cat5 lead pulls that one PC off the network', () => {
+  const p = new Party();
+  p.setNet('hub');
+  assert.ok(p.tripOver('cat5', 2));
+  assert.equal(p.pcLinkUp(2), false);
+  assert.equal(p.pcLinkUp(3), true);
+  assert.equal(p.tripped, 1);
+});
+
+test('tripping over the coax pulls it off PC-06 and takes everyone down', () => {
+  const p = new Party();
+  assert.ok(p.tripOver('coax', null));
+  assert.equal(p.pcs[PC_COUNT - 1].linkDown, true);
+  assert.equal(p.netDown(), true);
+});
+
+test('a plugged-back-in lead works again', () => {
+  const p = new Party();
+  p.setNet('hub');
+  p.tripOver('cat5', 0);
+  p.fixLink(0);
+  assert.ok(p.pcLinkUp(0));
+});
+
 console.log(`${n} passed`);

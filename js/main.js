@@ -7,7 +7,7 @@ import { RoomLink, ROOM_NAME } from './net.js';
 import { Crowd } from './avatars.js';
 import * as sfx from './sfx.js';
 import { analytics } from './analytics.js';
-import { Party, BURNER, DISCS, NET, SHOP } from './party.js';
+import { Party, BURNER, DISCS, NET, SHOP, PC_COUNT } from './party.js';
 import * as dialog from './dialog.js';
 
 const $ = (id) => document.getElementById(id);
@@ -389,6 +389,21 @@ function collide(p) {
   }
 }
 
+// Cables on the floor: walk over one and you go down, and the lead comes out of the back of the PC.
+const TRIP = { seconds: 0.9, radius: 0.09, cooldown: 3.5, chance: 0.3 };
+const trip = { t: 0, cool: 0, on: false, dir: new THREE.Vector3() };
+
+function cableUnderfoot() {
+  for (const c of room.floorCables) {
+    const gone = c.kind === 'coax'
+      ? party.net !== 'coax' || party.pcs[PC_COUNT - 1].linkDown  // the coax across the floor is the cable to PC-06
+      : party.net === 'coax' || party.pcs[c.pc].linkDown;         // an unplugged lead isn't lying there any more
+    if (gone) continue;
+    for (const p of c.pts) if (Math.hypot(p.x - player.pos.x, p.z - player.pos.z) < TRIP.radius) return c;
+  }
+  return null;
+}
+
 const fwd = new THREE.Vector3(), side = new THREE.Vector3(), move = new THREE.Vector3();
 function walk(dt) {
   fwd.set(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
@@ -398,8 +413,25 @@ function walk(dt) {
   if (keys.has('KeyS') || keys.has('ArrowDown')) move.sub(fwd);
   if (keys.has('KeyD') || keys.has('ArrowRight')) move.add(side);
   if (keys.has('KeyA') || keys.has('ArrowLeft')) move.sub(side);
-  const speed = 2.1 * (1 + stats.caffeine / 250);
-  if (move.lengthSq()) player.pos.addScaledVector(move.normalize(), speed * dt);
+  const speed = 2.1 * (1 + stats.caffeine / 250) * (trip.t > 0 ? 0.35 : 1);
+  trip.cool = Math.max(0, trip.cool - dt);
+  if (move.lengthSq()) {
+    player.pos.addScaledVector(move.normalize(), speed * dt);
+    // the cables are gaffer-taped, so most crossings are fine; each time you step onto one it's a roll,
+    // and a few cans of Volt make you clumsier
+    const cable = cableUnderfoot();
+    const stepOn = cable && !trip.on;
+    trip.on = !!cable;
+    if (stepOn && trip.cool === 0 && Math.random() < TRIP.chance + stats.caffeine / 250) {
+      trip.t = TRIP.seconds; trip.cool = TRIP.cooldown; trip.dir.copy(move);
+      sfx.thud();
+      party.tripOver(cable.kind, cable.pc);
+    }
+  } else trip.on = !!cableUnderfoot();
+  if (trip.t > 0) { // stagger on a few steps in the direction you were going
+    trip.t = Math.max(0, trip.t - dt);
+    player.pos.addScaledVector(trip.dir, 1.3 * (trip.t / TRIP.seconds) * dt);
+  }
   collide(player.pos);
 
   camera.position.copy(player.pos);
@@ -411,6 +443,12 @@ function walk(dt) {
   camera.position.x += (Math.random() - 0.5) * jit;
   camera.position.y += (Math.random() - 0.5) * jit;
   camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
+  if (trip.t > 0) { // the camera pitches forward and rolls, then you pick yourself up
+    const k = Math.sin(Math.PI * (1 - trip.t / TRIP.seconds));
+    camera.rotation.x -= k * 0.35;
+    camera.rotation.z = k * 0.14;
+    camera.position.y -= k * 0.3;
+  }
 }
 
 /* ---------- loop ---------- */
@@ -522,7 +560,16 @@ party.addEventListener('net', (e) => {
   linkChanged();
 });
 party.addEventListener('dad-warning', () => chatLine("Dazza's dad: \"I need that switch back by six.\"", true));
+const TRIP_LINES = ['You trip over the cat5.', 'Your foot finds the cable. Of course it does.', 'Cable. Floor. Face.'];
+party.addEventListener('trip', (e) => {
+  const st = room.stations[e.detail.pc];
+  const out = e.detail.kind === 'coax' ? `The coax pops off ${st.name}. Everybody is offline.` : `${st.name} has lost its link.`;
+  const line = `${TRIP_LINES[party.tripped % TRIP_LINES.length]} ${out}`;
+  toast(line); chatLine(line, true);
+  analytics.tripCable(e.detail.kind, party.tripped);
+});
 party.addEventListener('link-down', (e) => {
+  if (e.detail.why === 'tripped') { linkChanged(); return; } // the trip handler already said so
   const msg = party.net === 'coax' ? `A T-connector on ${room.stations[e.detail.pc].name} has come loose. The whole network is down.` : `${room.stations[e.detail.pc].name} has lost its network lead.`;
   toast(msg); chatLine(msg, true);
   linkChanged();

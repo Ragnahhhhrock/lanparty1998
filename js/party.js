@@ -43,6 +43,7 @@ export class Party extends EventTarget {
     this.orders = [];      // things on their way: { what: 'hub' | 'switch', at }
     this.dadLent = false;  // the switch only goes on loan once
     this.warned = false;
+    this.tripped = 0;      // times somebody has gone over a cable
     this.nextFault = this.now + this.faultGap();
   }
 
@@ -69,6 +70,17 @@ export class Party extends EventTarget {
     this.pcs[i].linkDown = false;
     this.emit('link-up', { pc: i });
     return true;
+  }
+
+  // Someone has tripped on a cable lying across the floor. On a hub or switch that is one lead
+  // out of one PC. On coax it is the cable to PC-06, the end that runs across the floor, and
+  // that takes the whole segment down.
+  tripOver(kind, pc) {
+    const i = kind === 'coax' ? PC_COUNT - 1 : pc;
+    this.tripped++;
+    const dropped = this.dropLink(i, 'tripped');
+    this.emit('trip', { kind, pc: i, dropped });
+    return dropped;
   }
 
   ordered(what) { return this.orders.some((o) => o.what === what); }

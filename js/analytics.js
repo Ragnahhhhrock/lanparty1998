@@ -21,6 +21,9 @@ export const analytics = {
     track('eat_snack', { handfuls_total: totals.handfuls, snack_level: Math.round(snacks) });
   },
 
+  // Tripped over a cable on the floor; `kind` is 'cat5' or 'coax'.
+  tripCable(kind, total) { track('trip_cable', { cable: kind, trips_total: total }); },
+
   sitDown(station) {
     seatedAt = performance.now();
     track('sit_down', { station: station?.name || 'you' });
