@@ -42,6 +42,12 @@
   --beige: #d6cdb4;         /* PC plastic */
   --beige-light: #ebe4cf;   /* keycaps, bezels */
   --paper: #e8e1cc;         /* text on dark basement surfaces */
+  --duct-silver: #9aa0a6;   /* the ceiling duct */
+  --duct-tape: #5c6166;     /* gaffer tape, mostly holding people to things */
+  --cardboard: #b8935a;     /* pizza boxes */
+  --pizza-crust: #d9a04a;
+  --pizza-cheese: #f2c14e;
+  --pepperoni: #b22a1e;
 
   /* ---- Parody brands (never use real brand names or marks) ---- */
   --volt: #e2231a;          /* Volt Cola, UI red, caffeine meter */

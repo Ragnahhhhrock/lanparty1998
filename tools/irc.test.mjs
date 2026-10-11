@@ -21,7 +21,7 @@ test('events get a reaction that names the person', () => {
   assert.ok(msgs.some((m) => m.text.includes('FRAGMASTER')));
 });
 test('every reaction kind fills its template', () => {
-  for (const kind of ['crash', 'trip', 'hot', 'midnight', 'join', 'door']) {
+  for (const kind of ['crash', 'trip', 'hot', 'midnight', 'join', 'door', 'pizza']) {
     const b = new Banter({ rng: seeded(4) });
     b.react(kind, 'PC-03');
     assert.ok(b.tick(10).every((m) => !/\{\w\}/.test(m.text)), kind);

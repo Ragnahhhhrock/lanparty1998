@@ -19,6 +19,7 @@ export const NET = {
   switch: { label: '16-port switch', short: 'SWITCH', speed: 10 },
 };
 export const SHOP = { hubCost: 45, hubDelay: 10 };            // the hub: shop price, game minutes until it turns up
+export const PIZZA = { cost: 16, delay: 25, slices: 8 };         // a large pepperoni: price, game minutes to deliver, slices in the box
 export const DAD = { delay: 20, warnAt: 5 * 60 + 30, returnAt: 6 * 60 }; // the switch is on loan until 6:00 AM
 export const COAX_FAULT_EVERY = [6, 12];                      // game minutes between dodgy T-connectors
 
@@ -101,6 +102,7 @@ export class Party extends EventTarget {
     this.sticks = 0;       // SIMMs in your pocket
     this.fan = { on: true, phase: 0 };
     this.nextKnock = this.now + this.knockGap();
+    this.pizzas = 0;       // pizzas that have turned up
     this.orders = [];      // things on their way: { what: 'hub' | 'switch', at }
     this.dadLent = false;  // the switch only goes on loan once
     this.warned = false;
@@ -353,6 +355,16 @@ export class Party extends EventTarget {
     return true;
   }
 
+  // the pizza place: one large pepperoni at a time
+  canOrderPizza() { return !this.ordered('pizza') && this.cash >= PIZZA.cost; }
+  orderPizza() {
+    if (!this.canOrderPizza()) return false;
+    this.spend(PIZZA.cost);
+    this.orders.push({ what: 'pizza', at: this.now + PIZZA.delay });
+    this.emit('order', { what: 'pizza' });
+    return true;
+  }
+
   // Dazza's dad works in IT for the government. He won't put a switch on a coax mess.
   canBorrowSwitch() { return this.net === 'hub' && !this.dadLent && !this.ordered('switch'); }
   borrowSwitch() {
@@ -414,6 +426,7 @@ export class Party extends EventTarget {
       if (this.now < o.at) continue;
       this.orders.splice(this.orders.indexOf(o), 1);
       if (o.what === 'hub') this.setNet('hub', 'delivered');
+      else if (o.what === 'pizza') { this.pizzas++; this.emit('pizza-arrive', { n: this.pizzas }); }
       else { this.dadLent = true; this.setNet('switch', 'delivered'); }
     }
     // coax: every so often a T-connector works itself loose somewhere along the cable

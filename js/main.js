@@ -4,10 +4,10 @@ import * as THREE from 'three';
 import { buildRoom, ROOM } from './room.js';
 import { DosPC } from './emulator.js';
 import { RoomLink, ROOM_NAME } from './net.js';
-import { Crowd, spawnNpc } from './avatars.js';
+import { Crowd, spawnNpc, spawnTaped } from './avatars.js';
 import * as sfx from './sfx.js';
 import { analytics } from './analytics.js';
-import { Party, BURNER, DISCS, NET, SHOP, PC_COUNT, OC, HEAT, RAM, NIGHT, SEC_PER_GAME_MIN, SHARE_STEPS, celsius } from './party.js';
+import { Party, PIZZA, BURNER, DISCS, NET, SHOP, PC_COUNT, OC, HEAT, RAM, NIGHT, SEC_PER_GAME_MIN, SHARE_STEPS, celsius } from './party.js';
 import * as dialog from './dialog.js';
 import { Banter, IrcView, REGULARS } from './irc.js';
 import { Player } from './music.js';
@@ -164,7 +164,9 @@ const PROMPTS = {
   buddy: () => (party.buddy.state === 'back' ? 'E · Macca is back. Ask about the RAM' : 'E · Talk to Macca'),
   fan: () => `E · Turn the fan ${party.fan.on ? 'off' : 'on'}`,
   shop: () => 'E · Read the computer shop price list',
-  phone: () => 'E · Ring Dazza',
+  phone: () => 'E · Use the phone',
+  pizza: (t) => (t.box.slices > 0 ? `E · Eat a slice of pepperoni pizza (${t.box.slices} left)` : 'Empty box. Just grease.'),
+  taped: () => 'E · Talk to DUCTAPE',
   door: () => `E · ${room.door.open ? 'Close' : 'Open'} the door`,
   drink: () => 'E · Crack a Volt Cola',
   eat: () => 'E · Grab a handful of Nachoz',
@@ -183,6 +185,8 @@ function interact(t) {
   else if (t.kind === 'buddy') openMacca();
   else if (t.kind === 'fan') party.setFan(!party.fan.on, 'switch');
   else if (t.kind === 'phone') openPhone();
+  else if (t.kind === 'pizza') eatPizza(t.box);
+  else if (t.kind === 'taped') talkToTaped();
   else if (t.kind === 'door') useDoor();
 }
 
@@ -322,6 +326,42 @@ function openShop() {
 
 function openPhone() {
   openErrand({
+    title: 'WALL PHONE',
+    render: () => ({
+      lines: ['The phone is on the wall by the stairs, with the pizza place magnet stuck next to it. Whose number do you want?'],
+      progress: null,
+      buttons: [{ label: 'Pizza place', run: () => openPizzaMenu() }, { label: 'Dazza', run: () => openDazza() }, { label: 'Hang up' }],
+    }),
+  });
+}
+
+function openPizzaMenu() {
+  setTimeout(() => openErrand({
+    title: 'PIZZAMENU.TXT',
+    render: () => {
+      const buttons = [{ label: 'Hang up' }];
+      let lines;
+      if (party.ordered('pizza')) lines = [`Pepperoni is on its way. The delivery bloke says ${clockText(party.secondsUntil('pizza'))}, and he has said that twice.`];
+      else {
+        lines = [
+          'HOT & FRESH PIZZA. Delivered in 30 min.',
+          `1. Large pepperoni, ${PIZZA.slices} slices ... $${PIZZA.cost}`,
+          '2. Large pepperoni, extra pepperoni ... same pizza',
+          `Cash $${party.cash}.`,
+        ];
+        buttons.unshift({ label: `Order a large pepperoni ($${PIZZA.cost})`, disabled: !party.canOrderPizza(), run: () => party.orderPizza(), keep: true });
+      }
+      return { lines, progress: null, buttons };
+    },
+  }), 0);
+}
+
+function openDazza() {
+  setTimeout(() => openDazzaDialog(), 0);
+}
+
+function openDazzaDialog() {
+  openErrand({
     title: 'DAZZA.TEL',
     render: () => {
       const buttons = [{ label: 'Hang up' }];
@@ -383,6 +423,72 @@ function drink() {
   sfx.fizz();
   analytics.drinkCola(stats.caffeine);
   toast(stats.caffeine > 85 ? 'You can hear colours. Maybe slow down.' : DRINK_LINES[stats.cans % DRINK_LINES.length]);
+}
+
+/* ---------- pizza: boxes, slices, and who is eating what ---------- */
+const handSlice = (() => { // the slice you hold up in front of the camera
+  const g = new THREE.Group();
+  const w = (r, h, y, hex) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 3, 1, false, 0, Math.PI * 2 / 3), new THREE.MeshStandardMaterial({ color: hex, roughness: 0.7 })); m.position.y = y; return m; };
+  g.add(w(0.12, 0.012, 0, 0xd9a04a), w(0.105, 0.016, 0.005, 0xf2c14e)); // --pizza-crust, --pizza-cheese
+  const pep = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.018, 8), new THREE.MeshStandardMaterial({ color: 0xb22a1e })); // --pepperoni
+  pep.position.set(0.04, 0.008, 0.02); g.add(pep);
+  g.visible = false; scene.add(camera); camera.add(g);
+  return g;
+})();
+let handT = -1;
+const HAND = { raise: 0.5, bite: 0.6, lower: 0.4 };
+function stepHandSlice(dt) {
+  if (handT < 0) return;
+  handT += dt;
+  const total = HAND.raise + 3 * HAND.bite + HAND.lower;
+  const k = Math.min(1, handT / HAND.raise, (total - handT) / HAND.lower);
+  const up = Math.max(0, k), bites = Math.max(0, Math.min(3, Math.floor((handT - HAND.raise) / HAND.bite)));
+  handSlice.position.set(0.14 - up * 0.12, -0.3 + up * 0.18, -0.6 + up * 0.12);
+  handSlice.rotation.set(-0.5 - up * 0.4, 0.4, 0.3);
+  handSlice.scale.setScalar(0.75 * (1 - bites * 0.3));
+  if (handT >= total) { handT = -1; handSlice.visible = false; }
+}
+function eatPizza(box) {
+  if (box.slices <= 0) { toast('Empty box. Just grease and one crust.'); return; }
+  if (handT >= 0) return;
+  box.setSlices(box.slices - 1);
+  handT = 0; handSlice.visible = true;
+  stats.snacks = Math.min(100, stats.snacks + 20);
+  stats.handfuls++;
+  sfx.crunch();
+  analytics.eatSnack(stats.snacks);
+  toast(PIZZA_LINES[stats.pizzaSlices++ % PIZZA_LINES.length]);
+}
+const PIZZA_LINES = ['Cold pepperoni. Still good.', 'A string of cheese reaches the box. You follow it.', 'Grease, salt and regret.', 'You eat the pizza like a man with a frag limit.'];
+stats.pizzaSlices = 0;
+
+// the regulars eat too, from whichever box has a slice left, and the man on the ceiling has his own
+const eaters = [macca, ...regulars];
+let nextEat = 20;
+function stepEaters(dt, now) {
+  nextEat -= dt;
+  if (nextEat > 0) return;
+  nextEat = 25 + Math.random() * 40;
+  const who = eaters[Math.floor(Math.random() * eaters.length)];
+  if (!who.group.visible || who.eatT >= 0) return;
+  const box = room.pizzaBoxes.find((b) => b.slices > 0 && Math.random() < 0.6) ?? room.pizzaBoxes.find((b) => b.slices > 0);
+  if (!box) return;
+  box.setSlices(box.slices - 1);
+  who.eat();
+}
+
+const TAPED_LINES = [
+  "DUCTAPE: Don't ask how I got up here. Ask how I get down.",
+  'DUCTAPE: Best seat in the house. Nobody can camp me.',
+  'DUCTAPE: Could you pass up a slice? I can only reach the duct.',
+  'DUCTAPE: I lost a bet. It was not even a good bet.',
+  'DUCTAPE: The tape is the only thing holding this LAN together. Same as the cables.',
+  'DUCTAPE: Quick, tell my mum I am studying.',
+];
+let tapedLine = 0;
+function talkToTaped() {
+  toast(TAPED_LINES[tapedLine++ % TAPED_LINES.length]);
+  if (tapedLine % 3 === 0) { if (taped.eatT < 0) taped.eat(); }
 }
 
 function eat() {
@@ -601,6 +707,9 @@ function walk(dt) {
   }
 }
 
+const taped = spawnTaped(scene, { name: 'DUCTAPE', color: '#e8c21b', ...room.taped });
+let tapedNext = 6;
+
 /* ---------- LANamp: the room's music ---------- */
 let music = null, amp = null;
 function startMusic() {
@@ -638,6 +747,10 @@ function frame() {
   if (mode !== 'intro') for (const m of banter.tick(dt)) ircSay(m.nick, m.text);
   const groove = music?.level() ?? 0, bpm = music?.track.bpm ?? 120;
   amp?.update(dt);
+  stepHandSlice(dt);
+  stepEaters(dt, now);
+  taped.idle(now);
+  if ((tapedNext -= dt) < 0) { tapedNext = 12 + Math.random() * 10; if (taped.eatT < 0) taped.eat(); }
   if (macca.group.visible) macca.idle(now, groove, bpm);
   for (const r of regulars) r.idle(now, groove, bpm);
   if (mode !== 'intro') party.tick(dt, { seatedPc: seatedAt?.index ?? null });
@@ -835,7 +948,14 @@ party.addEventListener('link-down', (e) => {
   linkChanged();
 });
 party.addEventListener('link-up', () => { chatLine('Link light is back on.', true); linkChanged(); });
-party.addEventListener('order', (e) => chatLine(e.detail.what === 'hub' ? 'Hub ordered. It is on its way.' : "Dazza's dad is bringing the switch round.", true));
+party.addEventListener('order', (e) => chatLine(e.detail.what === 'hub' ? 'Hub ordered. It is on its way.' : e.detail.what === 'pizza' ? `Pepperoni ordered. $${PIZZA.cost}, and "30 minutes".` : "Dazza's dad is bringing the switch round.", true));
+party.addEventListener('pizza-arrive', () => {
+  const box = room.addPizza();
+  toast('The pizza is here. Large pepperoni, on the table.');
+  chatLine('The pizza guy dumps a large pepperoni on the table and leaves before anyone can tip.', true);
+  banter.react('pizza');
+  box.fresh = true;
+});
 
 party.addEventListener('burn-start', () => toast('CDWRITE: writing at 2x. Hands off PC-04.'));
 party.addEventListener('burn-done', (e) => {

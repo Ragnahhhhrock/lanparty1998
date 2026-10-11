@@ -140,12 +140,24 @@ function buildBody(look) {
   torso.position.y = 0.84;
   const tw = 0.42 * look.top.width, th = 0.56; // th: shoulder height above the hip; top.length: how far the shirt hangs
   torso.add(box(tw, look.top.length, 0.22, topM, 0, th - look.top.length / 2, 0));
-  // arms: sleeve in clothing, the rest bare. sleeves is the sleeve length down from the shoulder
+  // arms hang from the shoulder with an elbow, so they can lift a slice of pizza to the mouth.
+  // sleeves is the sleeve length down from the shoulder; the rest of the arm is bare.
+  const arms = [];
   for (const sx of [-1, 1]) {
     const sl = look.top.sleeves, ax = sx * (tw / 2 + 0.065);
-    if (sl > 0) torso.add(box(0.12, sl, 0.13, look.coat ? mat(C.black) : topM, ax, 0.52 - sl / 2, 0));
-    if (sl < 0.5) torso.add(box(0.1, 0.5 - sl, 0.11, skin, ax, 0.02 + (0.5 - sl) / 2, 0));
-    if (look.glow) torso.add(box(0.035, 0.2, 0.035, mat(look.glowColor ?? C.neon[sx > 0 ? 1 : 0], { basic: true }), ax, 0.04, -0.09));
+    const upper = new THREE.Group(); upper.position.set(ax, 0.52, 0);
+    const fore = new THREE.Group(); fore.position.y = -0.25; upper.add(fore);
+    const limb = (from, to, m, w) => { // from/to: distance down the arm
+      for (const [seg, parent, off] of [[[0, 0.25], upper, 0], [[0.25, 0.5], fore, 0.25]]) {
+        const a0 = Math.max(from, seg[0]), a1 = Math.min(to, seg[1]);
+        if (a1 - a0 > 0.001) parent.add(box(w, a1 - a0, w + 0.02, m, 0, -((a0 + a1) / 2 - off), 0));
+      }
+    };
+    const sleeveM = look.coat ? mat(C.black) : topM;
+    limb(0, sl, sleeveM, 0.12); limb(sl, 0.5, skin, 0.1);
+    if (look.glow) fore.add(box(0.035, 0.2, 0.035, mat(C.neon[sx > 0 ? 1 : 0], { basic: true }), 0, -0.2, -0.09));
+    torso.add(upper);
+    arms.push({ upper, fore });
   }
   if (look.coat) { // trench coat: long, open at the front, collar up
     const coat = mat(C.black);
@@ -199,7 +211,7 @@ function buildBody(look) {
   if (look.glasses === 'round') for (const sx of [-1, 1]) torso.add(box(0.07, 0.07, 0.012, mat(C.dark, { basic: true, mat: { wireframe: true } }), sx * 0.05, headY + 0.02, -0.116));
 
   body.add(torso);
-  return { body, legs, torso, headTop: (0.84 + headY + 0.2) * look.height };
+  return { body, legs, torso, arms, headTop: (0.84 + headY + 0.2) * look.height };
 }
 
 function label(name, color) {
@@ -223,15 +235,37 @@ function label(name, color) {
   return s;
 }
 
-class Avatar {
-  constructor(player, force) {
+const EAT = { raise: 0.8, bite: 0.7, lower: 0.7, total: 0.8 + 3 * 0.7 + 0.7 };
+// a slice of pepperoni pizza in the hand: crust, cheese and a pepperoni, all token colours
+function sliceMesh() {
+  const g = new THREE.Group();
+  const wedge = (r, h, y, m) => {
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 3, 1, false, 0, Math.PI * 2 / 3), m);
+    w.position.y = y; return w;
+  };
+  const pizza = new THREE.Group();
+  pizza.add(wedge(0.12, 0.012, 0, mat(0xd9a04a)));        // --pizza-crust
+  pizza.add(wedge(0.105, 0.016, 0.005, mat(0xf2c14e)));   // --pizza-cheese
+  const pep = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.018, 8), mat(0xb22a1e)); // --pepperoni
+  pep.position.set(0.04, 0.008, 0.02);
+  pizza.add(pep);
+  pizza.rotation.set(0, 1.0, 0);
+  g.add(pizza);
+  return g;
+}
+
+class Avatar extends EventTarget {
+  constructor(player, force, override) {
+    super();
     this.id = player.id;
     this.group = new THREE.Group();
-    this.look = lookFor(player.id ?? player.name, { force, shirt: player.color });
+    this.look = Object.assign(lookFor(player.id ?? player.name, { force, shirt: player.color }), override);
     const b = buildBody(this.look);
     this.group.add(b.body);
     this.legs = b.legs;
     this.torso = b.torso;
+    this.arms = b.arms;
+    this.eatT = -1; // seconds into eating a slice, or -1
     this.tagY = b.headTop + 0.25;
     this.tag = label(player.name, player.color);
     this.tag.position.y = this.tagY;
@@ -243,6 +277,32 @@ class Avatar {
     this.group.rotation.y = this.yaw;
     this.seat = null;
     this.walkT = 0;
+    this.armBase = 0;
+  }
+
+  // Eat a slice of pizza: lift it to the mouth, take three bites, lower the hand.
+  eat() {
+    if (this.eatT >= 0) return;
+    this.eatT = 0;
+    if (!this.slice) {
+      this.slice = sliceMesh();
+      this.slice.position.set(0, -0.27, -0.03);
+      this.arms[1].fore.add(this.slice);
+    }
+    this.slice.visible = true; this.slice.scale.setScalar(1);
+  }
+  stepEat(dt) {
+    if (this.eatT < 0) return;
+    this.eatT += dt;
+    const T = this.eatT, D = EAT.total, k = Math.min(1, T / EAT.raise, (D - T) / EAT.lower + 0.0001);
+    const lift = Math.max(0, Math.min(1, k));
+    const bites = Math.max(0, Math.min(3, Math.floor((T - EAT.raise) / EAT.bite)));
+    const nibble = T > EAT.raise && T < D - EAT.lower ? Math.sin(((T - EAT.raise) % EAT.bite) / EAT.bite * Math.PI) * 0.12 : 0;
+    const { upper, fore } = this.arms[1];
+    upper.rotation.x = this.armBase + (1.0 - this.armBase) * lift;
+    fore.rotation.x = 3.3 * lift - nibble;
+    this.slice.scale.setScalar(1 - bites * 0.3);
+    if (T >= D) { this.eatT = -1; upper.rotation.x = this.armBase; fore.rotation.x = 0; this.slice.visible = false; this.dispatchEvent?.(new Event('ate')); }
   }
 
   setSeat(seat) {
@@ -256,6 +316,7 @@ class Avatar {
   }
 
   update(dt, player) {
+    this.stepEat(dt);
     if (this.seat) return;
     this.target.set(player.x, 0, player.z);
     const before = this.group.position.clone();
@@ -274,14 +335,17 @@ class Avatar {
 }
 
 // A regular who isn't another player: stands where you put him and rocks gently on his heels.
-export function spawnNpc(scene, { name, color, x, z, yaw, arch }) {
-  const a = new Avatar({ id: `npc-${name}`, name, color, x, z, yaw }, arch);
+const t0 = () => performance.now() / 1000;
+export function spawnNpc(scene, { name, color, x, z, yaw, arch, look }) {
+  const a = new Avatar({ id: `npc-${name}`, name, color, x, z, yaw }, arch, look);
   scene.add(a.group);
   a.rest = yaw;
   a.phase = (name.length * 1.7) % 6;
   const dance = { raver: 1.7, hiphop: 1.2, surfer: 1, grunge: 0.8, nerd: 0.5, goth: 0.4 }[a.look.arch];
   // groove is 0..1 loudness from the music, bpm the tempo: everyone nods along, ravers more than goths
+  let lastT = t0();
   a.idle = (t, groove = 0, bpm = 120) => {
+    a.stepEat(Math.min(0.1, Math.max(0, t - lastT))); lastT = t;
     a.group.rotation.y = a.rest + Math.sin(t * 0.7 + a.phase) * 0.08;
     const beat = Math.abs(Math.sin(t * Math.PI * bpm / 120 + a.phase));
     a.torso.position.y = 0.84 + beat * groove * dance * 0.025;
@@ -331,4 +395,24 @@ export class Crowd {
       if (p) a.update(dt, p);
     }
   }
+}
+
+// The man taped to the ceiling: lies face down at the end of the duct, one arm out holding his pizza.
+export function spawnTaped(scene, { name, color, x, y, z }) {
+  const a = new Avatar({ id: `npc-${name}`, name, color, x, z, yaw: 0 }, 'nerd', {
+    hat: { kind: 'cap', color: C.white }, hair: { style: 'short', color: C.hair.brown }, glasses: 'none', facial: 'none', backpack: false,
+    top: { color: C.black, sleeves: 0.22, length: 0.56, width: 1.05 }, legs: { color: C.denim, width: 1, short: false }, height: 1.04, build: 1,
+  });
+  a.group.position.set(x, y, z);
+  a.group.rotation.x = -Math.PI / 2; // head toward -z, face to the floor
+  a.armBase = 1.35;
+  a.arms[0].upper.rotation.x = 1.2;
+  a.arms[1].upper.rotation.x = a.armBase;
+  a.tag.position.set(0, 0.5, 0.6); // above the body (the group is rotated)
+  a.tag.scale.set(0.6 / 1, 0.15, 1);
+  a.rest = 0;
+  a.phase = 0;
+  a.idle = (t) => { a.stepEat(Math.min(0.1, Math.max(0, t - (a.lastT ?? t)))); a.lastT = t; a.torso.position.y = 0.84 + Math.sin(t * 1.4) * 0.006; };
+  scene.add(a.group);
+  return a;
 }

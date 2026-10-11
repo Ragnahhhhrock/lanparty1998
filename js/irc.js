@@ -81,6 +81,12 @@ const REACT = {
     '{t} has arrived. lock up the nachoz',
     'oh no. {t} is here. hide the good chair',
   ],
+  pizza: [
+    'PIZZA. I can smell it from here. lock the box',
+    'whoever gets the last slice has to fight me for it',
+    'pepperoni is just red circles of grease and that is why we love it',
+    'if the pizza guy was this fast on the dial-up we would all be rich',
+  ],
   door: [
     'whoever opened the door: mum can hear us now. thanks',
     'close the door. close the door. close the door',

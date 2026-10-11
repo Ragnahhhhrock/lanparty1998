@@ -414,6 +414,95 @@ function buildDoor(scene, out, wallTex) {
   out.door = door;
 }
 
+// A pizza box with a pepperoni pizza cut in eight. setSlices(n) leaves n slices in the box.
+// Colours are tokens: --cardboard, --pizza-crust, --pizza-cheese, --pepperoni.
+function pizzaBox(slices = 8) {
+  const g = new THREE.Group();
+  const card = new THREE.MeshStandardMaterial({ color: 0xb8935a, roughness: 0.95 });
+  const crust = new THREE.MeshStandardMaterial({ color: 0xd9a04a, roughness: 0.8 });
+  const cheese = new THREE.MeshStandardMaterial({ color: 0xf2c14e, roughness: 0.55 });
+  const pep = new THREE.MeshStandardMaterial({ color: 0xb22a1e, roughness: 0.6 });
+  g.add(box(0.44, 0.045, 0.44, card, 0, 0.0225, 0));
+  const lid = new THREE.Group();            // propped open against the wall of the table
+  lid.position.set(0, 0.045, 0.22); lid.rotation.x = -1.9;
+  lid.add(box(0.44, 0.012, 0.44, card, 0, 0, 0.22));
+  g.add(lid);
+  const slicesList = [];
+  for (let i = 0; i < 8; i++) {
+    const sl = new THREE.Group();
+    const a0 = (i * Math.PI) / 4;
+    // each slice is one eighth of a round pizza: a narrow arc of a cylinder
+    const arc = (r, h, m) => new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 24, 1, false, a0, Math.PI / 4 - 0.03), m);
+    const c = arc(0.2, 0.02, crust); c.position.y = 0.055;
+    const ch = arc(0.17, 0.026, cheese); ch.position.y = 0.058;
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.03, 10), pep);
+    p.position.set(Math.sin(a0 + Math.PI / 8) * 0.1, 0.062, Math.cos(a0 + Math.PI / 8) * 0.1);
+    sl.add(c, ch, p);
+    g.add(sl);
+    slicesList.push(sl);
+  }
+  const out = { group: g, slices, max: 8 };
+  out.setSlices = (n) => {
+    out.slices = n;
+  slicesList.forEach((sl, i) => { sl.visible = i < n; });
+  };
+  out.setSlices(slices);
+  return out;
+}
+
+// Half-eaten pizzas lying about, and the ones that get delivered. out.pizzaBoxes holds them all.
+const PIZZA_SPOTS = [ // where deliveries are put down: x, y, z, yaw
+  [1.4, 0, 4.25, 0.3], [-1.4, 0, -4.25, 2.6], [4.0, 0, 4.25, 3.3], [-4.0, 0, -4.25, 0.1],
+];
+function buildPizza(scene, out) {
+  out.pizzaBoxes = [];
+  let delivered = 0;
+  const place = (x, y, z, yaw, slices) => {
+    const b = pizzaBox(slices);
+    b.group.position.set(x, y, z); b.group.rotation.y = yaw;
+    scene.add(b.group);
+    b.group.traverse((o) => { o.userData.interact = { kind: 'pizza', box: b }; });
+    out.interactables.push(b.group);
+    out.pizzaBoxes.push(b);
+    return b;
+  };
+  // already on the go when you walk in
+  place(-5.45, TABLE_Y, 0.58, 0.2, 3);   // the snack table
+  place(1.4, TABLE_Y, -4.25, 2.9, 2);    // between PC-02 and PC-03
+  place(-1.4, TABLE_Y, 4.25, 0.5, 4);    // between PC-04 and PC-05
+  place(-3.6, 0, -2.4, 0.9, 1);          // on the carpet, where somebody put it down
+  out.addPizza = () => {
+    const [x, y, z, yaw] = PIZZA_SPOTS[delivered % PIZZA_SPOTS.length];
+    const stack = Math.floor(delivered / PIZZA_SPOTS.length);
+    delivered++;
+    return place(x, TABLE_Y + stack * 0.05, z, yaw, 8);
+  };
+}
+
+// The man taped to the ceiling. The duct, the tape and the pole are built here; main.js puts the man in.
+function buildCeilingGamer(scene, out) {
+  const duct = new THREE.MeshStandardMaterial({ color: 0x9aa0a6, roughness: 0.4, metalness: 0.7 }); // --duct-silver
+  const tape = new THREE.MeshStandardMaterial({ color: 0x5c6166, roughness: 0.35, metalness: 0.5 }); // --duct-tape
+  const at = { x: -2.6, y: 2.12, z: 3.0 };   // his feet; he lies with his head toward -z
+  // a run of ceiling duct along x, behind his feet
+  scene.add(box(5.4, 0.4, 0.5, duct, at.x, 2.6, at.z + 0.1));
+  for (let i = 0; i < 9; i++) scene.add(box(0.03, 0.42, 0.52, tape, at.x - 2.4 + i * 0.6, 2.6, at.z + 0.1)); // duct bands
+  // gaffer tape holding him to it: bands round his legs and chest, and straps up to the duct
+  for (const dz of [0.15, -0.3, -0.75, -1.15]) scene.add(box(0.5, 0.36, 0.06, tape, at.x, at.y, at.z + dz));
+  for (const dx of [-0.16, 0.16]) scene.add(box(0.07, 0.3, 0.01, tape, at.x + dx, at.y + 0.28, at.z - 0.3));
+  // the white pole he's holding on to
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.6, 12), new THREE.MeshStandardMaterial({ color: 0xececec, roughness: 0.6 })); // --clothes-white
+  pole.position.set(at.x + 0.55, 1.3, at.z - 1.0);
+  scene.add(pole);
+  out.colliders.push({ minX: at.x + 0.55 - 0.1, maxX: at.x + 0.55 + 0.1, minZ: at.z - 1.0 - 0.1, maxZ: at.z - 1.0 + 0.1 });
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 1.8), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.set(at.x, at.y, at.z - 0.8);
+  hit.userData.interact = { kind: 'taped' };
+  scene.add(hit);
+  out.interactables.push(hit);
+  out.taped = at;
+}
+
 export function buildRoom(scene) {
   const out = { stations: [], interactables: [], colliders: [], screens: [], hddLeds: [] };
   const { minX, maxX, minZ, maxZ, height } = ROOM;
@@ -562,15 +651,12 @@ export function buildRoom(scene) {
     out.interactables.push(bag);
   }
 
-  const pizza = box(0.42, 0.05, 0.42, [beigeDark, beigeDark, new THREE.MeshStandardMaterial({ map: T.pizzaLid() }), beigeDark, beigeDark, beigeDark]);
-  pizza.position.set(-5.45, TABLE_Y + 0.025, 0.58);
-  pizza.rotation.y = 0.2;
-  scene.add(pizza);
-
   buildNetwork(scene, out);
   buildErrands(scene, out);
   buildFan(scene, out);
   buildDoor(scene, out, wallMat.map);
+  buildPizza(scene, out);
+  buildCeilingGamer(scene, out);
 
   // posters and the scoreboard
   const posterMat = (t) => new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 });

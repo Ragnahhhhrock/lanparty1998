@@ -1,6 +1,6 @@
 // Logic tests for js/party.js. Run: node tools/party.test.mjs
 import assert from 'node:assert/strict';
-import { Party, BURNER, DISCS, SEC_PER_GAME_MIN, SHOP, DAD, PC_COUNT, OC, HEAT, FAN, RAM, NIGHT, ANNOUNCEMENTS, SHARE_STEPS, SHARE_FAIL, SWAP_MB_PER_SEC, WAREZ } from '../js/party.js';
+import { PIZZA, Party, BURNER, DISCS, SEC_PER_GAME_MIN, SHOP, DAD, PC_COUNT, OC, HEAT, FAN, RAM, NIGHT, ANNOUNCEMENTS, SHARE_STEPS, SHARE_FAIL, SWAP_MB_PER_SEC, WAREZ } from '../js/party.js';
 
 const run = (p, seconds, ctx = {}) => { for (let i = 0; i < seconds * 10; i++) p.tick(0.1, ctx); };
 let n = 0;
@@ -518,6 +518,26 @@ test('the library fills up in milestones as files go round', () => {
   p.addEventListener('warez', (e) => names.push(e.detail.name));
   run(p, 400);
   assert.deepEqual(names, WAREZ.map((w) => w.name));
+});
+
+test('the pizza costs money and turns up 25 game minutes later', () => {
+  const p = new Party();
+  const cash = p.cash;
+  assert.ok(p.orderPizza());
+  assert.equal(p.cash, cash - PIZZA.cost);
+  assert.ok(!p.canOrderPizza(), 'one at a time');
+  let arrived = 0; p.addEventListener('pizza-arrive', () => arrived++);
+  run(p, PIZZA.delay * SEC_PER_GAME_MIN - 5);
+  assert.equal(arrived, 0);
+  run(p, 10);
+  assert.equal(arrived, 1);
+  assert.equal(p.pizzas, 1);
+  assert.ok(p.canOrderPizza());
+});
+test('you cannot order a pizza with no money', () => {
+  const p = new Party();
+  p.cash = PIZZA.cost - 1;
+  assert.ok(!p.orderPizza());
 });
 
 console.log(`${n} passed`);
