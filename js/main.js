@@ -143,6 +143,7 @@ const PROMPTS = {
   fan: () => `E · Turn the fan ${party.fan.on ? 'off' : 'on'}`,
   shop: () => 'E · Read the computer shop price list',
   phone: () => 'E · Ring Dazza',
+  door: () => `E · ${room.door.open ? 'Close' : 'Open'} the door`,
   drink: () => 'E · Crack a Volt Cola',
   eat: () => 'E · Grab a handful of Nachoz',
   burner: () => (party.job ? `E · CD-R: writing ${Math.floor(party.burnProgress() * 100)}%` : 'E · Burn a CD (2x)'),
@@ -160,6 +161,22 @@ function interact(t) {
   else if (t.kind === 'buddy') openMacca();
   else if (t.kind === 'fan') party.setFan(!party.fan.on, 'switch');
   else if (t.kind === 'phone') openPhone();
+  else if (t.kind === 'door') useDoor();
+}
+
+// The door to the stairs. Mum is upstairs, and she can hear everything.
+const MUM = [
+  'Mum, from upstairs: "Keep it down, we can hear the explosions."',
+  'Mum, from upstairs: "Is anybody on the phone? I\'m expecting a call."',
+  'Mum, from upstairs: "Do your friends want toasties?"',
+  'Mum, from upstairs: "Whose car is that across the driveway?"',
+];
+let doorOpens = 0;
+function useDoor() {
+  const d = room.door;
+  if (d.open && player.pos.z < ROOM.minZ + 0.3) { toast("You're standing in the doorway."); return; }
+  sfx.door();
+  if (d.toggle()) toast(MUM[doorOpens++ % MUM.length]);
 }
 
 /* ---------- errands: little message boxes ---------- */
@@ -484,8 +501,12 @@ function placeMonitorOverlay(station) {
 /* ---------- movement ---------- */
 const RADIUS = 0.28;
 function collide(p) {
+  const dr = room.door;
   p.x = THREE.MathUtils.clamp(p.x, ROOM.minX + RADIUS, ROOM.maxX - RADIUS);
-  p.z = THREE.MathUtils.clamp(p.z, ROOM.minZ + RADIUS, ROOM.maxZ - RADIUS);
+  // through the open door and onto the landing, but only lined up with the doorway
+  const through = dr.open && p.x > dr.minX + 0.15 && p.x < dr.maxX - 0.15;
+  p.z = THREE.MathUtils.clamp(p.z, through ? ROOM.minZ - dr.depth + 0.2 : ROOM.minZ + RADIUS, ROOM.maxZ - RADIUS);
+  if (p.z < ROOM.minZ + RADIUS) p.x = THREE.MathUtils.clamp(p.x, dr.minX + 0.15, dr.maxX - 0.15);
   for (const c of room.colliders) {
     const minX = c.minX - RADIUS, maxX = c.maxX + RADIUS, minZ = c.minZ - RADIUS, maxZ = c.maxZ + RADIUS;
     if (p.x > minX && p.x < maxX && p.z > minZ && p.z < maxZ) {
@@ -568,6 +589,7 @@ function frame() {
 
   crowd.update(dt, link.players);
   room.updateFan(dt, party.fan.on, party.fanSweep());
+  room.door.update(dt);
   if (macca.group.visible) macca.idle(now);
   if (mode !== 'intro') party.tick(dt, { seatedPc: seatedAt?.index ?? null });
   if (link.online && mode === 'walk' && (sendTimer += dt) > 0.1) { sendTimer = 0; link.pos(player.pos.x, player.pos.z, player.yaw); }

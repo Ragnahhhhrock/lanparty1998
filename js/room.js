@@ -318,6 +318,102 @@ function buildErrands(scene, out) {
   out.interactables.push(phone, phoneHit);
 }
 
+// The way out: a doorway in the back wall, a landing and a staircase up to the rest of the house.
+// The wall is three pieces (left, right, lintel) so the opening is real. out.door drives it.
+const DOOR = { minX: 4.7, maxX: 5.6, height: 2.1, landing: 0.9, steps: 10, rise: 0.2, run: 0.28 };
+function buildDoor(scene, out, wallTex) {
+  const { minX, minZ, maxX, height } = ROOM;
+  const cx = (DOOR.minX + DOOR.maxX) / 2, dw = DOOR.maxX - DOOR.minX;
+  const dark = new THREE.MeshStandardMaterial({ color: 0x24170e, roughness: 0.9 }); // --wood-dark
+
+  // back wall, continuing the panelling's grain across the gap
+  const piece = (x0, x1, y0, y1) => {
+    const t = wallTex.clone();
+    t.repeat.set((x1 - x0) / 3, (y1 - y0) / height);
+    t.offset.set((x0 - minX) / 3, y0 / height);
+    t.needsUpdate = true;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, y1 - y0), new THREE.MeshStandardMaterial({ map: t, roughness: 0.8 }));
+    m.position.set((x0 + x1) / 2, (y0 + y1) / 2, minZ);
+    scene.add(m);
+    if (y0 === 0) scene.add(box(x1 - x0, 0.1, 0.02, dark, (x0 + x1) / 2, 0.05, minZ + 0.01));
+  };
+  piece(minX, DOOR.minX, 0, height);
+  piece(DOOR.maxX, ROOM.maxX, 0, height);
+  piece(DOOR.minX, DOOR.maxX, DOOR.height, height);
+
+  // frame
+  scene.add(box(0.06, DOOR.height, 0.1, dark, DOOR.minX - 0.03, DOOR.height / 2, minZ + 0.03));
+  scene.add(box(0.06, DOOR.height, 0.1, dark, DOOR.maxX + 0.03, DOOR.height / 2, minZ + 0.03));
+  scene.add(box(dw + 0.12, 0.06, 0.1, dark, cx, DOOR.height + 0.03, minZ + 0.03));
+
+  // the stairwell behind it
+  const g = new THREE.Group();
+  const carpet = new THREE.MeshStandardMaterial({ color: 0x3b2f2a, roughness: 1 }); // --carpet
+  const run = DOOR.steps * DOOR.run, top = DOOR.steps * DOOR.rise;
+  const z0 = minZ - DOOR.landing, zEnd = z0 - run, slope = DOOR.rise / DOOR.run;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(dw, DOOR.landing), carpet);
+  floor.rotation.x = -Math.PI / 2; floor.position.set(cx, 0.001, minZ - DOOR.landing / 2);
+  g.add(floor);
+  for (let k = 0; k < DOOR.steps; k++) {
+    g.add(box(dw, (k + 1) * DOOR.rise, DOOR.run, carpet, cx, (k + 1) * DOOR.rise / 2, z0 - (k + 0.5) * DOOR.run));
+  }
+  const len = DOOR.landing + run, mid = minZ - len / 2;
+  g.add(box(0.04, top + 2.4, len, dark, DOOR.minX - 0.02, (top + 2.4) / 2, mid));
+  g.add(box(0.04, top + 2.4, len, dark, DOOR.maxX + 0.02, (top + 2.4) / 2, mid));
+  g.add(box(dw, top + 2.4, 0.04, dark, cx, (top + 2.4) / 2, zEnd - 0.02));
+  const lid = new THREE.Mesh(new THREE.PlaneGeometry(dw, DOOR.landing), dark);
+  lid.rotation.x = Math.PI / 2; lid.position.set(cx, DOOR.height, minZ - DOOR.landing / 2);
+  g.add(lid);
+  const ramp = new THREE.BufferGeometry();
+  const x0 = DOOR.minX, x1 = DOOR.maxX, yTop = DOOR.height + run * slope;
+  ramp.setAttribute('position', new THREE.Float32BufferAttribute([x0, DOOR.height, z0, x1, DOOR.height, z0, x1, yTop, zEnd, x0, yTop, zEnd], 3));
+  ramp.setIndex([0, 1, 2, 0, 2, 3]); ramp.computeVertexNormals();
+  g.add(new THREE.Mesh(ramp, new THREE.MeshStandardMaterial({ color: 0x24170e, roughness: 1, side: THREE.DoubleSide })));
+  // light from the hall at the top of the stairs
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(dw - 0.1, 1.6), new THREE.MeshBasicMaterial({ color: 0xe8e1cc })); // --paper
+  glow.position.set(cx, top + 1.1, zEnd + 0.01);
+  g.add(glow);
+  const lamp = new THREE.PointLight(0xffe0a8, 5, 7, 1.6);
+  lamp.position.set(cx, top + 0.6, zEnd + 0.8);
+  g.add(lamp);
+  scene.add(g);
+
+  // the door itself, hinged at the right-hand jamb and swinging into the room
+  const pivot = new THREE.Group();
+  pivot.position.set(DOOR.maxX - 0.02, 0, minZ + 0.03);
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(dw - 0.04, DOOR.height - 0.04, 0.04), new THREE.MeshStandardMaterial({ map: T.door(), roughness: 0.85 }));
+  slab.position.set(-(dw - 0.04) / 2, (DOOR.height - 0.04) / 2, 0);
+  pivot.add(slab);
+  const brass = new THREE.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.35, metalness: 0.6 }); // --amber
+  for (const sz of [-1, 1]) {
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), brass);
+    knob.position.set(-(dw - 0.04) + 0.09, 1.0, sz * 0.045);
+    pivot.add(knob);
+  }
+  scene.add(pivot);
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(dw, DOOR.height, 0.2), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.set(cx, DOOR.height / 2, minZ + 0.1);
+  scene.add(hit);
+  for (const o of [slab, hit]) o.userData.interact = { kind: 'door' };
+  out.interactables.push(slab, hit);
+
+  const OPEN_ANGLE = 1.55;
+  const door = {
+    minX: DOOR.minX, maxX: DOOR.maxX, depth: DOOR.landing,
+    open: false, t: 0,
+    toggle() { door.open = !door.open; return door.open; },
+    update(dt) {
+      const goal = door.open ? 1 : 0;
+      door.t += Math.sign(goal - door.t) * Math.min(Math.abs(goal - door.t), dt * 1.6);
+      const e = door.t * door.t * (3 - 2 * door.t);
+      pivot.rotation.y = e * OPEN_ANGLE;
+      lamp.visible = glow.visible = door.t > 0.02;
+    },
+  };
+  door.update(0);
+  out.door = door;
+}
+
 export function buildRoom(scene) {
   const out = { stations: [], interactables: [], colliders: [], screens: [], hddLeds: [] };
   const { minX, maxX, minZ, maxZ, height } = ROOM;
@@ -331,8 +427,8 @@ export function buildRoom(scene) {
   ceil.rotation.x = Math.PI / 2; ceil.position.y = height;
   scene.add(ceil);
   const wallMat = new THREE.MeshStandardMaterial({ map: T.woodPanel(), roughness: 0.8 });
-  const walls = [
-    [w, 0, minZ, 0], [w, 0, maxZ, Math.PI], [d, minX, 0, Math.PI / 2], [d, maxX, 0, -Math.PI / 2],
+  const walls = [ // the back wall (z = minZ) is built around the door, in buildDoor
+    [w, 0, maxZ, Math.PI], [d, minX, 0, Math.PI / 2], [d, maxX, 0, -Math.PI / 2],
   ];
   for (const [len, x, z, ry] of walls) {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(len, height), wallMat);
@@ -474,6 +570,7 @@ export function buildRoom(scene) {
   buildNetwork(scene, out);
   buildErrands(scene, out);
   buildFan(scene, out);
+  buildDoor(scene, out, wallMat.map);
 
   // posters and the scoreboard
   const posterMat = (t) => new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 });

@@ -53,6 +53,14 @@ export function thud() {
   burst(t + 0.04, 0.12, 900, 1.2, 0.35);
 }
 
+// a basement door: a long dry creak, then the latch
+export function door() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  for (let i = 0; i < 5; i++) burst(t + i * 0.09, 0.12, 380 + i * 90, 6, 0.3, 'bandpass');
+  burst(t + 0.5, 0.05, 1800, 1.5, 0.5);
+}
+
 export function crunch() {
   if (!ctx) return;
   const t = ctx.currentTime;

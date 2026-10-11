@@ -43,6 +43,26 @@ export function woodPanel() {
   return tex(c, [4, 1]);
 }
 
+// a six-panel interior door, painted wood-brown
+export function door() {
+  const [c, g] = canvas(256, 512);
+  const r = rand(23);
+  g.fillStyle = '#4a2c17'; g.fillRect(0, 0, 256, 512); // --wood
+  for (let i = 0; i < 60; i++) {
+    g.strokeStyle = `rgba(36,21,11,${0.1 + r() * 0.2})`; // --wood-dark
+    g.lineWidth = 0.5 + r() * 1.2;
+    const x = r() * 256;
+    g.beginPath(); g.moveTo(x, 0); g.bezierCurveTo(x + 4, 170, x - 4, 340, x + 2, 512); g.stroke();
+  }
+  const panel = (x, y, w, h) => {
+    g.fillStyle = '#24150b'; g.fillRect(x, y, w, h);
+    g.fillStyle = '#4a2c17'; g.fillRect(x + 4, y + 4, w - 8, h - 8);
+    g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(x + 4, y + 4, w - 8, 3); g.fillRect(x + 4, y + 4, 3, h - 8);
+  };
+  for (const x of [28, 136]) { panel(x, 28, 92, 150); panel(x, 196, 92, 110); panel(x, 324, 92, 160); }
+  return tex(c);
+}
+
 export function carpet() {
   const [c, g] = canvas(256, 256);
   const r = rand(11);
