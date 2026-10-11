@@ -120,8 +120,147 @@ const STATIONS = [
   { x: 2.8, z: 4.25, face: Math.PI, idle: 'dos' },
 ];
 
+// The network, in three generations. Only one is visible at a time (out.setNetwork).
+//  coax:   a single black cable under the tables, a T-connector at each tower, terminators at both ends
+//  hub:    8-port 10BASE-T hub on the snack table, a cat5 lead from every tower
+//  switch: a borrowed 16-port switch in the hub's spot, same leads
+// out.floorCables lists the bits of cable lying across the floor, for tripping over.
+function buildNetwork(scene, out) {
+  const tube = (pts, radius, mat) => {
+    const path = new THREE.CurvePath();
+    for (let i = 1; i < pts.length; i++) path.add(new THREE.LineCurve3(pts[i - 1], pts[i]));
+    return new THREE.Mesh(new THREE.TubeGeometry(path, pts.length * 12, radius, 5), mat);
+  };
+  const gear = { coax: new THREE.Group(), hub: new THREE.Group(), switch: new THREE.Group(), lan: new THREE.Group() };
+  for (const g of Object.values(gear)) scene.add(g);
+  out.floorCables = [];
+  out.netLeds = [];
+  const leds = { hub: [], switch: [], coax: [] };
+  const panelMat = new THREE.MeshStandardMaterial({ color: 0x2f3542, roughness: 0.6 });
+  const ledMat = () => new THREE.MeshBasicMaterial({ color: 0x0a3a0a });
+
+  // the hub: 8-port 10BASE-T, sitting on the snack table because that's where the power board reached
+  const hub = new THREE.Group();
+  hub.add(box(0.28, 0.045, 0.14, panelMat));
+  for (let p = 0; p < 8; p++) {
+    const led = box(0.01, 0.008, 0.004, ledMat(), -0.11 + p * 0.031, 0.008, 0.071);
+    hub.add(led);
+    leds.hub.push(led);
+  }
+  hub.position.set(-5.3, TABLE_Y + 0.023, 1.0);
+  hub.rotation.y = Math.PI / 2;
+  gear.hub.add(hub);
+
+  // the switch: borrowed, 16 ports, and it has a sticker on it
+  const sw = new THREE.Group();
+  sw.add(box(0.38, 0.05, 0.16, panelMat));
+  for (let row = 0; row < 2; row++) for (let p = 0; p < 8; p++) {
+    const led = box(0.01, 0.008, 0.004, ledMat(), -0.15 + p * 0.043, 0.012 - row * 0.02, 0.081);
+    sw.add(led);
+    leds.switch.push(led);
+  }
+  const sticker = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.058), new THREE.MeshStandardMaterial({ map: T.assetTag(), roughness: 0.6 }));
+  sticker.rotation.x = -Math.PI / 2;
+  sticker.position.set(0.04, 0.0255, 0);
+  sw.add(sticker);
+  sw.position.set(-5.3, TABLE_Y + 0.026, 1.0);
+  sw.rotation.y = Math.PI / 2;
+  gear.switch.add(sw);
+
+  // cat5 runs from every tower to the hub (or switch), gaffer-taped across the floor
+  const hubPort = new THREE.Vector3(-5.38, TABLE_Y + 0.02, 1.0);
+  const cableColours = [0xe8c21b, 0x2b6fd6, 0x9a9a9a, 0xd23c3c, 0xe8c21b, 0x3aa35a];
+  out.cat5 = [];
+  out.stations.forEach((st, i) => {
+    const s = st.cableStart;
+    const dir = Math.sign(s.z);
+    const pts = [
+      s.clone(),
+      new THREE.Vector3(s.x, 0.4, s.z + dir * 0.25),
+      new THREE.Vector3(s.x + 0.1, 0.012, s.z + dir * 0.35),
+      new THREE.Vector3(-4.8 + i * 0.03, 0.012, s.z * 0.55 + i * 0.04),
+      new THREE.Vector3(-5.05, 0.012, 0.9 + i * 0.03),
+      new THREE.Vector3(-5.12, 0.4, 0.98),
+      hubPort.clone(),
+    ];
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const lead = new THREE.Mesh(new THREE.TubeGeometry(curve, 80, 0.004, 5), new THREE.MeshStandardMaterial({ color: cableColours[i], roughness: 0.6 }));
+    gear.lan.add(lead);
+    out.cat5.push(lead);
+    out.floorCables.push({ pc: i, kind: 'cat5', pts: curve.getPoints(120).filter((p) => p.y < 0.05) });
+  });
+
+  // coax: the bus runs under the tables, down the right-hand side across the floor, and back along the other row
+  const coaxMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.5 });
+  const steelMat = new THREE.MeshStandardMaterial({ color: 0x6b6b6b, metalness: 0.6, roughness: 0.4 });
+  const under = (i) => new THREE.Vector3(out.stations[i].cableStart.x, 0.3, out.stations[i].cableStart.z);
+  const bus = [under(0), under(1), under(2), new THREE.Vector3(4.55, 0.3, under(2).z), new THREE.Vector3(4.6, 0.012, -3.9),
+    new THREE.Vector3(4.6, 0.012, 3.9), new THREE.Vector3(4.55, 0.3, under(5).z), under(5), under(4), under(3)];
+  gear.coax.add(tube(bus, 0.006, coaxMat));
+  out.floorCables.push({ pc: null, kind: 'coax', pts: Array.from({ length: 40 }, (_, k) => new THREE.Vector3(4.6, 0.012, -3.9 + (7.8 * k) / 39)) });
+  out.tConns = [];
+  out.stations.forEach((st, i) => {
+    const t = new THREE.Group();
+    t.add(box(0.05, 0.022, 0.022, steelMat));
+    t.add(box(0.022, 0.03, 0.022, steelMat, 0, 0.02, 0));
+    t.position.copy(st.cableStart);
+    gear.coax.add(t);
+    out.tConns.push(t);
+    gear.coax.add(tube([st.cableStart.clone(), under(i)], 0.005, coaxMat)); // the drop from the T down to the bus
+  });
+  for (const i of [0, 3]) { // 50 ohm terminators on the two ends of the bus
+    const term = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.05, 8), steelMat);
+    term.rotation.z = Math.PI / 2;
+    term.position.copy(under(i)).add(new THREE.Vector3(-0.05, 0, 0));
+    gear.coax.add(term);
+  }
+
+  out.setNetwork = (tier) => {
+    gear.coax.visible = tier === 'coax';
+    gear.lan.visible = tier !== 'coax';
+    gear.hub.visible = tier === 'hub';
+    gear.switch.visible = tier === 'switch';
+    out.netLeds = leds[tier] ?? [];
+  };
+  out.setNetwork('coax');
+
+  // a lead that's been yanked out, or a T-connector that's come loose
+  out.setLoose = (i, loose) => {
+    out.cat5[i].visible = !loose;
+    out.tConns[i].rotation.z = loose ? 0.9 : 0;
+    out.tConns[i].position.y = out.stations[i].cableStart.y - (loose ? 0.03 : 0);
+  };
+}
+
+// the things on the snack table and the wall you use to get stuff done
+function buildErrands(scene, out) {
+  // the computer shop's price list, to order from
+  const flyer = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.26), new THREE.MeshStandardMaterial({ map: T.priceList(), roughness: 0.9 }));
+  flyer.rotation.x = -Math.PI / 2; flyer.rotation.z = 0.35;
+  flyer.position.set(-5.3, TABLE_Y + 0.004, 0.18);
+  scene.add(flyer);
+  const flyerHit = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.12, 0.34), new THREE.MeshBasicMaterial({ visible: false }));
+  flyerHit.position.set(-5.3, TABLE_Y + 0.05, 0.18);
+  scene.add(flyerHit);
+  for (const o of [flyer, flyerHit]) o.userData.interact = { kind: 'shop' };
+  out.interactables.push(flyer, flyerHit);
+
+  // the wall phone, beige, with a curly cord
+  const phone = new THREE.Group();
+  phone.add(box(0.07, 0.24, 0.1, beige, 0, 0, 0));
+  phone.add(box(0.06, 0.05, 0.05, beigeDark, 0, 0.02, 0.07));
+  phone.add(box(0.045, 0.05, 0.012, black, 0, 0.06, 0.056));
+  phone.position.set(ROOM.minX + 0.05, 1.3, -3.2);
+  scene.add(phone);
+  const phoneHit = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.4), new THREE.MeshBasicMaterial({ visible: false }));
+  phoneHit.position.copy(phone.position).add(new THREE.Vector3(0.15, 0, 0));
+  scene.add(phoneHit);
+  for (const o of [...phone.children, phoneHit]) o.userData.interact = { kind: 'phone' };
+  out.interactables.push(phone, phoneHit);
+}
+
 export function buildRoom(scene) {
-  const out = { stations: [], interactables: [], colliders: [], screens: [], hddLeds: [], hubLeds: [] };
+  const out = { stations: [], interactables: [], colliders: [], screens: [], hddLeds: [] };
   const { minX, maxX, minZ, maxZ, height } = ROOM;
   const w = maxX - minX, d = maxZ - minZ;
 
@@ -269,41 +408,12 @@ export function buildRoom(scene) {
   }
 
   const pizza = box(0.42, 0.05, 0.42, [beigeDark, beigeDark, new THREE.MeshStandardMaterial({ map: T.pizzaLid() }), beigeDark, beigeDark, beigeDark]);
-  pizza.position.set(-5.45, TABLE_Y + 0.025, 0.75);
+  pizza.position.set(-5.45, TABLE_Y + 0.025, 0.58);
   pizza.rotation.y = 0.2;
   scene.add(pizza);
 
-  // the hub: 8-port 10BASE-T, sitting on the snack table because that's where the power board reached
-  const hub = new THREE.Group();
-  hub.add(box(0.28, 0.045, 0.14, new THREE.MeshStandardMaterial({ color: 0x2f3542, roughness: 0.6 })));
-  for (let p = 0; p < 8; p++) {
-    const led = box(0.01, 0.008, 0.004, new THREE.MeshBasicMaterial({ color: 0x0a3a0a }), -0.11 + p * 0.031, 0.008, 0.071);
-    hub.add(led);
-    out.hubLeds.push(led);
-  }
-  hub.position.set(-5.3, TABLE_Y + 0.023, 1.0);
-  hub.rotation.y = Math.PI / 2;
-  scene.add(hub);
-  const hubPort = new THREE.Vector3(-5.38, TABLE_Y + 0.02, 1.0);
-
-  // cat5 runs from every tower to the hub, gaffer-taped across the floor
-  const cableColours = [0xe8c21b, 0x2b6fd6, 0x9a9a9a, 0xd23c3c, 0xe8c21b, 0x3aa35a];
-  out.stations.forEach((st, i) => {
-    const s = st.cableStart;
-    const dir = Math.sign(s.z);
-    const pts = [
-      s.clone(),
-      new THREE.Vector3(s.x, 0.4, s.z + dir * 0.25),
-      new THREE.Vector3(s.x + 0.1, 0.012, s.z + dir * 0.35),
-      new THREE.Vector3(-4.8 + i * 0.03, 0.012, s.z * 0.55 + i * 0.04),
-      new THREE.Vector3(-5.05, 0.012, 0.9 + i * 0.03),
-      new THREE.Vector3(-5.12, 0.4, 0.98),
-      hubPort.clone(),
-    ];
-    const curve = new THREE.CatmullRomCurve3(pts);
-    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 80, 0.004, 5), new THREE.MeshStandardMaterial({ color: cableColours[i], roughness: 0.6 }));
-    scene.add(tube);
-  });
+  buildNetwork(scene, out);
+  buildErrands(scene, out);
 
   // posters and the scoreboard
   const posterMat = (t) => new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 });

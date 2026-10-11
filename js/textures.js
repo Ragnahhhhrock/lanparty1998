@@ -92,6 +92,31 @@ export function cdrDrive() {
   return tex(c);
 }
 
+// the computer shop's price list, left on the snack table
+export function priceList() {
+  const [c, g] = canvas(192, 256);
+  g.fillStyle = '#e8e1cc'; g.fillRect(0, 0, 192, 256);                    // --paper
+  g.fillStyle = '#000080'; g.fillRect(0, 0, 192, 34);                     // --w98-title
+  g.font = `24px ${CRT_FONT}`; g.fillStyle = '#ffffff'; g.fillText('COMPUTER SHOP', 10, 24);
+  g.font = '11px Tahoma, sans-serif'; g.fillStyle = '#000000';
+  const rows = [['PRICE LIST', 'NOV 98'], ['8-port 10BASE-T hub', '$45'], ['16MB SIMM, 72-pin', '$75'], ['CD-R blank, each', '$4'], ['Cat5 patch lead', '$6'], ['BNC T-connector', '$8']];
+  rows.forEach(([a, b], i) => { g.fillText(a, 10, 62 + i * 24); g.fillText(b, 148, 62 + i * 24); });
+  g.fillStyle = '#808080'; for (let i = 0; i < 6; i++) g.fillRect(10, 68 + i * 24, 172, 1); // --w98-shadow
+  g.font = '11px Tahoma, sans-serif'; g.fillStyle = '#000000'; g.fillText('No refunds on opened RAM.', 10, 222);
+  return tex(c);
+}
+
+// a government asset sticker on the borrowed switch
+export function assetTag() {
+  const [c, g] = canvas(192, 80);
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, 192, 80);
+  g.fillStyle = '#0a0a0a'; g.fillRect(0, 0, 192, 4); g.fillRect(0, 76, 192, 4);
+  g.font = 'bold 15px Tahoma, sans-serif'; g.fillText('GOVT PROPERTY', 8, 26);
+  g.font = '13px Tahoma, sans-serif'; g.fillText('ASSET 004417 · IT BRANCH', 8, 46);
+  g.fillText('NOT FOR PRIVATE USE', 8, 64);
+  return tex(c);
+}
+
 export function voltLabel() {
   const [c, g] = canvas(256, 128);
   g.fillStyle = '#c4161c'; g.fillRect(0, 0, 256, 128);
@@ -198,6 +223,10 @@ export class Screen {
     g.save();
     // the burner PC shows its write progress while nobody is sitting at it
     this[this.burn && this.free ? 'burning' : this.mode]?.(g, t);
+    if (this.linkDown) { // the Win98 tray balloon, big enough to read from across the room
+      g.fillStyle = '#ffcc00'; g.fillRect(0, 0, W, 26);                      // --amber
+      this.text(g, 'NETWORK CABLE DISCONNECTED', 8, 20, '#000000', 20);
+    }
     if (this.free && this.mode === this.idle) {
       g.fillStyle = '#000080'; g.fillRect(0, H - 34, W, 34); // --w98-title
       this.text(g, `PC-${String(this.pcNumber ?? 0).padStart(2, '0')} FREE · Press E to sit`, 10, H - 11, '#ffffff', 20);

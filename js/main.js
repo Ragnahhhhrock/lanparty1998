@@ -7,7 +7,7 @@ import { RoomLink, ROOM_NAME } from './net.js';
 import { Crowd } from './avatars.js';
 import * as sfx from './sfx.js';
 import { analytics } from './analytics.js';
-import { Party, BURNER, DISCS } from './party.js';
+import { Party, BURNER, DISCS, NET, SHOP } from './party.js';
 import * as dialog from './dialog.js';
 
 const $ = (id) => document.getElementById(id);
@@ -42,13 +42,13 @@ const room = buildRoom(scene);
 const pc = new DosPC(ui.dos);
 const link = new RoomLink();
 const crowd = new Crowd(scene, room.stations);
-const party = new Party();
+const GAME_START = 23 * 60 + 42; // the clock when the doors open
+const party = new Party({ startMinutes: GAME_START });
 
 /* ---------- state ---------- */
 let mode = 'intro'; // intro | walk | tween | seated | dialog
 const keys = new Set();
 const stats = { caffeine: 15, snacks: 40, dust: 0, cans: 0, handfuls: 0 };
-const GAME_START = 23 * 60 + 42; // the clock when the doors open
 let target = null;
 let tween = null;
 let myName = 'YOU';
@@ -98,6 +98,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyT' && link.online) { e.preventDefault(); openChat(); return; }
   keys.add(e.code);
   if (e.code === 'KeyE' && target) interact(target);
+  if (e.code === 'KeyF' && target?.station) openPcMenu(target.station);
 }, true);
 window.addEventListener('keyup', (e) => keys.delete(e.code), true);
 window.addEventListener('blur', () => keys.clear());
@@ -119,8 +120,11 @@ function findTarget() {
 const PROMPTS = {
   sit: (t) => {
     const who = link.occupant(t.station.index);
-    return who ? `${t.station.name} · ${who.name}'s sitting here` : `E · Sit down at ${t.station.name}`;
+    const fiddle = party.pcs[t.station.index].linkDown ? 'F · Cable is out' : 'F · Open the case';
+    return who ? `${t.station.name} · ${who.name}'s sitting here  ·  ${fiddle}` : `E · Sit down at ${t.station.name}  ·  ${fiddle}`;
   },
+  shop: () => 'E · Read the computer shop price list',
+  phone: () => 'E · Ring Dazza',
   drink: () => 'E · Crack a Volt Cola',
   eat: () => 'E · Grab a handful of Nachoz',
   burner: () => (party.job ? `E · CD-R: writing ${Math.floor(party.burnProgress() * 100)}%` : 'E · Burn a CD (2x)'),
@@ -134,6 +138,8 @@ function interact(t) {
   } else if (t.kind === 'drink') drink();
   else if (t.kind === 'eat') eat();
   else if (t.kind === 'burner') openBurner();
+  else if (t.kind === 'shop') openShop();
+  else if (t.kind === 'phone') openPhone();
 }
 
 /* ---------- errands: little message boxes ---------- */
@@ -147,6 +153,74 @@ function openErrand(spec) {
 }
 
 const clockText = (secs) => `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
+
+// F at a PC: the case comes off. The cable lives here for now; more goes in as the night goes on.
+function openPcMenu(station) {
+  const i = station.index;
+  openErrand({
+    title: `${station.name}.SYS`,
+    render: () => {
+      const buttons = [];
+      const lines = [];
+      const culprit = party.pcs[i].linkDown;
+      if (culprit) {
+        lines.push(party.net === 'coax' ? 'The T-connector on the back of this box has come loose.' : 'The network lead has been pulled out of the back of this box.');
+        buttons.push({ label: party.net === 'coax' ? 'Re-seat the T-connector' : 'Plug the lead back in', run: () => party.fixLink(i), keep: true });
+      } else if (!party.pcLinkUp(i)) {
+        lines.push('No link light. On coax the whole cable goes down when one T-connector comes loose. Check the back of each tower.');
+      } else {
+        lines.push(`${NET[party.net].label}: link light is on.`);
+      }
+      buttons.push({ label: 'Close' });
+      return { lines, progress: null, buttons };
+    },
+  });
+}
+
+function openShop() {
+  openErrand({
+    title: 'PRICELIST.TXT',
+    render: () => {
+      const buttons = [{ label: 'Close' }];
+      let lines;
+      if (party.net !== 'coax') lines = ['COMPUTER SHOP, NOV 98.', 'You already bought the hub. Everything else on the list is dearer than the Volt.'];
+      else if (party.ordered('hub')) {
+        lines = [`Hub on order. Somebody's mum is driving it over: ${clockText(party.secondsUntil('hub'))}.`];
+      } else {
+        lines = [
+          'COMPUTER SHOP, NOV 98. 8-port 10BASE-T hub, $' + SHOP.hubCost + '.',
+          'Coax is one cable and one loose T-connector away from everybody losing their game. A hub fixes that.',
+          `Cash $${party.cash}.`,
+        ];
+        buttons.unshift({ label: `Order the hub ($${SHOP.hubCost})`, disabled: !party.canOrderHub(), run: () => party.orderHub(), keep: true });
+      }
+      return { lines, progress: null, buttons };
+    },
+  });
+}
+
+function openPhone() {
+  openErrand({
+    title: 'DAZZA.TEL',
+    render: () => {
+      const buttons = [{ label: 'Hang up' }];
+      let lines;
+      if (party.net === 'switch') {
+        lines = ["Dazza's dad works in IT for the government. The switch has a sticker on it.", 'He wants it back before 6:00 AM, in the same condition. Do not spill Volt on it.'];
+      } else if (party.dadLent) {
+        lines = ["Dazza's dad took his switch back. He is not lending it twice."];
+      } else if (party.ordered('switch')) {
+        lines = [`Dazza's dad is driving the switch over: ${clockText(party.secondsUntil('switch'))}.`];
+      } else if (party.net === 'coax') {
+        lines = ["Dazza's dad works in IT for the government. He has a 16-port switch in the boot of his car.", '"Get a hub in first. I am not plugging it into a coax mess."'];
+      } else {
+        lines = ["Dazza's dad works in IT for the government. He has a 16-port switch he is not supposed to take home.", 'He will lend it for the night, and he wants it back by 6:00 AM.'];
+        buttons.unshift({ label: 'Ask Dazza to borrow it', disabled: !party.canBorrowSwitch(), run: () => party.borrowSwitch(), keep: true });
+      }
+      return { lines, progress: null, buttons };
+    },
+  });
+}
 
 function openBurner() {
   openErrand({
@@ -375,9 +449,11 @@ function frame() {
   // blinkenlights
   const playing = (mode === 'seated' && pc.running) || [...link.players.values()].some((p) => p.pc !== null);
   for (const led of room.hddLeds) if (Math.random() < 0.15) led.material.color.setHex(Math.random() < 0.4 ? 0xff2a1a : 0x400000);
-  room.hubLeds.forEach((led, i) => {
-    const busy = i < 6 && Math.random() < (playing ? 0.5 : 0.12);
-    led.material.color.setHex(busy ? 0x4dff5a : (i < 6 ? 0x1b6e1b : 0x0a2a0a));
+  room.netLeds.forEach((led, i) => {
+    const used = i < 6; // one port per PC; the rest are spare
+    const up = !used || party.pcLinkUp(i);
+    const busy = used && up && Math.random() < (playing ? 0.5 : 0.12);
+    led.material.color.setHex(busy ? 0x4dff5a : (used && up ? 0x1b6e1b : 0x0a2a0a));
   });
 
   // stats tick once a second
@@ -394,6 +470,7 @@ function frame() {
     ui.snacks.style.width = `${stats.snacks}%`;
     ui.dust.style.opacity = (stats.dust * 0.9).toFixed(2);
     room.stations[BURNER.pc].screen.burn = party.job ? { pct: party.burnProgress(), secondsLeft: party.burnSecondsLeft() } : null;
+    refreshLinks();
     dialog.refresh();
   }
 
@@ -416,7 +493,43 @@ frame();
 
 /* ---------- the night's logistics ---------- */
 ui.cash.textContent = `$${party.cash}`;
+room.setNetwork(party.net);
 party.addEventListener('cash', (e) => { ui.cash.textContent = `$${e.detail}`; });
+// what the cables are doing, shown on the gear and on the screens
+function refreshLinks() {
+  room.stations.forEach((st, i) => {
+    room.setLoose(i, party.pcs[i].linkDown);
+    st.screen.linkDown = !party.pcLinkUp(i);
+  });
+  setNetStatus();
+}
+
+// a dead link ends your deathmatch: the IPX packets have nowhere to go
+function linkChanged() {
+  refreshLinks();
+  if (seatedAt && !party.pcLinkUp(seatedAt.index) && inMatch()) link.send({ t: isHost() ? 'dm_end' : 'dm_leave' });
+  updateDM();
+}
+
+party.addEventListener('net', (e) => {
+  room.setNetwork(e.detail.net);
+  const lines = {
+    hub: "The hub's here. Goodbye, coax.",
+    switch: "Dazza's dad dropped round the switch. Sixteen ports, one government sticker.",
+  };
+  if (e.detail.reason === 'returned') { toast("Dazza's dad took his switch back. Hub it is."); chatLine("Dazza's dad took his switch back. Hub it is.", true); }
+  else { toast(lines[e.detail.net]); chatLine(lines[e.detail.net], true); }
+  linkChanged();
+});
+party.addEventListener('dad-warning', () => chatLine("Dazza's dad: \"I need that switch back by six.\"", true));
+party.addEventListener('link-down', (e) => {
+  const msg = party.net === 'coax' ? `A T-connector on ${room.stations[e.detail.pc].name} has come loose. The whole network is down.` : `${room.stations[e.detail.pc].name} has lost its network lead.`;
+  toast(msg); chatLine(msg, true);
+  linkChanged();
+});
+party.addEventListener('link-up', () => { chatLine('Link light is back on.', true); linkChanged(); });
+party.addEventListener('order', (e) => chatLine(e.detail.what === 'hub' ? 'Hub ordered. It is on its way.' : "Dazza's dad is bringing the switch round.", true));
+
 party.addEventListener('burn-start', () => toast('CDWRITE: writing at 2x. Hands off PC-04.'));
 party.addEventListener('burn-done', (e) => {
   toast(`Disc done. Mates pay $${e.detail.pays}.`);
@@ -455,7 +568,7 @@ function setNetStatus() {
     return;
   }
   const n = link.players.size + 1;
-  ui.netstatus.textContent = `${n} in the room${ROOM_NAME !== 'basement' ? ` · ${ROOM_NAME}` : ''}`;
+  ui.netstatus.textContent = `${n} in the room${ROOM_NAME !== 'basement' ? ` · ${ROOM_NAME}` : ''} · ${NET[party.net].short}${party.netDown() ? ' · CABLE FAULT' : ''}`;
   ui.netstatus.classList.add('online');
 }
 
@@ -577,6 +690,11 @@ function bootForMatch() {
 function updateDM() {
   const m = link.match;
   if (!link.online || mode !== 'seated') { ui.dm.hidden = true; return; }
+  if (seatedAt && !party.pcLinkUp(seatedAt.index)) {
+    ui.dm.hidden = false; ui.dmBtn.hidden = true; ui.dmBtn2.hidden = true;
+    ui.dmText.textContent = 'Network cable disconnected.';
+    return;
+  }
   ui.dm.hidden = false;
   ui.dmBtn2.hidden = true;
   ui.dmBtn.hidden = false;
