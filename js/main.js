@@ -4,10 +4,10 @@ import * as THREE from 'three';
 import { buildRoom, ROOM } from './room.js';
 import { DosPC } from './emulator.js';
 import { RoomLink, ROOM_NAME } from './net.js';
-import { Crowd } from './avatars.js';
+import { Crowd, spawnNpc } from './avatars.js';
 import * as sfx from './sfx.js';
 import { analytics } from './analytics.js';
-import { Party, BURNER, DISCS, NET, SHOP, PC_COUNT, OC, HEAT, celsius } from './party.js';
+import { Party, BURNER, DISCS, NET, SHOP, PC_COUNT, OC, HEAT, RAM, SEC_PER_GAME_MIN, celsius } from './party.js';
 import * as dialog from './dialog.js';
 
 const $ = (id) => document.getElementById(id);
@@ -44,6 +44,15 @@ const link = new RoomLink();
 const crowd = new Crowd(scene, room.stations);
 const GAME_START = 23 * 60 + 42; // the clock when the doors open
 const party = new Party({ startMinutes: GAME_START });
+
+// Macca: off to Singapore for work, and happy to bring RAM back if you give him cash first
+const macca = spawnNpc(scene, { name: 'MACCA', color: '#20b2aa', x: -4.4, z: -1.9, yaw: -Math.PI / 2 }); // --shirt-7
+const maccaHit = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.9, 0.7), new THREE.MeshBasicMaterial({ visible: false }));
+maccaHit.position.set(-4.4, 0.95, -1.9);
+maccaHit.userData.interact = { kind: 'buddy' };
+scene.add(maccaHit);
+room.interactables.push(maccaHit);
+room.colliders.push({ minX: -4.65, maxX: -4.15, minZ: -2.15, maxZ: -1.65 });
 
 /* ---------- state ---------- */
 let mode = 'intro'; // intro | walk | tween | seated | dialog
@@ -114,8 +123,13 @@ const centre = new THREE.Vector2(0, 0);
 
 function findTarget() {
   ray.setFromCamera(centre, camera);
-  const hit = ray.intersectObjects(room.interactables, true)[0];
-  return hit?.object.userData.interact ?? null;
+  for (const hit of ray.intersectObjects(room.interactables, true)) {
+    const t = hit.object.userData.interact;
+    if (!t) continue;
+    if (t.kind === 'buddy' && party.buddy.state === 'away') continue; // he's in Singapore
+    return t;
+  }
+  return null;
 }
 
 const PROMPTS = {
@@ -124,6 +138,7 @@ const PROMPTS = {
     const fiddle = party.pcs[t.station.index].linkDown ? 'F · Cable is out' : 'F · Open the case';
     return who ? `${t.station.name} · ${who.name}'s sitting here  ·  ${fiddle}` : `E · Sit down at ${t.station.name}  ·  ${fiddle}`;
   },
+  buddy: () => (party.buddy.state === 'back' ? 'E · Macca is back. Ask about the RAM' : 'E · Talk to Macca'),
   fan: () => `E · Turn the fan ${party.fan.on ? 'off' : 'on'}`,
   shop: () => 'E · Read the computer shop price list',
   phone: () => 'E · Ring Dazza',
@@ -141,6 +156,7 @@ function interact(t) {
   else if (t.kind === 'eat') eat();
   else if (t.kind === 'burner') openBurner();
   else if (t.kind === 'shop') openShop();
+  else if (t.kind === 'buddy') openMacca();
   else if (t.kind === 'fan') party.setFan(!party.fan.on, 'switch');
   else if (t.kind === 'phone') openPhone();
 }
@@ -176,6 +192,9 @@ function openPcMenu(station) {
       }
       const pc = party.pcs[i];
       let progress = null;
+      lines.push(`RAM: ${pc.ram}MB.${pc.ram >= RAM.max ? ' Every slot is full.' : ''}`);
+      if (party.canFitRam(i)) buttons.push({ label: `Fit a ${RAM.stick}MB SIMM (${party.sticks} in your pocket)`, run: () => party.fitRam(i), keep: true });
+      else if (pc.ram < RAM.max && party.buddy.state === 'away') lines.push(`Macca's RAM lands in about ${clockText(party.buddySecondsLeft())}.`);
       if (pc.crashed) lines.push('This box has blue screened. Sit down and press a key.');
       else {
         lines.push(`CPU: ${OC[pc.oc].label}. Case temperature ${celsius(pc.heat)}°C${party.fan.on ? '' : ', and the fan is off'}.`);
@@ -185,6 +204,35 @@ function openPcMenu(station) {
       }
       buttons.push({ label: 'Close' });
       return { lines, progress, buttons };
+    },
+  });
+}
+
+function openMacca() {
+  openErrand({
+    title: 'MACCA.EXE',
+    render: () => {
+      const b = party.buddy;
+      if (b.state === 'back') {
+        return {
+          lines: [`Macca is back from Singapore, a bit jet-lagged. He has ${b.sticks} SIMM${b.sticks > 1 ? 's' : ''} in a sock.`],
+          progress: null,
+          buttons: [{ label: `Take the RAM (${b.sticks})`, run: () => party.collectRam() }, { label: 'Later' }],
+        };
+      }
+      return {
+        lines: [
+          'Macca is off to Singapore for work. He says RAM is dirt cheap over there.',
+          `The shop here wants $${RAM.shopPrice} for a ${RAM.stick}MB SIMM. Macca will get you one for $${RAM.sgPrice}, cash up front. He is back in about ${Math.round((RAM.tripMinutes * SEC_PER_GAME_MIN) / 60)} minutes.`,
+          `Cash $${party.cash}. SIMMs in your pocket: ${party.sticks}.`,
+        ],
+        progress: null,
+        buttons: [
+          { label: `Give him $${party.ramCost(1)} (1 SIMM)`, disabled: !party.canSendBuddy(1), run: () => party.sendBuddy(1) },
+          { label: `Give him $${party.ramCost(2)} (2 SIMMs)`, disabled: !party.canSendBuddy(2), run: () => party.sendBuddy(2) },
+          { label: 'Nah' },
+        ],
+      };
     },
   });
 }
@@ -494,6 +542,7 @@ function frame() {
 
   crowd.update(dt, link.players);
   room.updateFan(dt, party.fan.on, party.fanSweep());
+  if (macca.group.visible) macca.idle(now);
   if (mode !== 'intro') party.tick(dt, { seatedPc: seatedAt?.index ?? null });
   if (link.online && mode === 'walk' && (sendTimer += dt) > 0.1) { sendTimer = 0; link.pos(player.pos.x, player.pos.z, player.yaw); }
 
@@ -574,6 +623,7 @@ function refreshLinks() {
     st.screen.linkDown = !party.pcLinkUp(i);
     st.screen.crashed = party.pcs[i].crashed;
     st.screen.oc = party.pcs[i].oc;
+    st.screen.ram = party.pcs[i].ram;
   });
   setNetStatus();
 }
@@ -614,6 +664,18 @@ party.addEventListener('fan-off', (e) => {
   const msg = e.detail.why === 'knocked' ? "Somebody kicked the fan's plug out." : 'Fan off.';
   toast(msg); chatLine(msg, true);
 });
+party.addEventListener('buddy-away', (e) => {
+  macca.group.visible = false;
+  toast("Macca's off to Singapore.");
+  chatLine(`Macca took $${party.ramCost(e.detail.sticks)} and went to Singapore. He'll be back with the RAM.`, true);
+});
+party.addEventListener('buddy-back', () => {
+  macca.group.visible = true;
+  toast("Macca's back from Singapore.");
+  chatLine('Macca is back from Singapore with a sock full of SIMMs.', true);
+});
+party.addEventListener('ram-collected', (e) => chatLine(`You pocket ${e.detail.sticks} SIMM${e.detail.sticks > 1 ? 's' : ''}. Cheap.`, true));
+party.addEventListener('ram', (e) => { toast(`${room.stations[e.detail.pc].name}: ${e.detail.mb}MB.`); refreshLinks(); });
 party.addEventListener('dad-warning', () => chatLine("Dazza's dad: \"I need that switch back by six.\"", true));
 const TRIP_LINES = ['You trip over the cat5.', 'Your foot finds the cable. Of course it does.', 'Cable. Floor. Face.'];
 party.addEventListener('trip', (e) => {

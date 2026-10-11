@@ -101,6 +101,15 @@ class Avatar {
   }
 }
 
+// A regular who isn't another player: stands where you put him and rocks gently on his heels.
+export function spawnNpc(scene, { name, color, x, z, yaw }) {
+  const a = new Avatar({ id: `npc-${name}`, name, color, x, z, yaw });
+  scene.add(a.group);
+  a.rest = yaw;
+  a.idle = (t) => { a.group.rotation.y = a.rest + Math.sin(t * 0.7) * 0.08; };
+  return a;
+}
+
 export class Crowd {
   constructor(scene, stations) {
     this.scene = scene;

@@ -32,6 +32,9 @@ export const FAN = { cool: 1.4, period: 14, knockEvery: [9, 16] }; // heat/s at 
 export const HEAT = { crash: 100, warn: 75, ok: 60, afterReboot: 70 };
 export const celsius = (heat) => Math.round(28 + heat * 0.5);
 
+// RAM: 72-pin SIMMs. Macca is off to Singapore, where it's a lot cheaper than the shop here.
+export const RAM = { start: 16, stick: 16, max: 64, shopPrice: 75, sgPrice: 35, maxOrder: 4, tripMinutes: 90 };
+
 export const DISCS = {
   MIX: { name: 'MIX CD', pays: 10 },
 };
@@ -49,7 +52,9 @@ export class Party extends EventTarget {
     this.job = null;       // the burn in progress: { kind, left, total, abused }
 
     this.net = 'coax';     // coax -> hub -> (borrowed) switch
-    this.pcs = Array.from({ length: PC_COUNT }, () => ({ linkDown: false, oc: 0, heat: 0, crashed: false, hot: false }));
+    this.pcs = Array.from({ length: PC_COUNT }, () => ({ linkDown: false, oc: 0, heat: 0, crashed: false, hot: false, ram: RAM.start }));
+    this.buddy = { state: 'home', sticks: 0, back: 0 }; // home -> away (in Singapore) -> back (with the RAM) -> home
+    this.sticks = 0;       // SIMMs in your pocket
     this.fan = { on: true, phase: 0 };
     this.nextKnock = this.now + this.knockGap();
     this.orders = [];      // things on their way: { what: 'hub' | 'switch', at }
@@ -63,6 +68,37 @@ export class Party extends EventTarget {
   clockMinutes() { return this.start + this.now; }
 
   knockGap() { const [a, b] = FAN.knockEvery; return a + this.rng() * (b - a); }
+
+  /* ---- RAM from Singapore ---- */
+
+  ramCost(n) { return n * RAM.sgPrice; }
+  canSendBuddy(n = 1) { return this.buddy.state === 'home' && n >= 1 && n <= RAM.maxOrder && this.cash >= this.ramCost(n); }
+  sendBuddy(n = 1) {
+    if (!this.canSendBuddy(n)) return false;
+    this.spend(this.ramCost(n));
+    this.buddy = { state: 'away', sticks: n, back: this.now + RAM.tripMinutes };
+    this.emit('buddy-away', { sticks: n });
+    return true;
+  }
+  buddySecondsLeft() { return this.buddy.state === 'away' ? Math.max(0, (this.buddy.back - this.now) * SEC_PER_GAME_MIN) : 0; }
+
+  collectRam() {
+    if (this.buddy.state !== 'back') return false;
+    this.sticks += this.buddy.sticks;
+    const got = this.buddy.sticks;
+    this.buddy = { state: 'home', sticks: 0, back: 0 };
+    this.emit('ram-collected', { sticks: got });
+    return true;
+  }
+
+  canFitRam(i) { return this.sticks > 0 && this.pcs[i].ram + RAM.stick <= RAM.max; }
+  fitRam(i) {
+    if (!this.canFitRam(i)) return false;
+    this.sticks--;
+    this.pcs[i].ram += RAM.stick;
+    this.emit('ram', { pc: i, mb: this.pcs[i].ram });
+    return true;
+  }
 
   /* ---- heat, the fan and the blue screen ---- */
 
@@ -257,6 +293,10 @@ export class Party extends EventTarget {
     this.now += dt / SEC_PER_GAME_MIN;
     this.tickNetwork();
     this.tickHeat(dt);
+    if (this.buddy.state === 'away' && this.now >= this.buddy.back) {
+      this.buddy.state = 'back';
+      this.emit('buddy-back', { sticks: this.buddy.sticks });
+    }
     if (this.job) {
       // sitting at the burner and playing DOOM starves the write buffer
       if (ctx.seatedPc === BURNER.pc) {

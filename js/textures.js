@@ -280,8 +280,9 @@ export class Screen {
     g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
     this.text(g, 'Award Modular BIOS v4.51PG', 8, 20);
     this.text(g, `Pentium II-MMX CPU at ${[300, 450, 504][this.oc | 0]}MHz`, 8, 46);
-    const mem = Math.min(65536, Math.floor((t % 9) * 16000));
-    this.text(g, `Memory Test : ${mem}K ${mem >= 65536 ? 'OK' : ''}`, 8, 64);
+    const total = (this.ram || 16) * 1024;
+    const mem = Math.min(total, Math.floor((t % 9) * (total / 4)));
+    this.text(g, `Memory Test : ${mem}K ${mem >= total ? 'OK' : ''}`, 8, 64);
     if (t % 9 > 5) this.text(g, 'Starting Windows 98...', 8, 110);
     this.text(g, 'Press DEL to enter SETUP', 8, H - 12);
   }

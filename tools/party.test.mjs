@@ -1,6 +1,6 @@
 // Logic tests for js/party.js. Run: node tools/party.test.mjs
 import assert from 'node:assert/strict';
-import { Party, BURNER, DISCS, SEC_PER_GAME_MIN, SHOP, DAD, PC_COUNT, OC, HEAT, FAN } from '../js/party.js';
+import { Party, BURNER, DISCS, SEC_PER_GAME_MIN, SHOP, DAD, PC_COUNT, OC, HEAT, FAN, RAM } from '../js/party.js';
 
 const run = (p, seconds, ctx = {}) => { for (let i = 0; i < seconds * 10; i++) p.tick(0.1, ctx); };
 let n = 0;
@@ -294,6 +294,53 @@ test('the burner PC blue screening mid-write makes a coaster', () => {
   assert.equal(p.pcs[BURNER.pc].crashed, true);
   assert.equal(p.job, null);
   assert.equal(p.coasters, 1);
+});
+
+// ---- RAM from Singapore ----
+test('every PC starts on 16MB', () => {
+  assert.ok(new Party().pcs.every((pc) => pc.ram === 16));
+});
+
+test('Singapore RAM is a lot cheaper than the shop', () => {
+  assert.ok(RAM.sgPrice < RAM.shopPrice / 2);
+});
+
+test('cash buys sticks: Macca goes away and comes back ninety game minutes later', () => {
+  const p = new Party({ rng: () => 0.99 });
+  assert.ok(p.sendBuddy(2));
+  assert.equal(p.cash, 150 - 2 * RAM.sgPrice);
+  assert.equal(p.buddy.state, 'away');
+  assert.equal(p.sendBuddy(1), false, 'he is already on the plane');
+  run(p, RAM.tripMinutes * SEC_PER_GAME_MIN - 5);
+  assert.equal(p.buddy.state, 'away');
+  run(p, 10);
+  assert.equal(p.buddy.state, 'back');
+  assert.equal(p.sticks, 0, 'still in his bag until you ask');
+  assert.ok(p.collectRam());
+  assert.equal(p.sticks, 2);
+  assert.equal(p.buddy.state, 'home');
+});
+
+test('you cannot send him with money you do not have', () => {
+  const p = new Party();
+  p.cash = RAM.sgPrice - 1;
+  assert.equal(p.canSendBuddy(1), false);
+  p.cash = 1000;
+  assert.equal(p.canSendBuddy(RAM.maxOrder + 1), false);
+});
+
+test('fitting a stick takes one from your pocket and adds 16MB, up to 64MB', () => {
+  const p = new Party();
+  p.sticks = 5;
+  for (let k = 0; k < 3; k++) assert.ok(p.fitRam(0));
+  assert.equal(p.pcs[0].ram, 64);
+  assert.equal(p.sticks, 2);
+  assert.equal(p.fitRam(0), false, 'no more slots');
+  assert.equal(p.fitRam(1), true);
+});
+
+test('no sticks, no upgrade', () => {
+  assert.equal(new Party().fitRam(0), false);
 });
 
 console.log(`${n} passed`);
