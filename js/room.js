@@ -17,15 +17,46 @@ function box(w, h, d, mat, x = 0, y = 0, z = 0) {
   return m;
 }
 
-function foldingTable(length, depth) {
+// 6 ft fold-in-half trestle table: 183.8 x 76.2 cm, 73.7 cm high, almond top with a centre seam, brown steel legs.
+const TABLE_LEN = 1.838, TABLE_DEPTH = 0.762;
+const tableTopMat = new THREE.MeshStandardMaterial({ color: 0xe6dcc3, roughness: 0.85 });
+const tableSeamMat = new THREE.MeshStandardMaterial({ color: 0xa89f88, roughness: 0.9 });
+const tableLegMat = new THREE.MeshStandardMaterial({ color: 0x4b3a2a, metalness: 0.4, roughness: 0.55 });
+
+function tube(a, b, r, mat) {
+  const dir = new THREE.Vector3().subVectors(b, a);
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, dir.length(), 8), mat);
+  m.position.copy(a).addScaledVector(dir, 0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+  return m;
+}
+
+// segments = how many tables are pushed end to end along x
+function foldingTable(segments = 1) {
   const g = new THREE.Group();
-  const top = box(length, 0.04, depth, new THREE.MeshStandardMaterial({ color: 0xe8e2d2, roughness: 0.85 }), 0, TABLE_Y - 0.02, 0);
-  g.add(top);
-  const legMat = new THREE.MeshStandardMaterial({ color: 0x2b2b2b, metalness: 0.5, roughness: 0.5 });
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, TABLE_Y - 0.04), legMat);
-    leg.position.set(sx * (length / 2 - 0.08), (TABLE_Y - 0.04) / 2, sz * (depth / 2 - 0.08));
-    g.add(leg);
+  const total = segments * TABLE_LEN;
+  for (let s = 0; s < segments; s++) {
+    const cx = -total / 2 + TABLE_LEN * (s + 0.5);
+    const seg = new THREE.Group();
+    seg.position.x = cx;
+    seg.add(box(TABLE_LEN - 0.004, 0.04, TABLE_DEPTH, tableTopMat, 0, TABLE_Y - 0.02, 0));
+    seg.add(box(0.006, 0.002, TABLE_DEPTH, tableSeamMat, 0, TABLE_Y + 0.0005, 0)); // fold seam
+    const top = TABLE_Y - 0.04;
+    for (const sx of [-1, 1]) {
+      const x = sx * (TABLE_LEN / 2 - 0.2);
+      for (const sz of [-1, 1]) {
+        const z = sz * (TABLE_DEPTH / 2 - 0.1);
+        seg.add(tube(new THREE.Vector3(x, top, z), new THREE.Vector3(x + sx * 0.05, 0.01, z), 0.014, tableLegMat));
+      }
+      // low cross brace between the two legs of each frame
+      seg.add(tube(new THREE.Vector3(x + sx * 0.03, 0.2, -(TABLE_DEPTH / 2 - 0.1)), new THREE.Vector3(x + sx * 0.03, 0.2, TABLE_DEPTH / 2 - 0.1), 0.01, tableLegMat));
+    }
+    // folding side braces under the top, hinged near the seam
+    for (const sz of [-1, 1]) {
+      const z = sz * (TABLE_DEPTH / 2 - 0.1);
+      seg.add(tube(new THREE.Vector3(-(TABLE_LEN / 2 - 0.2), top - 0.01, z), new THREE.Vector3(TABLE_LEN / 2 - 0.2, top - 0.01, z), 0.008, tableLegMat));
+    }
+    g.add(seg);
   }
   return g;
 }
@@ -541,10 +572,11 @@ export function buildRoom(scene) {
   // stations
   const labelVolt = T.voltLabel(), labelNachoz = T.nachozBag();
   const table = (z) => {
-    const t = foldingTable(8.6, 0.8);
+    const t = foldingTable(5);   // five 6 ft tables end to end
     t.position.set(0, 0, z);
     scene.add(t);
-    out.colliders.push({ minX: -4.3, maxX: 4.3, minZ: z - 0.4, maxZ: z + 0.4 });
+    const half = (5 * TABLE_LEN) / 2;
+    out.colliders.push({ minX: -half, maxX: half, minZ: z - TABLE_DEPTH / 2, maxZ: z + TABLE_DEPTH / 2 });
   };
   table(-4.25); table(4.25);
 
@@ -626,11 +658,11 @@ export function buildRoom(scene) {
   });
 
   // snack table along the left wall
-  const snacks = foldingTable(2.4, 0.7);
+  const snacks = foldingTable(2);   // two 6 ft tables end to end
   snacks.rotation.y = Math.PI / 2;
   snacks.position.set(-5.45, 0, 0);
   scene.add(snacks);
-  out.colliders.push({ minX: -5.8, maxX: -5.1, minZ: -1.2, maxZ: 1.2 });
+  out.colliders.push({ minX: -5.45 - TABLE_DEPTH / 2, maxX: -5.45 + TABLE_DEPTH / 2, minZ: -TABLE_LEN, maxZ: TABLE_LEN });
 
   const crate = new THREE.Group();
   for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) {
