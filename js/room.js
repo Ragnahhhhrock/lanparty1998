@@ -580,6 +580,17 @@ export function buildRoom(scene) {
   p2.position.set(maxX - 0.01, 1.6, 1.2); p2.rotation.y = -Math.PI / 2; scene.add(p2);
   const p3 = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.98), posterMat(T.poster('VOLT\nCOLA', 'NOW WITH\nEVEN MORE VOLTS', 5)));
   p3.position.set(minX + 0.01, 1.7, -2.2); p3.rotation.y = Math.PI / 2; scene.add(p3);
+  // 90s nostalgia. Games are named in text only, never with their art or characters.
+  const nostalgia = [
+    [-4.6, minZ + 0.01, 0, T.poster('DUKE\nNUKEM 3D', 'SHOOTERS FIRST\nFRAG LIMIT 20', 40)],
+    [-1.4, minZ + 0.01, 0, T.poster('Y2K', '13 MONTHS TO GO\nIS YOUR BIOS READY?', 120)],
+    [1.4, minZ + 0.01, 0, T.poster('56K', "DON'T PICK UP\nTHE PHONE", 280)],
+    [-1.4, maxZ - 0.01, Math.PI, T.pixelAdventure()],
+  ];
+  for (const [x, z, ry, tex] of nostalgia) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.98), posterMat(tex));
+    m.position.set(x, 1.75, z); m.rotation.y = ry; scene.add(m);
+  }
 
   return out;
 }

@@ -192,6 +192,45 @@ export function poster(title, sub, hue) {
   return tex(c);
 }
 
+// An invented 1990s point-and-click adventure: a pixel treasure chest and a text parser.
+export function pixelAdventure() {
+  const [c, g] = canvas(256, 360);
+  g.fillStyle = '#000080'; g.fillRect(0, 0, 256, 360); // --w98-title
+  g.fillStyle = '#000'; g.fillRect(16, 16, 224, 200); // --crt-black
+  const px = 8, ox = 56, oy = 72;
+  const sprite = [ // 1 = lid, 2 = body, 3 = gold, 4 = outline
+    '..444444444444..',
+    '.41111111111114.',
+    '4111111111111114',
+    '4111111111111114',
+    '4444444444444444',
+    '4222223322322224',
+    '4222223333322224',
+    '4222222332222224',
+    '4222222222222224',
+    '4222222222222224',
+    '.44444444444444.',
+  ];
+  const cols = { 1: '#4a2c17', 2: '#4a2c17', 3: '#ffcc00', 4: '#f28a1c' }; // --wood, --amber, --nacho
+  sprite.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch === '.') return;
+    g.fillStyle = cols[ch]; g.fillRect(ox + x * px, oy + y * px, px, px);
+  }));
+  g.fillStyle = '#24150b'; for (let x = 1; x < 15; x += 2) g.fillRect(ox + x * px, oy + px, px, px); // --wood-dark
+  g.textAlign = 'center';
+  g.font = `bold 40px Impact, "Arial Black", sans-serif`;
+  g.fillStyle = '#ffcc00'; g.fillText('THE LOST', 128, 262);
+  g.fillText('TREASURE', 128, 300);
+  g.textAlign = 'left';
+  g.font = `22px ${CRT_FONT}`; g.fillStyle = '#9dff7a'; // --phosphor
+  g.fillText('> OPEN CHEST', 24, 44);
+  g.fillStyle = '#aaaaaa'; g.fillText('It is locked.', 24, 66);
+  g.fillStyle = '#9dff7a'; g.fillText('> _', 24, 200);
+  g.textAlign = 'center'; g.fillStyle = '#e8e1cc'; g.font = `18px ${CRT_FONT}`; // --paper
+  g.fillText('ON 3 FLOPPY DISKS · VGA', 128, 340);
+  return tex(c);
+}
+
 export function nameTag(name, existing) {
   const [c, g] = existing ? [existing.image, existing.image.getContext('2d')] : canvas(256, 64);
   g.fillStyle = '#f5f0dc'; g.fillRect(0, 0, 256, 64);
