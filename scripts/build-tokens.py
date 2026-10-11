@@ -15,7 +15,7 @@ GROUPS = {
     "basement": ("basement", "wood", "carpet", "ceiling", "beige", "paper", "duct-", "cardboard", "pizza-", "pepperoni", "couch", "beanbag", "oak", "tv-", "console-"),
     "media": ("floppy-", "disk-", "disc-", "case-"),
     "brand": ("volt", "nacho", "cheese", "curlz", "zap-", "cup-"),
-    "apps": ("mine-", "felt", "card-"),
+    "apps": ("mine-", "felt", "card-", "snow"),
     "people": ("link-led", "skin", "denim", "shoe", "hair", "eye-", "iris-", "lip", "clothes-", "neon-", "shirt-"),
     "font": ("font-",),
     "text": ("text-", "leading-"),

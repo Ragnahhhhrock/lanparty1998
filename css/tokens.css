@@ -100,6 +100,9 @@
   /* Solitaire on the in-room PCs: the felt and the red suits (black suits use --w98-text) */
   --felt: #008000;
   --card-red: #c4161c;
+  /* Downhill: the snow and the tracks in it (trees, rocks and the skier reuse basement, brand and shell tokens) */
+  --snow: #f4f8ff;
+  --snow-shade: #c3d0e4;
 
   /* ---- People: the other players in the room ---- */
   --link-led: #1fbf3a;      /* "plugged into the hub" status LED */

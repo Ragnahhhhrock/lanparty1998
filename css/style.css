@@ -244,6 +244,27 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 .n1 { color: var(--mine-1); } .n2 { color: var(--mine-2); } .n3 { color: var(--mine-3); } .n4 { color: var(--w98-title); }
 .n5 { color: var(--mine-5); } .n6 { color: var(--mine-6); } .n7 { color: var(--w98-text); } .n8 { color: var(--mine-8); }
 
+/* ---- Solitaire and Downhill ---- */
+.sol, .ski { display: grid; gap: var(--space-1); padding: var(--space-0); }
+.app-bar { display: flex; gap: var(--space-4); padding: var(--space-0) var(--space-2); font: var(--text-ui)/1.4 var(--font-ui); box-shadow: var(--bevel-sunken); }
+.sol-felt { position: relative; width: 524px; height: 470px; overflow: hidden; background: var(--felt); box-shadow: var(--bevel-sunken); outline: none; user-select: none; touch-action: none; }
+.sol-felt:focus-visible { outline: 1px dotted var(--w98-light); outline-offset: -4px; }
+.sol-slot { position: absolute; width: 64px; height: 88px; }
+.sol-slot.tall { height: 350px; }
+.sol-slot::before { content: attr(data-label); display: grid; place-items: center; height: 88px; box-sizing: border-box; border: 1px solid var(--w98-light); opacity: .5; color: var(--w98-light); font: var(--text-crt-xl)/1 var(--font-crt); }
+.card { position: absolute; width: 64px; height: 88px; box-sizing: border-box; border: 1px solid var(--w98-dark); background: var(--w98-light); font: bold var(--text-ui)/1 var(--font-ui); cursor: default; }
+.card.red { color: var(--card-red); }
+.card.blk { color: var(--w98-text); }
+.card b { position: absolute; top: 3px; left: 4px; }
+.card i { position: absolute; top: 16px; left: 4px; font-style: normal; }
+.card span { position: absolute; inset: 30px 0 0; text-align: center; font: var(--text-crt-xl)/1 var(--font-crt); }
+.card.down { background: repeating-linear-gradient(45deg, var(--w98-title) 0 2px, var(--w98-title2) 2px 4px); box-shadow: inset 0 0 0 3px var(--w98-light); }
+.card.sel { outline: 2px solid var(--amber); outline-offset: 1px; }
+.card.under { pointer-events: none; }
+.card.dragging { z-index: 10; pointer-events: none; box-shadow: 3px 3px 0 var(--crt-black); }
+.ski-view { display: block; width: 480px; height: 320px; background: var(--snow); box-shadow: var(--bevel-sunken); outline: none; image-rendering: pixelated; }
+.ski-view:focus-visible { outline: 1px dotted var(--w98-text); outline-offset: -4px; }
+
 /* ---- Calculator ---- */
 .calc { display: grid; gap: var(--space-1h); padding: var(--space-1h) var(--space-1h) var(--space-2); }
 .calc-screen { display: block; min-height: 24px; padding: var(--space-1h) var(--space-2); overflow: hidden; background: var(--w98-light); color: var(--w98-text); white-space: nowrap;

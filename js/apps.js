@@ -4,6 +4,8 @@
 import { icon } from './icons.js';
 import { Board, LEVELS, MARK } from './minesweeper.js';
 import * as calc from './calc.js';
+import { solitaire } from './app-solitaire.js';
+import { downhill } from './app-ski.js';
 
 const el = (tag, cls, html) => {
   const e = document.createElement(tag);
@@ -500,7 +502,7 @@ const help = {
 /* ------------------------------------------------------------------- Run, Shut Down */
 
 const RUN = {
-  calc: 'calc', calculator: 'calc', notepad: 'notepad', mspaint: 'paint', paint: 'paint', winmine: 'mine', minesweeper: 'mine',
+  calc: 'calc', calculator: 'calc', notepad: 'notepad', mspaint: 'paint', paint: 'paint', winmine: 'mine', minesweeper: 'mine', sol: 'sol', solitaire: 'sol', ski: 'ski', downhill: 'ski',
   command: 'dos', 'command.com': 'dos', defrag: 'defrag', mirc: 'irc', mirc32: 'irc', lanamp: 'lanamp', help: 'help',
 };
 
@@ -568,7 +570,7 @@ const MENU = [
     label: 'Programs', icon: 'programs',
     items: [
       { label: 'Accessories', icon: 'folder', items: [{ app: 'calc' }, { app: 'dos' }, { app: 'notepad' }, { app: 'paint' }] },
-      { label: 'Games', icon: 'folder', items: [{ app: 'mine' }] },
+      { label: 'Games', icon: 'folder', items: [{ app: 'mine' }, { app: 'sol' }, { app: 'ski' }] },
       { label: 'System Tools', icon: 'folder', items: [{ app: 'defrag' }] },
       { sep: true },
       { app: 'irc', label: 'mIRC' },
@@ -586,6 +588,6 @@ export function registerApps(desktop, { irc, lanamp, gameTime }) {
   desktop.gameTime = gameTime;
   desktop.adopt('irc', irc, { title: 'mIRC32 - [#lanparty98]', icon: 'irc' });
   desktop.adopt('lanamp', lanamp, { title: 'LANamp 2.0', icon: 'amp' });
-  for (const app of [minesweeper, calculator, notepad, paint, dosPrompt, defrag, help, run, shutdown]) desktop.define(app);
+  for (const app of [minesweeper, solitaire, downhill, calculator, notepad, paint, dosPrompt, defrag, help, run, shutdown]) desktop.define(app);
   desktop.setMenu(MENU);
 }
