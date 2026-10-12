@@ -1,0 +1,66 @@
+diff --git a/doomgeneric/d_net.c b/doomgeneric/d_net.c
+index b8962cc..0047ebb 100644
+--- a/doomgeneric/d_net.c
++++ b/doomgeneric/d_net.c
+@@ -42,6 +42,7 @@ ticcmd_t *netcmds;
+ 
+ // Called when a player leaves the game
+ 
++extern boolean bot_mode; extern void Bot_Setup(void);
+ static void PlayerQuitGame(player_t *player)
+ {
+     static char exitmsg[80];
+@@ -77,7 +78,7 @@ static void RunTic(ticcmd_t *cmds, boolean *ingame)
+ 
+     for (i = 0; i < MAXPLAYERS; ++i)
+     {
+-        if (!demoplayback && playeringame[i] && !ingame[i])
++        if (!bot_mode && !demoplayback && playeringame[i] && !ingame[i])
+         {
+             PlayerQuitGame(&players[i]);
+         }
+@@ -251,6 +252,8 @@ void D_CheckNetGame (void)
+     SaveGameSettings(&settings);
+     D_StartNetGame(&settings, NULL);
+     LoadGameSettings(&settings);
++    Bot_Setup();
++    if (bot_mode) { playeringame[0] = playeringame[1] = true; netgame = true; consoleplayer = 0; }
+ 
+     DEH_printf("startskill %i  deathmatch: %i  startmap: %i  startepisode: %i\n",
+                startskill, deathmatch, startmap, startepisode);
+diff --git a/doomgeneric/g_game.c b/doomgeneric/g_game.c
+index 9954d78..1fc9136 100644
+--- a/doomgeneric/g_game.c
++++ b/doomgeneric/g_game.c
+@@ -129,6 +129,7 @@ int             totalkills, totalitems, totalsecret;    // for intermission
+  
+ char           *demoname;
+ boolean         demorecording; 
++extern boolean bot_mode; extern void Bot_Build(int, ticcmd_t *); extern boolean Bot_Finish(void); extern void Bot_LevelStart(void);
+ boolean         longtics;               // cph's doom 1.91 longtics hack
+ boolean         lowres_turn;            // low resolution turning for longtics
+ boolean         demoplayback; 
+@@ -666,6 +667,7 @@ void G_DoLoadLevel (void)
+     memset(mousearray, 0, sizeof(mousearray));
+     memset(joyarray, 0, sizeof(joyarray));
+ 
++    Bot_LevelStart();
+     if (testcontrols)
+     {
+         players[consoleplayer].message = "Press escape to quit.";
+@@ -901,6 +903,7 @@ void G_Ticker (void)
+ 	} 
+     }
+     
++    if (bot_mode && Bot_Finish()) G_CheckDemoStatus();
+     // get commands, check consistancy,
+     // and build new consistancy check
+     buf = (gametic/ticdup)%BACKUPTICS; 
+@@ -912,6 +915,7 @@ void G_Ticker (void)
+ 	    cmd = &players[i].cmd; 
+ 
+ 	    memcpy(cmd, &netcmds[i], sizeof(ticcmd_t));
++	    if (bot_mode && i < 2) Bot_Build(i, cmd);
+ 
+ 	    if (demoplayback) 
+ 		G_ReadDemoTiccmd (cmd); 

@@ -75,9 +75,11 @@ export function nextGame(id) {
 
 const clampNodes = (n) => Math.min(MAX_PLAYERS, Math.max(2, n | 0 || 2));
 
-// Which config bundle in bundles/ boots this game: kind is 'solo', 'host' or 'join'.
+// Which config bundle in bundles/ boots this game: kind is 'solo', 'host' or 'join', or 'spectate' for the
+// recorded deathmatches on the regulars' PCs (DOOM only; js/spectator.js).
 export function confName(gameId, kind, nodes) {
   const g = gameOf(gameId);
+  if (kind === 'spectate') return `conf-${g.id}-spectate.jsdos`;
   if (kind === 'solo') return `conf-${g.id}-solo.jsdos`;
   if (g.net.kind === 'lobby') return `conf-${g.id}-net.jsdos`;
   return `conf-${g.id}-dm${clampNodes(nodes)}.jsdos`;

@@ -1326,7 +1326,8 @@ function frame() {
   if (mode !== 'intro') voice.update(camera, dt);
   room.updateFan(dt, party.fan.on, party.fanSweep());
   room.updatePower(dt);
-  room.updateDuel(dt);
+  room.spectator.update(dt, Math.hypot(player.pos.x - room.spectatorDesk.x, player.pos.z - room.spectatorDesk.z),
+    mode === 'intro' || document.hidden || (mode === 'seated' && pc.running));
   room.updatePizza(dt);
   room.updateTrays(dt);
   room.updateBenches();

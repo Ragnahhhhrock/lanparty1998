@@ -8,6 +8,8 @@
 
 import { gameOf, confName } from './games.js';
 import { makeZip } from './zip.js';
+import { spectatorWad } from './dm-demos.js';
+import { DEMO_FILES } from './spectator-demos.js';
 
 const BUNDLES = new URL('../bundles/', import.meta.url).href;
 const EMULATORS = new URL('../vendor/js-dos/emulators/', import.meta.url).href;
@@ -28,6 +30,10 @@ function fetchBytes(name) {
 
 // Files made on the spot for this player, handed to js-dos after the game's own files.
 async function extraFiles(game, opts) {
+  if (opts.kind === 'spectate') {   // DOOM's own demo loop, playing our recorded deathmatches through player opts.view's eyes
+    const demos = await Promise.all(DEMO_FILES.map(fetchBytes));
+    return [makeZip([{ name: 'DEMOS.WAD', data: spectatorWad(demos, opts.view | 0) }])];
+  }
   if (!game.pilot) return [];
   const name = opts.pilot || 'PILOT';
   const template = await fetchBytes(game.pilot.template);
@@ -82,8 +88,12 @@ export class DosPC {
       theme: 'dark',
       ...(opts.kind === 'host' ? { startIpxServer: true } : {}),
       ...(opts.kind === 'join' ? { connectIpxAddress: String(opts.peerId) } : {}),
-      onEvent: (event) => {
-        if (event === 'ci-ready') { this.running = true; this.onReady?.(); }
+      onEvent: (event, ci) => {
+        if (event === 'ci-ready') {
+          this.running = true; this.onReady?.();
+          // DOOM stops on "this version has been modified, press enter" because of the demo WAD: press it
+          if (opts.kind === 'spectate') setTimeout(() => { try { ci.sendKeyEvent(257, true); setTimeout(() => ci.sendKeyEvent(257, false), 120); } catch { /* gone */ } }, 2500);
+        }
       },
     });
   }

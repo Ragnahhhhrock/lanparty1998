@@ -1,7 +1,6 @@
 // Procedural canvas textures: everything in the room is drawn here, no image files.
 import * as THREE from 'three';
 import { feedFresh, feedGlow } from './feed.js';
-import { drawScreen as drawDuel } from './spectator.js';
 
 const CRT_FONT = '"VT323", "Lucida Console", monospace';
 
@@ -971,7 +970,7 @@ export class Screen {
     this.t0 = seed * 3.7;
     this.message = '';
     this.feed = null;    // the picture of the player's game sent from their PC: { bitmap, at, glow } (see pushFeed)
-    this.bot = null;     // a regular playing a bot deathmatch here: { sim, index } (see js/spectator.js)
+    this.bot = null;     // a regular's bot deathmatch, played by the real DOOM: { sim: Spectator, index } (js/spectator.js)
     this.feedSeq = 0;
     this.draw(0);
   }
@@ -1271,7 +1270,7 @@ export class Screen {
   }
 
   remote(g, t) { // somebody else's game, seen over their shoulder
-    if (this.bot) return this.duel(g);
+    if (this.bot) return this.spectate(g);
     g.fillStyle = '#000000'; g.fillRect(0, 0, W, H);
     // a suggestion of a 90s shooter: grey walls, a brown floor, the status bar (token colours only)
     g.fillStyle = '#808080'; g.fillRect(0, 0, W, 90);       // --w98-shadow
@@ -1292,9 +1291,17 @@ export class Screen {
     this.tube(g);
   }
 
-  // spectator mode: a regular's bot deathmatch, drawn from their own eyes (js/spectator.js)
-  duel(g) {
-    drawDuel(g, this.bot.sim, this.bot.index, { w: W, h: H, font: CRT_FONT });
+  // spectator mode: the real DOOM, replaying a bot deathmatch through this regular's eyes (js/spectator.js)
+  spectate(g) {
+    const pic = this.bot.sim.picture(this.bot.index);
+    g.fillStyle = '#000000'; g.fillRect(0, 0, W, H);                                   // --crt-black
+    if (pic) {
+      g.imageSmoothingEnabled = true;
+      g.drawImage(pic, 0, 0, W, H);
+    } else {
+      this.text(g, 'DOOM', 10, 30, '#ffcc00', 22);                                      // --amber
+      this.text(g, 'LOADING DEMO LOOP...', 10, 54, '#aaaaaa', 16);                      // --dos-grey
+    }
     this.tube(g);
   }
 

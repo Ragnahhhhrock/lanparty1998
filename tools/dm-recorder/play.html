@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>DOOM demo player</title>
+<!-- Plays recorded deathmatches in the real DOS DOOM, the way the site does for spectator mode (js/spectator.js), so
+     a new demo can be checked by eye before it goes in bundles/. Open it from the site root:
+       /tools/dm-recorder/play.html?demos=dm-1.lmp,dm-2.lmp&view=0
+     Not part of the site. -->
+<link rel="stylesheet" href="/vendor/js-dos/js-dos.css">
+<style>body{margin:0;background:#000}#dos{width:640px;height:400px}</style>
+<div id="dos"></div>
+<script src="/vendor/js-dos/js-dos.js"></script>
+<script type="module">
+import { spectatorWad } from '/js/dm-demos.js';
+import { makeZip } from '/js/zip.js';
+const q = new URLSearchParams(location.search);
+const view = Number(q.get('view') || 0);
+const get = async (u) => new Uint8Array(await (await fetch(u)).arrayBuffer());
+const demos = await Promise.all((q.get('demos') || 'dm-1.lmp').split(',').map((n) => get('/bundles/' + n)));
+const game = await get('/bundles/doom-shareware.zip');
+window.__ci = null;
+window.__props = window.Dos(document.getElementById('dos'), {
+  url: '/bundles/conf-doom-spectate.jsdos',
+  initFs: [game, makeZip([{ name: 'DEMOS.WAD', data: spectatorWad(demos, view) }])],
+  pathPrefix: '/vendor/js-dos/emulators/',
+  autoStart: true, kiosk: true, backend: 'dosbox', backendLocked: true, mouseCapture: false,
+  onEvent: (event, ci) => { if (event === 'ci-ready') window.__ci = ci; },
+});
+</script>

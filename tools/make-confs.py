@@ -58,6 +58,10 @@ GAMES = {
     'duke':    dict(mem=32, solo='DUKE3D.EXE',  net=('lobby', 'SETUP.EXE')),
 }
 
+# Spectator mode (js/spectator.js): DOOM's own title and demo loop, with our recorded deathmatches slipped in as its
+# demos by a PWAD that the page makes (js/dm-demos.js). The demos are silent: nobody is listening on these PCs.
+SPECTATE = {'doom': 'DOOM.EXE -nosound -file DEMOS.WAD'}
+
 out = pathlib.Path(__file__).resolve().parent.parent / 'bundles'
 
 
@@ -76,3 +80,6 @@ for game, g in GAMES.items():
             write(f'conf-{game}-dm{n}.jsdos', g['mem'], command.format(n=n))
     else:
         write(f'conf-{game}-net.jsdos', g['mem'], command)
+
+for game, command in SPECTATE.items():
+    write(f'conf-{game}-spectate.jsdos', GAMES[game]['mem'], command)
