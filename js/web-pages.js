@@ -193,7 +193,7 @@ ${box('On the desktop', `<table class="w-tbl" cellspacing="0" cellpadding="0">
 <p class="w-more">Start > Programs > Games, or Start > Run.</p>`)}
 <a id="midnight" name="midnight"></a>
 ${box('At midnight', `<p><b>StarCraft.</b> Somebody kicks off a game at midnight and the chat says so. Free PCs with at least 32MB show it running; the rest show a DOS error. The game itself is not here, because it is not shareware, so sitting down still runs the shooter you chose.</p>`)}
-${box('Looks like a game, is not', `<p><b>The DUKE NUKEM 3D poster</b> on the wall is just a poster, and the characters are not here. The shareware episode is on the PCs, though, and has a box on the shelf. <b>The console under the TV</b> has four pads and a brawl on a loop. You can look at it. Six more game boxes and film posters are on the walls (IRON HYMN, VOID HARVEST and so on); they are all made up. The shelf on the left wall holds a box for each game that runs on the PCs. Those pictures are made up too.</p>`)}
+${box('Looks like a game, is not', `<p><b>The DUKE NUKEM 3D poster</b> on the wall is just a poster, and the characters are not here. The shareware episode is on the PCs, though, and has a box on the shelf. <b>The console under the TV</b> has four pads and a brawl on a loop. Press E at the TV for its prompt and bring your own cartridge files. Six more game boxes and film posters are on the walls (IRON HYMN, VOID HARVEST and so on); they are all made up. The shelf on the left wall holds a box for each game that runs on the PCs. Those pictures are made up too.</p>`)}
 <p><a href="howto.htm">How to start a deathmatch</a> | <a href="news.htm">What's new</a></p>`,
   },
 

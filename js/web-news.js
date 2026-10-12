@@ -13,6 +13,10 @@ export const NEWS = [
     link: ['/games.htm', 'All the games'],
   },
   {
+    date: '1998-02-06', kind: 'new', title: 'The console has a prompt',
+    text: 'Press E at the TV and the console boots to a C:\\N64> prompt on the glass. Type OPEN to point it at a folder of cartridge files on your own drive, DIR to list them, and a number or a name to run one. Nothing is supplied: the slot is empty until you bring a cartridge. Esc brings the prompt back, KEYS shows the layout, and the file never leaves your machine.',
+  },
+  {
     date: '1998-02-06', kind: 'new', title: 'The lights have a switch',
     text: 'There is a light switch on the back wall by the stairs door. Turn the ceiling tubes off and the room is nearly dark, and the monitors become the light: each one glows on the keyboard, the table and your face, in the colour of whatever is on it. Teal for Windows, green for Solitaire, grey for DOS. The switch has a small orange dot so you can find it.',
   },
@@ -109,7 +113,7 @@ export const NEWS = [
   },
   {
     date: '1998-01-26', kind: 'new', title: 'The lounge',
-    text: 'Plaid couch, a big CRT TV on a stand, a console with four wired pads and a coffee table loaded with cans and pizza. The TV loops a four-player brawl. It is not playable; the pads are for show.',
+    text: 'Plaid couch, a big CRT TV on a stand, a console with four wired pads and a coffee table loaded with cans and pizza. The TV loops a four-player brawl until you sit at the console, which takes cartridges you bring yourself. The pads are for show.',
   },
   {
     date: '1998-01-26', kind: 'new', title: 'The regulars dance',

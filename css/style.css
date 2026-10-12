@@ -120,11 +120,13 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
     radial-gradient(circle at 28% 62%, rgba(242,138,28,.35) 0 18px, transparent 34px),
     radial-gradient(circle at 34% 58%, rgba(242,138,28,.25) 0 10px, transparent 22px),
     radial-gradient(circle at 71% 40%, rgba(242,138,28,.3) 0 14px, transparent 28px); }
-#seated-bar { position: fixed; left: 50%; bottom: calc(var(--taskbar-h) + 14px); transform: translateX(-50%); z-index: var(--z-seated);
+#seated-bar, #console-bar { position: fixed; left: 50%; bottom: calc(var(--taskbar-h) + 14px); transform: translateX(-50%); z-index: var(--z-seated);
   display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: center;
   color: var(--paper); font-size: var(--text-ui-sm); max-width: calc(100vw - 32px);
   background: var(--bar-bg); padding: 6px 10px; }
-#seated-status { font: var(--text-crt-sm)/1 var(--font-crt); color: var(--phosphor); min-width: 22ch; }
+#seated-status, #console-status { font: var(--text-crt-sm)/1 var(--font-crt); color: var(--phosphor); min-width: 22ch; }
+/* the console's emulator lives in this frame, out of sight: the room reads its pixels onto the TV */
+.n64-frame { position: fixed; right: 0; bottom: 0; width: 640px; height: 480px; border: 0; opacity: 0; pointer-events: none; z-index: -1; }
 
 #schedule { font-size: var(--text-ui-xs); color: var(--w98-text); }
 #netstatus { font-size: var(--text-ui-xs); color: var(--w98-text); border-top: 1px solid var(--w98-shadow); padding-top: var(--space-1); }

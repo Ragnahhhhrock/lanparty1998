@@ -1187,6 +1187,17 @@ export function couchFabric() {
   return tex(c, [1, 1]);
 }
 
+// Scanlines for the TV's glass while the console is on (a plane of this sits just in front of the picture).
+// Black at 22% on every other line; the glass shows about 480 lines, so the pitch matches.
+export function crtScanlines() {
+  const [c, g] = canvas(4, 480);
+  g.fillStyle = 'rgba(0,0,0,.22)';
+  for (let y = 1; y < 480; y += 2) g.fillRect(0, y, 4, 1);
+  const t = tex(c);
+  t.anisotropy = 1;
+  return t;
+}
+
 // What the four of them are playing on the TV: a four-player arena brawl, drawn flat.
 // Parody and generic on purpose: no real game, character or console. Colours are the four
 // pad colours (--floppy-red, --floppy-blue, --floppy-yellow, --floppy-green) on --nacho-navy.
