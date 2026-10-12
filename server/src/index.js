@@ -1,10 +1,12 @@
 // LAN Party '98 room server: one Durable Object per room keeps track of who is in the
-// basement, where they're standing, which PC they're sitting at, and the current
+// basement, where they're standing, which PC (or BYOC bench) they're sitting at, and the current
 // deathmatch. Game traffic itself does not pass through here (DOOM's IPX packets go
 // peer to peer over WebRTC); this only coordinates.
 
 const MAX_PLAYERS = 16;
-const PCS = 6;
+const PCS = 8;           // six club PCs, then the two BYOC benches (seats 6 and 7)
+const CLUB_PCS = 6;
+const BENCHES = 2;
 // games a deathmatch can be hosted for: ids from js/games.js (an unknown one becomes DOOM)
 const GAMES = new Set(['doom', 'heretic', 'hexen', 'quake', 'descent']);
 // shirt colours: tokens --shirt-1 .. --shirt-8 in css/tokens.css
@@ -24,6 +26,19 @@ export default {
     return new Response('Bad command or file name\n', { status: 404 });
   },
 };
+
+// A PC build (js/build.js) from a client: part ids only, so it can be passed on to the other players
+const BUILD_IDS = ['crt', 'cpu', 'ram', 'cdrom', 'cdr', 'nic', 'audio', 'keyboard', 'mouse', 'mat'];
+const id12 = (v) => (typeof v === 'string' && /^[A-Za-z0-9]{1,12}$/.test(v) ? v : null);
+function cleanBuild(b) {
+  if (!b || typeof b !== 'object') return null;
+  const out = {};
+  for (const k of BUILD_IDS) out[k] = id12(b[k]);
+  out.hdd = (Array.isArray(b.hdd) ? b.hdd : []).slice(0, 3).map(id12);
+  while (out.hdd.length < 3) out.hdd.push(null);
+  out.floppy = Math.min(2, Math.max(0, Number(b.floppy) | 0));
+  return out;
+}
 
 const clean = (s, n) => String(s ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
 const num = (v, lo, hi) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : 0);
@@ -50,7 +65,7 @@ export class Room {
     const used = new Set(sockets.map((ws) => this.info(ws)?.id));
     let id = crypto.randomUUID().slice(0, 8);
     while (used.has(id)) id = crypto.randomUUID().slice(0, 8);
-    server.serializeAttachment({ id, name: null, color: null, x: 0, z: 1.2, yaw: 0, pc: null });
+    server.serializeAttachment({ id, name: null, color: null, x: 0, z: 1.2, yaw: 0, pc: null, bench: null, build: null });
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -120,11 +135,24 @@ export class Room {
         const pc = Number(msg.pc);
         if (!Number.isInteger(pc) || pc < 0 || pc >= PCS) return;
         const owner = this.players().find((o) => o.pc === pc);
+        if (pc >= CLUB_PCS && p.bench !== pc - CLUB_PCS) return;  // a bench is only for the player who set it up
         if (owner && owner.id !== p.id) { this.send(ws, { t: 'denied', pc, by: owner.name }); return; }
         if (p.pc !== null && p.pc !== pc) this.dropFromMatch(p.id);
         p.pc = pc;
         this.save(ws, p);
         this.broadcast({ t: 'seat', id: p.id, pc });
+        return;
+      }
+      case 'bench': {
+        // "I have a PC to set up": hand out the first free bench and tell everyone what is on it
+        const taken = new Set(this.players().filter((o) => o.id !== p.id && o.bench !== null).map((o) => o.bench));
+        let bench = p.bench !== null && !taken.has(p.bench) ? p.bench : null;
+        for (let b = 0; bench === null && b < BENCHES; b++) if (!taken.has(b)) bench = b;
+        p.bench = bench;
+        p.build = bench === null ? null : cleanBuild(msg.build);
+        if (bench === null && p.pc !== null && p.pc >= CLUB_PCS) { p.pc = null; this.broadcast({ t: 'seat', id: p.id, pc: null }); this.dropFromMatch(p.id); }
+        this.save(ws, p);
+        this.broadcast({ t: 'bench', id: p.id, bench, build: p.build });
         return;
       }
       case 'stand': {

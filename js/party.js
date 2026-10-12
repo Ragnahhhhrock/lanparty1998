@@ -2,7 +2,9 @@
 // network, the heat, the RAM and the file sharing. DOM-free on purpose: main.js feeds it
 // time and reads state back, so it can be tested in plain node.
 export const SEC_PER_GAME_MIN = 10;   // one in-game minute is ten real seconds
-export const PC_COUNT = 6;
+export const PC_COUNT = 6;          // the club's PCs
+export const BENCH_COUNT = 2;       // and the two benches for the PC you built (js/bench-plan.js): PC-07 and PC-08, seats 6 and 7
+export const PC_TOTAL = PC_COUNT + BENCH_COUNT;
 
 export const BURNER = {
   pc: 3,                 // PC-04 is the only box with a CD-R drive
@@ -98,7 +100,11 @@ export class Party extends EventTarget {
     this.job = null;       // the burn in progress: { kind, left, total, abused }
 
     this.net = 'coax';     // coax -> hub -> (borrowed) switch
-    this.pcs = Array.from({ length: PC_COUNT }, () => ({ linkDown: false, oc: 0, heat: 0, crashed: false, hot: false, ram: RAM.start, share: 'broken', boot: 0 }));
+    this.pcs = Array.from({ length: PC_TOTAL }, (_, i) => (i < PC_COUNT
+      ? { linkDown: false, oc: 0, heat: 0, crashed: false, hot: false, ram: RAM.start, share: 'broken', boot: 0 }
+      // a bench: nothing there until somebody's PC is switched on. on: running; cabled: the network lead is fitted;
+      // ocTable: the overclock steps for the CPU in it; burnSpeed: its CD-R, 0 for none
+      : { linkDown: false, oc: 0, heat: 0, crashed: false, hot: false, ram: 0, share: 'broken', boot: 0, bench: true, on: false, cabled: false, ocTable: null, burnSpeed: 0 }));
     this.leadIn = true;    // the extension lead is plugged into the front row's board
     this.fixes = new Map(); // pc -> the file sharing job in progress
     this.swapped = 0;       // MB that have gone round the network
@@ -123,6 +129,10 @@ export class Party extends EventTarget {
   // PCs with the memory to run StarCraft
   canRunStarcraft(i) { return this.pcs[i].ram >= RAM.starcraft; }
   starcraftBoxes() { return this.pcs.filter((pc) => pc.ram >= RAM.starcraft).length; }
+  // PCs in the room: the club's six and whichever benches are running
+  pcCount() { return PC_COUNT + this.pcs.filter((pc) => pc.bench && pc.on).length; }
+  isBench(i) { return !!this.pcs[i]?.bench; }
+  ocTable(i) { return this.pcs[i].ocTable ?? OC; }
 
   tickNight() {
     for (const a of ANNOUNCEMENTS) {
@@ -180,7 +190,7 @@ export class Party extends EventTarget {
       if (step.reboot && !f.rebooted) { // the PC goes down for a restart, burner or not
         f.rebooted = true;
         this.emit('pc-reboot', { pc: i });
-        if (i === BURNER.pc && this.job) {
+        if (this.job?.pc === i) {
           this.job = null;
           this.coasters++;
           this.emit('coaster', { reason: 'reboot' });
@@ -239,7 +249,7 @@ export class Party extends EventTarget {
     return true;
   }
 
-  canFitRam(i) { return this.sticks > 0 && this.pcs[i].ram + RAM.stick <= RAM.max; }
+  canFitRam(i) { return this.sticks > 0 && this.pcs[i].ram > 0 && this.pcs[i].ram + RAM.stick <= RAM.max; }
   fitRam(i) {
     if (!this.canFitRam(i)) return false;
     this.sticks--;
@@ -255,7 +265,7 @@ export class Party extends EventTarget {
 
   // how much of the fan's blast PC i is getting right now. It sweeps, so never none and never all.
   fanFactor(i) {
-    const side = i < PC_COUNT / 2 ? -1 : 1;
+    const side = LEAD.pcs.includes(i) ? 1 : -1;   // the benches are on the back table
     return 0.45 + 0.55 * Math.max(0, side * this.fanSweep());
   }
 
@@ -268,10 +278,10 @@ export class Party extends EventTarget {
 
   setOverclock(i, level) {
     const pc = this.pcs[i];
-    pc.oc = Math.max(0, Math.min(OC.length - 1, level));
+    pc.oc = Math.max(0, Math.min(this.ocTable(i).length - 1, level));
     this.emit('oc', { pc: i, level: pc.oc });
   }
-  cycleOverclock(i) { this.setOverclock(i, (this.pcs[i].oc + 1) % OC.length); }
+  cycleOverclock(i) { this.setOverclock(i, (this.pcs[i].oc + 1) % this.ocTable(i).length); }
 
   reboot(i) {
     const pc = this.pcs[i];
@@ -292,7 +302,7 @@ export class Party extends EventTarget {
         return;
       }
       if (pc.crashed) return;
-      let rate = OC[pc.oc].heat;
+      let rate = this.ocTable(i)[pc.oc].heat;
       if (this.fan.on) rate -= FAN.cool * this.fanFactor(i);
       pc.heat = Math.max(0, Math.min(HEAT.crash, pc.heat + rate * dt));
       if (!pc.hot && pc.heat >= HEAT.warn) { pc.hot = true; this.emit('hot', { pc: i }); }
@@ -302,7 +312,7 @@ export class Party extends EventTarget {
         pc.hot = false;
         this.emit('crash', { pc: i });
         this.breakShare(i, 'crash');
-        if (i === BURNER.pc && this.job) { // blue screen in the middle of a write
+        if (this.job?.pc === i) { // blue screen in the middle of a write
           this.job = null;
           this.coasters++;
           this.emit('coaster', { reason: 'crash' });
@@ -322,7 +332,11 @@ export class Party extends EventTarget {
 
   // coax is one shared cable: a single loose T-connector takes the whole segment down
   netDown() { return this.net === 'coax' && this.pcs.some((p) => p.linkDown); }
-  pcLinkUp(i) { return this.net === 'coax' ? !this.netDown() : !this.pcs[i].linkDown; }
+  pcLinkUp(i) {
+    const pc = this.pcs[i];
+    if (pc.bench && !pc.cabled) return false;   // no network lead fitted: it is on its own
+    return this.net === 'coax' ? !this.netDown() : !pc.linkDown;
+  }
 
   dropLink(i, why) {
     if (this.pcs[i].linkDown) return false;
@@ -340,7 +354,7 @@ export class Party extends EventTarget {
 
   /* ---- power: the extension lead to the front row ---- */
 
-  pcPowered(i) { return this.leadIn || !LEAD.pcs.includes(i); }
+  pcPowered(i) { const pc = this.pcs[i]; return pc.bench ? pc.on : this.leadIn || !LEAD.pcs.includes(i); }
   pcBooting(i) { return this.pcs[i].boot > 0; }
   // the PCs that are dark right now
   deadPcs() { return LEAD.pcs.filter((i) => !this.pcPowered(i)); }
@@ -357,7 +371,7 @@ export class Party extends EventTarget {
       if (pc.share === 'ok') pc.share = 'broken';
       this.fixes.delete(i);
     }
-    if (this.job && !this.pcPowered(BURNER.pc)) {
+    if (this.job && !this.pcPowered(this.job.pc)) {
       this.job = null;
       this.coasters++;
       this.emit('coaster', { reason: 'power' });
@@ -377,6 +391,44 @@ export class Party extends EventTarget {
       pc.heat = 0;
     }
     this.emit('power-up', { pcs: [...LEAD.pcs] });
+    return true;
+  }
+
+  /* ---- the PC you built ---- */
+
+  // Switched on and past its POST. ocTable: js/build.js ocFor(cpu); burnSpeed: the CD-R's write speed, 0 for none.
+  benchOn(i, { ram, ocTable, burnSpeed = 0 }) {
+    const pc = this.pcs[i];
+    if (!pc?.bench || pc.on) return false;
+    Object.assign(pc, { on: true, ram, ocTable, burnSpeed, oc: 0, heat: 0, crashed: false, hot: false, linkDown: false, share: 'broken', boot: 0 });
+    this.emit('bench-on', { pc: i });
+    return true;
+  }
+
+  // The plug came out, or somebody pressed the button: nothing it was doing survives
+  benchOff(i, why = 'switch') {
+    const pc = this.pcs[i];
+    if (!pc?.bench || !pc.on) return false;
+    pc.on = false; pc.hot = false; pc.crashed = false;
+    if (pc.share === 'ok') pc.share = 'broken';
+    this.fixes.delete(i);
+    if (this.job?.pc === i) {
+      this.job = null;
+      this.coasters++;
+      this.emit('coaster', { reason: 'power' });
+    }
+    this.emit('bench-off', { pc: i, why });
+    return true;
+  }
+
+  // The network lead went in or came out
+  benchCabled(i, cabled) {
+    const pc = this.pcs[i];
+    if (!pc?.bench || pc.cabled === cabled) return false;
+    pc.cabled = cabled;
+    pc.linkDown = false;
+    if (!cabled && pc.share === 'ok') pc.share = 'broken';
+    this.emit(cabled ? 'link-up' : 'link-down', { pc: i, why: 'cable' });
     return true;
   }
 
@@ -457,14 +509,17 @@ export class Party extends EventTarget {
   /* ---- the CD burner ---- */
 
   // game minutes a burn takes: 74 minutes of disc at 2x is 37 minutes of waiting
-  burnMinutes() { return BURNER.discMinutes / BURNER.speed; }
+  burnMinutes(speed = BURNER.speed) { return BURNER.discMinutes / speed; }
 
-  canBurn() { return !this.job && this.cash >= BURNER.blankCost && this.pcPowered(BURNER.pc); }
+  // pc: the box with the burner in it, PC-04 or a bench with a CD-R of its own
+  canBurn(pc = BURNER.pc) { return !this.job && this.cash >= BURNER.blankCost && this.pcPowered(pc) && this.burnSpeedOf(pc) > 0; }
+  burnSpeedOf(pc = BURNER.pc) { return pc === BURNER.pc ? BURNER.speed : this.pcs[pc]?.burnSpeed ?? 0; }
 
-  startBurn(kind = 'MIX') {
-    if (!DISCS[kind] || !this.canBurn()) return false;
+  startBurn(kind = 'MIX', pc = BURNER.pc) {
+    if (!DISCS[kind] || !this.canBurn(pc)) return false;
     this.spend(BURNER.blankCost);
-    this.job = { kind, left: this.burnMinutes(), total: this.burnMinutes(), abused: 0 };
+    const mins = this.burnMinutes(this.burnSpeedOf(pc));
+    this.job = { kind, left: mins, total: mins, abused: 0, pc, speed: this.burnSpeedOf(pc) };
     this.emit('burn-start', this.job);
     return true;
   }
@@ -515,7 +570,7 @@ export class Party extends EventTarget {
     }
     if (this.job) {
       // sitting at the burner and playing DOOM starves the write buffer
-      if (ctx.seatedPc === BURNER.pc) {
+      if (ctx.seatedPc === this.job.pc) {
         this.job.abused += dt;
         if (this.job.abused > BURNER.underrunSeconds) {
           this.job = null;

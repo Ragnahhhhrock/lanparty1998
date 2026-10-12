@@ -1,6 +1,7 @@
 // Logic tests for js/party.js. Run: node tools/party.test.mjs
 import assert from 'node:assert/strict';
-import { PIZZA, Party, BURNER, DISCS, SEC_PER_GAME_MIN, SHOP, DAD, PC_COUNT, OC, HEAT, FAN, RAM, NIGHT, ANNOUNCEMENTS, SHARE_STEPS, SHARE_FAIL, SWAP_MB_PER_SEC, WAREZ, LEAD } from '../js/party.js';
+import { PIZZA, Party, BURNER, DISCS, SEC_PER_GAME_MIN, SHOP, DAD, PC_COUNT, OC, HEAT, FAN, RAM, NIGHT, ANNOUNCEMENTS, SHARE_STEPS, SHARE_FAIL, SWAP_MB_PER_SEC, WAREZ, LEAD, BENCH_COUNT, PC_TOTAL } from '../js/party.js';
+import { ocFor, PARTS } from '../js/build.js';
 
 const run = (p, seconds, ctx = {}) => { for (let i = 0; i < seconds * 10; i++) p.tick(0.1, ctx); };
 let n = 0;
@@ -298,7 +299,7 @@ test('the burner PC blue screening mid-write makes a coaster', () => {
 
 // ---- RAM from Singapore ----
 test('every PC starts on 16MB', () => {
-  assert.ok(new Party().pcs.every((pc) => pc.ram === 16));
+  assert.ok(new Party().pcs.slice(0, PC_COUNT).every((pc) => pc.ram === 16));
 });
 
 test('Singapore RAM is a lot cheaper than the shop', () => {
@@ -546,7 +547,7 @@ test('the front row, burner included, is on the lead and the back row is not', (
   assert.deepEqual(LEAD.pcs, [3, 4, 5]);
   assert.ok(LEAD.pcs.includes(BURNER.pc));
   const p = new Party();
-  assert.ok(p.pcs.every((_, i) => p.pcPowered(i)));
+  assert.ok(p.pcs.slice(0, PC_COUNT).every((_, i) => p.pcPowered(i)));
   p.pullLead('test');
   assert.deepEqual(p.deadPcs(), [3, 4, 5]);
   assert.ok([0, 1, 2].every((i) => p.pcPowered(i)));
@@ -610,7 +611,7 @@ test('plugging the lead back in boots every box cold, and the shares stay gone',
   assert.ok(p.plugLead());
   assert.equal(p.plugLead(), false);
   assert.deepEqual(events, [[3, 4, 5]]);
-  assert.ok(p.pcs.every((_, i) => p.pcPowered(i)));
+  assert.ok(p.pcs.slice(0, PC_COUNT).every((_, i) => p.pcPowered(i)));
   assert.ok(LEAD.pcs.every((i) => p.pcBooting(i)));
   assert.equal(p.pcs[3].crashed, false);
   assert.equal(p.pcs[3].heat, 0);
@@ -618,6 +619,75 @@ test('plugging the lead back in boots every box cold, and the shares stay gone',
   run(p, LEAD.bootSeconds + 1);
   assert.ok(LEAD.pcs.every((i) => !p.pcBooting(i)));
   assert.ok(p.canBurn());
+});
+
+/* ---- the PC you built ---- */
+
+test('the benches start empty: no power, no memory, nothing in the count', () => {
+  const p = new Party();
+  assert.equal(p.pcs.length, PC_TOTAL);
+  for (let i = PC_COUNT; i < PC_TOTAL; i++) assert.ok(!p.pcPowered(i) && !p.pcLinkUp(i) && p.pcs[i].ram === 0);
+  assert.equal(p.pcCount(), PC_COUNT);
+  assert.equal(p.starcraftBoxes(), 0);
+  assert.equal(p.sharing(PC_COUNT), false);
+});
+
+test('a bench PC switched on joins the room, and its own CPU sets how hot it runs', () => {
+  const p = new Party();
+  const table = ocFor(PARTS.cpu.p450);
+  assert.ok(p.benchOn(PC_COUNT, { ram: 64, ocTable: table }));
+  assert.ok(p.pcPowered(PC_COUNT));
+  assert.equal(p.pcCount(), PC_COUNT + 1);
+  assert.equal(p.starcraftBoxes(), 1);
+  assert.equal(p.ocTable(PC_COUNT), table);
+  p.fan.on = false;
+  p.setOverclock(PC_COUNT, 2);
+  for (let k = 0; k < 800 && !p.pcs[PC_COUNT].crashed; k++) p.tickHeat(1);
+  assert.ok(p.pcs[PC_COUNT].crashed, 'a 450 on extra volts with no fan blue screens in the end');
+  assert.equal(p.benchOn(PC_COUNT, { ram: 64, ocTable: table }), false);
+});
+
+test('a bench PC is only on the network once its lead is fitted', () => {
+  const p = new Party();
+  p.benchOn(PC_COUNT, { ram: 32, ocTable: ocFor(PARTS.cpu.p300) });
+  assert.equal(p.pcLinkUp(PC_COUNT), false);
+  p.benchCabled(PC_COUNT, true);
+  assert.equal(p.pcLinkUp(PC_COUNT), true);
+  assert.equal(p.canFixShare(PC_COUNT), true);
+  p.dropLink(PC_COUNT, 'loose');
+  assert.equal(p.pcLinkUp(0), false, 'a loose T-connector on the bench takes the coax down');
+  p.setNet('hub', 'delivered');
+  assert.equal(p.pcLinkUp(0), true);
+});
+
+test('pulling the plug on a bench PC loses its share and ruins a disc being written', () => {
+  const p = new Party();
+  p.benchOn(PC_COUNT + 1, { ram: 32, ocTable: ocFor(PARTS.cpu.p300), burnSpeed: 4 });
+  p.benchCabled(PC_COUNT + 1, true);
+  p.pcs[PC_COUNT + 1].share = 'ok';
+  assert.ok(p.startBurn('MIX', PC_COUNT + 1));
+  assert.equal(p.job.total, 74 / 4);
+  assert.equal(p.burnSpeedOf(PC_COUNT + 1), 4);
+  assert.ok(p.benchOff(PC_COUNT + 1, 'power'));
+  assert.equal(p.job, null);
+  assert.equal(p.coasters, 1);
+  assert.equal(p.pcs[PC_COUNT + 1].share, 'broken');
+  assert.equal(p.canBurn(PC_COUNT + 1), false);
+});
+
+test('only a bench with a CD-R can burn, and the club burner is untouched', () => {
+  const p = new Party();
+  p.benchOn(PC_COUNT, { ram: 32, ocTable: ocFor(PARTS.cpu.p300), burnSpeed: 0 });
+  assert.equal(p.canBurn(PC_COUNT), false);
+  assert.equal(p.burnSpeedOf(), BURNER.speed);
+  assert.ok(p.startBurn('MIX'));
+  assert.equal(p.job.pc, BURNER.pc);
+});
+
+test('benches sit with the back row for the fan', () => {
+  const p = new Party();
+  assert.equal(p.fanFactor(PC_COUNT), p.fanFactor(0));
+  assert.equal(BENCH_COUNT, 2);
 });
 
 console.log(`${n} passed`);

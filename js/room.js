@@ -1,7 +1,8 @@
-// Builds the basement: walls, tables, six PC stations, the hub, cables and the snack table.
+// Builds the basement: walls, tables, six PC stations (and two empty benches for the PC you build), the hub, cables and the snack table.
 import * as THREE from 'three';
 import * as T from './textures.js';
 import { buildPower } from './power.js';
+import { buildBenches } from './bench.js';
 import { BURNER } from './party.js';
 import { headphones } from './headphones.js';
 import { GAME_IDS } from './games.js';
@@ -275,6 +276,7 @@ const STATIONS = [
 //  hub:    8-port 10BASE-T hub on the snack table, a cat5 lead from every tower
 //  switch: a borrowed 16-port switch in the hub's spot, same leads
 // out.floorCables lists the bits of cable lying across the floor, for tripping over.
+const BENCH_X = [-1.4, 1.4];   // js/bench-plan.js BENCHES
 function buildNetwork(scene, out) {
   const tube = (pts, radius, mat) => {
     const path = new THREE.CurvePath();
@@ -344,9 +346,25 @@ function buildNetwork(scene, out) {
   const coaxMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.5 });
   const steelMat = new THREE.MeshStandardMaterial({ color: 0x6b6b6b, metalness: 0.6, roughness: 0.4 });
   const under = (i) => new THREE.Vector3(out.stations[i].cableStart.x, 0.3, out.stations[i].cableStart.z);
-  const bus = [under(0), under(1), under(2), new THREE.Vector3(4.55, 0.3, under(2).z), new THREE.Vector3(4.6, 0.012, -3.9),
+  // The bus, with the BYOC benches spliced in when both of their coax leads are fitted (js/bench.js out.setBenchCoax).
+  const busAround = (via) => [under(0), ...(via[0] ? [via[0]] : []), under(1), ...(via[1] ? [via[1]] : []), under(2), new THREE.Vector3(4.55, 0.3, under(2).z), new THREE.Vector3(4.6, 0.012, -3.9),
     new THREE.Vector3(4.6, 0.012, 3.9), new THREE.Vector3(4.55, 0.3, under(5).z), under(5), under(4), under(3)];
-  gear.coax.add(tube(bus, 0.006, coaxMat));
+  let busMesh = tube(busAround([null, null]), 0.006, coaxMat);
+  gear.coax.add(busMesh);
+  const benchBus = [null, null], benchDrops = [null, null];
+  out.setBenchCoax = (id, through, stubs) => {
+    const x = BENCH_X[id];
+    benchBus[id] = through ? new THREE.Vector3(x + 0.52, 0.3, -4.25 - 0.32) : null;
+    gear.coax.remove(busMesh);
+    busMesh = tube(busAround(benchBus), 0.006, coaxMat);
+    gear.coax.add(busMesh);
+    if (benchDrops[id]) { gear.coax.remove(benchDrops[id]); benchDrops[id] = null; }
+    if (through) {
+      const st = out.stations[6 + id];
+      benchDrops[id] = tube([st.cableStart.clone(), benchBus[id]], 0.005, coaxMat);
+      gear.coax.add(benchDrops[id]);
+    }
+  };
   out.floorCables.push({ pc: null, kind: 'coax', pts: Array.from({ length: 40 }, (_, k) => new THREE.Vector3(4.6, 0.012, -3.9 + (7.8 * k) / 39)) });
   out.tConns = [];
   out.stations.forEach((st, i) => {
@@ -900,7 +918,7 @@ function pizzaBox(slices = 8) {
 
 // Half-eaten pizzas lying about, and the ones that get delivered. out.pizzaBoxes holds them all.
 const PIZZA_SPOTS = [ // where deliveries are put down: x, y, z, yaw
-  [1.4, 0, 4.25, 0.3], [-1.4, 0, -4.25, 2.6], [4.0, 0, 4.25, 3.3], [-4.0, 0, -4.25, 0.1],
+  [1.4, 0, 4.25, 0.3], [4.0, 0, 4.25, 3.3], [-4.0, 0, -4.25, 0.1],   // not the back table's middle: that is where the BYOC benches are
 ];
 function buildPizza(scene, out) {
   out.pizzaBoxes = [];
@@ -916,7 +934,7 @@ function buildPizza(scene, out) {
   };
   // already on the go when you walk in
   place(-5.45, TABLE_Y, 0.58, 0.2, 3);   // the snack table
-  place(1.4, TABLE_Y, -4.25, 2.9, 2);    // between PC-02 and PC-03
+  place(1.95, TABLE_Y, 4.2, 2.9, 2);     // between PC-05 and PC-06
   place(-1.4, TABLE_Y, 4.25, 0.5, 4);    // between PC-04 and PC-05
   place(-3.6, 0, -2.4, 0.9, 1);          // on the carpet, where somebody put it down
   place(COFFEE.x, COFFEE.top, COFFEE.z, Math.PI / 2 + 0.1, 5); // the coffee table, lid toward the TV
@@ -1094,13 +1112,13 @@ function buildMedia(scene, out) {
   // ---- between the machines, in the gaps the pizza boxes leave
   put(scene, diskCase(true, 7), 0.95, TABLE_Y, -4.56, 0.12);
   put(scene, diskCase(false, 5), -2.0, TABLE_Y, -4.56, -0.1);
-  put(scene, pack(), -0.85, TABLE_Y, -4.56, 0.3);
+  put(scene, pack(), -2.3, TABLE_Y, 4.56, 0.3);
   put(scene, diskCase(false, 8), 0.95, TABLE_Y, 4.56, 0.2);
   put(scene, diskCase(true, 4), 2.0, TABLE_Y, 4.56, 3.0);
   put(scene, jewel(3, 'cdr'), -0.85, TABLE_Y, 4.56, 3.3);
   put(scene, tub(), 3.85, TABLE_Y, -4.25, 0.05);            // the back table's far end
   put(scene, spindle(), -3.85, TABLE_Y, 4.25, 0);           // the front table's far end
-  loose(scene, 2.0, TABLE_Y, -4.0, 0.9); loose(scene, -2.05, TABLE_Y, 4.0, 2.3);
+  loose(scene, 2.2, TABLE_Y, -4.0, 0.9); loose(scene, -2.05, TABLE_Y, 4.0, 2.3);
 
   // ---- the snack table: a spindle, a case and a couple of loose disks round the Nachoz
   put(scene, spindle(), -5.4, TABLE_Y, -0.46, 0);
@@ -1170,7 +1188,7 @@ function buildGameShelf(scene) {
 // Decoration only, so nothing is interactive. The spots keep clear of the pizza boxes, cans, bags and disks.
 const BOX_SPOTS = [
   // the back table
-  ['quake', -4.42, TABLE_Y, -4.2, 0.5], ['hexen', -1.9, TABLE_Y, -4.0, -0.4], ['doom', 4.35, TABLE_Y, -4.2, 2.3],
+  ['quake', -4.42, TABLE_Y, -4.2, 0.5], ['hexen', -2.0, TABLE_Y, -4.0, -0.4], ['doom', 4.35, TABLE_Y, -4.2, 2.3],
   ['descent', 4.35, TABLE_Y + BOX.d, -4.2, 2.9],                                    // on top of that one
   // the front table
   ['heretic', -4.42, TABLE_Y, 4.15, 3.4], ['doom', 4.42, TABLE_Y, 4.2, 5.9], ['quake', 2.1, TABLE_Y, 4.0, 0.2],
@@ -1437,6 +1455,7 @@ export function buildRoom(scene) {
   buildLooseBoxes(scene, out);
   buildChips(scene, out);
   buildPower(scene, out, { tableY: TABLE_Y });
+  buildBenches(scene, out, { chair: foldingChair });
 
   // posters and the scoreboard
   const posterMat = (t) => new THREE.MeshStandardMaterial({ map: t, roughness: 0.9 });

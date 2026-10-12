@@ -3,7 +3,8 @@
 // The layout is in js/power-plan.js (pure data); the rules (what loses power) are in js/party.js.
 //
 // buildPower(scene, out, env) adds to the room and puts on `out`:
-//   out.setPower(i, on)       a PC's screen, LEDs and glow, on or off
+//   out.setPower(i, on)       a PC's screen, LEDs and glow, on or off (the six club PCs; js/bench.js wraps it for the benches)
+//   out.addGlow(g, mon, light) a CRT's glow, for the BYOC benches
 //   out.setLead(plugged)      the extension lead: plugged into the wall, or lying on the floor with the plug out
 //   out.updatePower(dt)       fades the room between lit and dark, flickers the tubes, drives the CRT glow
 //   out.setLights(on, instant), out.toggleLights(), out.lightsOn
@@ -265,8 +266,10 @@ export function buildPower(scene, out, env) {
   out.stations.forEach((st, i) => { rigs[i].glow = addGlow(st.group, st.monitor, true); });
   (out.gamerPcs ?? []).forEach((gp, k) => { gp.glow = addGlow(gp.group, gp.mon, false); gp.screen = out.gamerScreens[k]; });
 
+  out.addGlow = addGlow;   // the BYOC benches (js/bench.js) add their own, and out.benchGlows is what updatePower drives for them
   out.setPower = (i, on) => {
     const r = rigs[i];
+    if (!r) return;
     r.glow.on = on;
     r.mon.screen.material.color.setHex(on ? 0xffffff : 0x040404);
     r.mon.led?.material.color.setHex(on ? 0x3cff5a : 0x0a2a10);
@@ -312,8 +315,9 @@ export function buildPower(scene, out, env) {
         glow.light.intensity = live * (0.08 + 0.9 * dark) * gain * (1 + 0.03 * Math.sin(clock * 55));
       }
     };
-    out.stations.forEach((st, i) => apply(rigs[i].glow, st.screen));
+    out.stations.forEach((st, i) => rigs[i] && apply(rigs[i].glow, st.screen));
     (out.gamerPcs ?? []).forEach((gp) => gp.screen && apply(gp.glow, gp.screen));
+    (out.benchGlows ?? []).forEach((b) => apply(b.glow, b.screen));
   };
   out.updatePower(0);
   out.setLead(true);
