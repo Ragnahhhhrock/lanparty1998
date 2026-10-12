@@ -49,6 +49,46 @@ export function fizz() {
   burst(t + 0.05, 1.1, 6000, 0.7, 0.25, 'highpass'); // the hiss
 }
 
+// a can of cola coming open: the ring-pull tab lifting with a tin "tik", then the crack and the hiss
+export function canOpen(at = 0) {
+  if (!ctx) return;
+  const t = ctx.currentTime + at;
+  const tink = ctx.createOscillator(); tink.type = 'triangle';
+  tink.frequency.setValueAtTime(3400, t);
+  tink.frequency.exponentialRampToValueAtTime(2300, t + 0.07);
+  const tg = ctx.createGain();
+  tg.gain.setValueAtTime(0.0001, t);
+  tg.gain.linearRampToValueAtTime(0.22, t + 0.004);
+  tg.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+  tink.connect(tg).connect(master); tink.start(t); tink.stop(t + 0.1);
+  burst(t, 0.03, 5200, 2, 0.35);                          // the click of the tab
+  const o = t + 0.3;                                      // the seal goes
+  burst(o, 0.1, 1800, 1.2, 0.7);                          // the pop
+  burst(o + 0.03, 1.0, 6500, 0.7, 0.3, 'highpass');       // the pssht
+  burst(o + 0.05, 0.6, 3200, 0.6, 0.12);                  // bubbles settling
+}
+
+// n swallows of cola: each a low wet "glk" as the throat closes, then a breath out ("ahh")
+export function gulp(n = 2, at = 0) {
+  if (!ctx) return;
+  const t = ctx.currentTime + at;
+  for (let i = 0; i < n; i++) {
+    const g0 = t + i * 0.42;
+    const osc = ctx.createOscillator(); osc.type = 'sine';
+    osc.frequency.setValueAtTime(230 + Math.random() * 30, g0);
+    osc.frequency.exponentialRampToValueAtTime(110, g0 + 0.12);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, g0);
+    g.gain.linearRampToValueAtTime(0.5, g0 + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.001, g0 + 0.16);
+    osc.connect(lp).connect(g).connect(master); osc.start(g0); osc.stop(g0 + 0.18);
+    burst(g0, 0.1, 420, 1.4, 0.35);                       // the wet click behind it
+    burst(g0 + 0.07, 0.07, 900, 1.5, 0.15);               // and a small second slosh
+  }
+  burst(t + n * 0.42 + 0.05, 0.45, 1100, 0.8, 0.14);      // ahh
+}
+
 // a shin meeting a cable: a low thump and a rattle of plastic
 export function thud() {
   if (!ctx) return;

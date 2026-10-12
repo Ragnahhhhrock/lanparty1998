@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'Cans now open, and then get drunk',
+    text: 'Taking a can of Volt Cola from the crate used to be silent until the hiss. It now has the tab lifting, the pop, the hiss, and then two swallows and a breath out once the can is up. Nobody has complained about the noise. Several people have complained about the swallowing.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'Game cartridges, left where they were dropped',
     text: 'Somebody brought a bag of cartridges for the console under the TV and has not taken them home. There are grey ones on the TV stand and the shelf next to the console, one in the slot, and more on the coffee table, under it, and on the carpet in front of the screen. A few have found their way onto the PC tables. Six titles, all of them made up: Hover Rally, Snow Dash, Puck Smash, Dino Dig, Sky Pilot and Block Brawl. Mind where you step.',
   },

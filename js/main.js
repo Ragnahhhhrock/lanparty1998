@@ -722,7 +722,8 @@ const EAT_LINES = ['Crunch.', 'Orange fingers acquired.', 'Nuclear cheese: confi
 function drink() {
   stats.caffeine = Math.min(100, stats.caffeine + 32);
   stats.cans++;
-  sfx.fizz();
+  sfx.canOpen();
+  sfx.gulp(2, 0.95);
   analytics.drinkCola(stats.caffeine);
   toast(stats.caffeine > 85 ? 'You can hear colours. Maybe slow down.' : DRINK_LINES[stats.cans % DRINK_LINES.length]);
 }
