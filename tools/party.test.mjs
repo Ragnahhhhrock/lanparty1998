@@ -521,7 +521,7 @@ test('the library fills up in milestones as files go round', () => {
   assert.deepEqual(names, WAREZ.map((w) => w.name));
 });
 
-test('the pizza costs money and the driver knocks 25 game minutes after you hang up', () => {
+test('the pizza costs money and the driver knocks the moment you hang up', () => {
   const p = new Party();
   const cash = p.cash;
   assert.ok(p.orderPizza());
@@ -531,10 +531,7 @@ test('the pizza costs money and the driver knocks 25 game minutes after you hang
   run(p, 600); // still on the phone: nothing is cooking yet
   assert.equal(arrived, 0);
   p.pizzaHungUp();
-  assert.ok(PIZZA.delay * SEC_PER_GAME_MIN >= 180, 'not round the corner');
-  run(p, PIZZA.delay * SEC_PER_GAME_MIN - 5);
-  assert.equal(arrived, 0);
-  run(p, 10);
+  run(p, 0.1); // one frame
   assert.equal(arrived, 1);
   assert.equal(p.pizzas, 1);
   assert.ok(p.canOrderPizza());

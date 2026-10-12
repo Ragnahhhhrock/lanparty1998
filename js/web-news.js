@@ -8,8 +8,8 @@
 
 export const NEWS = [
   {
-    date: '1998-02-07', kind: 'fix', title: 'The pizza no longer beats you back from the phone',
-    text: 'The driver used to knock about half a minute after you put the receiver down, which meant Pizza Shack was cooking while you were still reading them the order. The oven now starts when you hang up, and he turns up about twenty-five minutes later, inside the thirty on the box. Long enough to lose a deathmatch and start another.',
+    date: '1998-02-07', kind: 'fix', title: 'The pizza guy knocks as you hang up',
+    text: 'Order a large pepperoni and the knock on the basement door now comes the moment the receiver goes down, not half a minute later. Nobody knows how. Pizza Shack has stopped answering questions about it.',
   },
   {
     date: '1998-02-07', kind: 'new', title: 'The bean bag can be sat in',

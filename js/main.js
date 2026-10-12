@@ -601,7 +601,7 @@ const pizzaSpec = () => ({
   render: () => {
     const buttons = [{ label: 'Hang up' }];
     let lines;
-    if (party.ordered('pizza')) lines = [`Pepperoni is on its way. The delivery bloke says ${clockText(party.secondsUntil('pizza'))}, and he has said that twice.`];
+    if (party.ordered('pizza')) lines = ['Pepperoni, done. Hang up and he will be at the door.'];
     else {
       lines = [
         'PIZZA SHACK. Hot & fresh, delivered in 30 min.',
@@ -1568,7 +1568,7 @@ party.addEventListener('link-down', (e) => {
   linkChanged();
 });
 party.addEventListener('link-up', () => { chatLine('Link light is back on.', true); linkChanged(); });
-party.addEventListener('order', (e) => chatLine(e.detail.what === 'hub' ? 'Hub ordered. It is on its way.' : e.detail.what === 'pizza' ? `Pizza Shack: pepperoni ordered. $${PIZZA.cost}. Thirty minutes or it is free, he says.` : "Dazza's dad is bringing the switch round.", true));
+party.addEventListener('order', (e) => chatLine(e.detail.what === 'hub' ? 'Hub ordered. It is on its way.' : e.detail.what === 'pizza' ? `Pizza Shack: pepperoni ordered. $${PIZZA.cost}. Hang up and listen for the door.` : "Dazza's dad is bringing the switch round.", true));
 party.addEventListener('pizza-arrive', () => { // the driver is at the door; the pizza reaches a table when you open it (handOver)
   delivery.waiting = true; delivery.knockIn = 0; delivery.knocks = 0; delivery.leaveIn = 0;
   driverLoad.visible = true; driver.group.visible = true;
