@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'Voice chat, with a microphone',
+    text: 'Press Y, let the browser use your microphone, and anyone else who has joined voice can hear you. They hear you from where you are standing, or sitting: loud beside you, fading as they walk away, and gone by the far wall. Y shuts the microphone and opens it again, and Shift and Y leave. Nobody is linked to anybody until they join, nothing is recorded, and a player in voice can see the network address of the others in it. A strict office firewall may stop a link from forming. Typing still works.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'Cans now open, and then get drunk',
     text: 'Taking a can of Volt Cola from the crate used to be silent until the hiss. It now has the tab lifting, the pop, the hiss, and then two swallows and a breath out once the can is up. Nobody has complained about the noise. Several people have complained about the swallowing.',
   },

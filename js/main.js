@@ -7,6 +7,8 @@ import { N64Console } from './n64.js';
 import { GAMES, DEFAULT_GAME, MAX_PLAYERS, gameOf, nextGame, netHint, pilotName } from './games.js';
 import { RoomLink, ROOM_NAME } from './net.js';
 import { FeedSender } from './feed.js';
+import { Voice } from './voice.js';
+import { statusLine, buttonLabel } from './voice-logic.js';
 import { Crowd, spawnNpc, spawnTaped, seatFor, setEye } from './avatars.js';
 import * as sfx from './sfx.js';
 import * as voices from './voices.js';
@@ -35,7 +37,7 @@ const ui = {
   monitor: $('monitor'), dos: $('dos'), dust: $('dust'), bsod: $('bsod'),
   consoleBar: $('console-bar'), consoleStatus: $('console-status'),
   seatedBar: $('seated-bar'), stand: $('stand-btn'), drink: $('drink-btn'), eat: $('eat-btn'), gameBtn: $('game-btn'), seatedStatus: $('seated-status'),
-  handle: $('handle'), netstatus: $('netstatus'),
+  handle: $('handle'), netstatus: $('netstatus'), voiceStatus: $('voice-status'), mic: $('mic-btn'),
   chat: $('chat'), chatLog: $('chat-log'), chatForm: $('chat-form'), chatInput: $('chat-input'),
   dm: $('dm'), dmText: $('dm-text'), dmBtn: $('dm-btn'), dmBtn2: $('dm-btn2'),
 };
@@ -72,6 +74,8 @@ const feed = new FeedSender({
   send: (buf) => link.sendFrame(buf),
 });
 const crowd = new Crowd(scene, room.stations);
+// Proximity voice chat (js/voice.js): joined with Y, heard by whoever is within a few metres of where you are
+const voice = new Voice({ link, audioContext: () => sfx.audioContext(), positionOf: (id) => crowd.avatars.get(id)?.group.position ?? null });
 setEye(camera.position); // speech bubbles grow with distance so they stay readable
 const GAME_START = NIGHT.doors; // 7:30 PM
 const party = new Party({ startMinutes: GAME_START });
@@ -331,6 +335,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyH') { e.preventDefault(); desktop.toggle('ie'); return; } // preventDefault: the window focuses its address bar, which would swallow the h
   if (e.code === 'KeyN') { toast(voices.toggle() ? 'Noises on.' : 'Noises off.'); return; }
   if (e.code === 'KeyG') { eatGarlic(); return; }
+  if (e.code === 'KeyY') { e.preventDefault(); if (e.repeat) return; if (e.shiftKey) voice.leave(); else voice.toggleMic(); return; }
   if (amp?.keys[e.code]) { amp.keys[e.code](); return; }
   keys.add(e.code);
   if (e.code === 'KeyE' && target) interact(target);
@@ -347,6 +352,7 @@ window.addEventListener('keyup', (e) => {
 window.addEventListener('blur', () => keys.clear());
 
 ui.stand.addEventListener('click', standUp);
+ui.mic.addEventListener('click', () => { voice.toggleMic(); ui.mic.blur(); });
 ui.drink.addEventListener('click', drink);
 ui.eat.addEventListener('click', eat);
 
@@ -1272,6 +1278,7 @@ function frame() {
   const now = performance.now() / 1000;
 
   crowd.update(dt, link.players, now);
+  if (mode !== 'intro') voice.update(camera, dt);
   room.updateFan(dt, party.fan.on, party.fanSweep());
   room.updatePower(dt);
   room.updatePizza(dt);
@@ -1602,6 +1609,25 @@ ui.chatForm.addEventListener('submit', (e) => {
   closeChat();
 });
 ui.chatInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); closeChat(); } });
+
+/* ---------- voice chat: the words on the HUD and the mic button ---------- */
+function showVoice() {
+  const talking = voice.talking();
+  ui.voiceStatus.textContent = voice.on ? `${statusLine(voice.state, talking)} · Y ${voice.state === 'live' ? 'mutes' : 'opens the mic'}` : link.online ? 'Voice off · press Y to join' : '';
+  ui.voiceStatus.className = voice.state === 'off' ? '' : voice.state;
+  ui.mic.textContent = buttonLabel(voice.state);
+  ui.mic.className = `w98-btn${voice.state === 'off' ? '' : ` ${voice.state}`}`;
+  ui.mic.title = voice.on ? 'Mute or unmute your microphone (Y)' : 'Voice chat: people nearby hear you, and you hear them';
+}
+voice.addEventListener('state', (e) => {
+  showVoice();
+  if (e.detail === 'live' && !voice.wasLive) toast(`Voice on. Anyone within a few metres hears you. ${link.players.size ? '' : 'Nobody else is here yet.'}`.trim());
+  voice.wasLive = e.detail === 'live';
+});
+voice.addEventListener('talking', showVoice);
+voice.addEventListener('problem', (e) => toast(e.detail));
+link.addEventListener('online', showVoice);
+link.addEventListener('offline', showVoice);
 
 link.addEventListener('bench', (e) => {
   if (e.detail.id === link.me?.id) takeBench(e.detail.bench);

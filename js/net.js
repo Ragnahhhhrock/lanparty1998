@@ -102,6 +102,14 @@ export class RoomLink extends EventTarget {
         if (p) { p.bench = m.bench; p.build = m.build; p.up = !!m.up; this.emit('bench', p); }
         break;
       }
+      case 'voice': { // who has joined voice chat (js/voice.js)
+        const p = this.players.get(m.id);
+        if (p) { p.voice = !!m.on; this.emit('voice', { id: m.id, on: !!m.on }); }
+        break;
+      }
+      case 'rtc': // a voice handshake message from another player, for js/voice.js
+        this.emit('rtc', { from: m.from, d: m.d });
+        break;
       case 'denied':
         this.emit('denied', m);
         break;

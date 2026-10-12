@@ -135,6 +135,13 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 #schedule { font-size: var(--text-ui-xs); color: var(--w98-text); }
 #netstatus { font-size: var(--text-ui-xs); color: var(--w98-text); border-top: 1px solid var(--w98-shadow); padding-top: var(--space-1); }
 #netstatus.online::before { content: ""; display: inline-block; width: var(--space-2); height: var(--space-2); margin-right: var(--space-1h); vertical-align: -1px; background: var(--link-led); box-shadow: var(--bevel-sunken); }
+#voice-status { font-size: var(--text-ui-xs); color: var(--w98-text); }
+#voice-status:empty { display: none; }
+#voice-status::before { content: ""; display: inline-block; width: var(--space-2); height: var(--space-2); margin-right: var(--space-1h); vertical-align: -1px; background: var(--w98-shadow); box-shadow: var(--bevel-sunken); }
+#voice-status.live::before { background: var(--link-led); }
+#voice-status.muted::before { background: var(--pepperoni); }
+#mic-btn.live { color: var(--w98-title); font-weight: bold; }
+#mic-btn.muted { color: var(--pepperoni); }
 
 /* ---- Handle entry ---- */
 .handle { display: flex; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-3); font-weight: bold; }

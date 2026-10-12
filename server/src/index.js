@@ -1,10 +1,12 @@
 // LAN Party '98 room server: one Durable Object per room keeps track of who is in the
 // basement, where they're standing, which PC (or BYOC bench) they're sitting at, and the current
 // deathmatch. Game traffic itself does not pass through here (DOOM's IPX packets go
-// peer to peer over WebRTC); this only coordinates.
+// peer to peer over WebRTC); this only coordinates. The same goes for voice chat: the voices go peer to
+// peer, and this only passes the handshake between two players who have both joined voice.
 
 import { handleReminders, runDue } from './reminders.js';
 import { acceptFrame, relayFrame, tooSoon } from './feed-logic.js';
+import { cleanSignal, relaySignal, spend, MAX_RAW, MAX_RAW_OTHER } from './voice-logic.js';
 
 const MAX_PLAYERS = 16;
 const PCS = 8;           // six club PCs, then the two BYOC benches (seats 6 and 7)
@@ -59,6 +61,7 @@ export class Room {
     this.ctx = ctx;
     this.match = null;
     this.lastFrame = new WeakMap();   // socket -> when its last picture went out (lost if the room hibernates, which only lets one more through)
+    this.signals = new WeakMap();     // socket -> its voice handshake budget (also lost on hibernation, which only gives it a fresh one)
     // the room can hibernate between messages, so the match is kept in storage
     ctx.blockConcurrencyWhile(async () => {
       this.match = (await ctx.storage.get('match')) ?? null;
@@ -77,7 +80,7 @@ export class Room {
     const used = new Set(sockets.map((ws) => this.info(ws)?.id));
     let id = crypto.randomUUID().slice(0, 8);
     while (used.has(id)) id = crypto.randomUUID().slice(0, 8);
-    server.serializeAttachment({ id, name: null, color: null, x: 0, z: 1.2, yaw: 0, pc: null, bench: null, build: null, up: false });
+    server.serializeAttachment({ id, name: null, color: null, x: 0, z: 1.2, yaw: 0, pc: null, bench: null, build: null, up: false, voice: false });
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -134,9 +137,10 @@ export class Room {
 
   async webSocketMessage(ws, raw) {
     if (typeof raw !== 'string') return this.frame(ws, raw);
-    if (raw.length > 2000) return;
+    if (raw.length > MAX_RAW) return;
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
+    if (msg?.t !== 'rtc' && raw.length > MAX_RAW_OTHER) return;   // only a voice handshake is allowed to be long
     const p = this.info(ws);
     if (!p) return;
 
@@ -191,6 +195,30 @@ export class Room {
         this.save(ws, p);
         this.broadcast({ t: 'seat', id: p.id, pc: null });
         this.dropFromMatch(p.id);
+        return;
+      }
+      case 'voice': {
+        // "I have joined voice" / "I have left it": the others only open a voice link to players who have
+        const on = msg.on === true;
+        if (!!p.voice === on) return;
+        p.voice = on;
+        this.save(ws, p);
+        this.broadcast({ t: 'voice', id: p.id, on }, ws);
+        return;
+      }
+      case 'rtc': {
+        // a handshake message for one other player. Both ends must be in voice, so nobody can be sent
+        // handshakes they did not ask for, and a player not in voice cannot be probed.
+        if (!p.voice || typeof msg.to !== 'string') return;
+        const d = cleanSignal(msg.d);
+        if (!d) return;
+        const budget = spend(this.signals.get(ws), Date.now());
+        if (!budget) return;
+        this.signals.set(ws, budget);
+        for (const other of this.ctx.getWebSockets()) {
+          const o = this.info(other);
+          if (o?.name && o.id === msg.to && o.voice) { this.send(other, relaySignal(p.id, d)); break; }
+        }
         return;
       }
       case 'chat': {
