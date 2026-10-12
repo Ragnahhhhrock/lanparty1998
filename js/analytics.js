@@ -38,6 +38,9 @@ export const analytics = {
     track('game_start', { game_name: gameName, games_total: totals.games });
   },
 
+  // A cartridge started on the console. Deliberately carries no title: what people own is theirs.
+  consoleStart() { track('console_start'); },
+
   standUp(gameName) {
     if (!seatedAt) return;
     const secs = Math.round((performance.now() - seatedAt) / 1000);

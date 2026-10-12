@@ -8,8 +8,17 @@
 
 export const NEWS = [
   {
-    date: '1998-02-06', kind: 'new', title: 'Build your own PC, then set it up',
+    date: '1998-02-07', kind: 'new', title: 'Build your own PC, then set it up',
     text: 'Walking in now starts at the computer shop. You have $1500 to spend on a monitor from 14 to 19 inches, a Pentium, memory, up to three hard disks, floppies, a CD-ROM and a CD burner, a network card, speakers or headphones, a keyboard, a mouse and a mat. Then you carry it to the back table, between PC-01 and PC-02, and unpack it from the outline. Press E at the back of the tower to plug in the video, keyboard, mouse, power board and network, then press the button. It runs its memory test, starts Windows and joins the LAN. A BNC-only card will not talk to the hub when it arrives, and nobody warned you.',
+  },
+  {
+    date: '1998-02-07', kind: 'new', title: 'Duke Nukem 3D has come round',
+    text: 'Somebody brought the shareware episode on a floppy and it is now on every PC, with a box on the shelf. Sit down, press the Game button until it says DUKE NUKEM 3D, and walk around a cinema that has seen better days. For a network game, host and joiners both pick the network game in SETUP, as the manual says.',
+    link: ['/games.htm', 'All the games'],
+  },
+  {
+    date: '1998-02-06', kind: 'new', title: 'The console has a prompt',
+    text: 'Press E at the TV and the console boots to a C:\\N64> prompt on the glass. Type OPEN to point it at a folder of cartridge files on your own drive, DIR to list them, and a number or a name to run one. Nothing is supplied: the slot is empty until you bring a cartridge. Esc brings the prompt back, KEYS shows the layout, and the file never leaves your machine.',
   },
   {
     date: '1998-02-06', kind: 'new', title: 'The lights have a switch',
@@ -108,7 +117,7 @@ export const NEWS = [
   },
   {
     date: '1998-01-26', kind: 'new', title: 'The lounge',
-    text: 'Plaid couch, a big CRT TV on a stand, a console with four wired pads and a coffee table loaded with cans and pizza. The TV loops a four-player brawl. It is not playable; the pads are for show.',
+    text: 'Plaid couch, a big CRT TV on a stand, a console with four wired pads and a coffee table loaded with cans and pizza. The TV loops a four-player brawl until you sit at the console, which takes cartridges you bring yourself. The pads are for show.',
   },
   {
     date: '1998-01-26', kind: 'new', title: 'The regulars dance',

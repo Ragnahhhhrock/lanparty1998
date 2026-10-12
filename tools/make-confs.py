@@ -55,6 +55,7 @@ GAMES = {
     'hexen':   dict(mem=16, solo='HEXEN.EXE',   net=('setup', 'IPXSETUP.EXE -nodes {n} -deathmatch')),
     'quake':   dict(mem=32, solo='QUAKE.EXE -nocdaudio', net=('lobby', 'QUAKE.EXE -nocdaudio')),
     'descent': dict(mem=32, solo='DESCENT.EXE', net=('lobby', 'DESCENT.EXE')),
+    'duke':    dict(mem=32, solo='DUKE3D.EXE',  net=('lobby', 'SETUP.EXE')),
 }
 
 out = pathlib.Path(__file__).resolve().parent.parent / 'bundles'

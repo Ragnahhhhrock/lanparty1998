@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { buildRoom, ROOM } from './room.js';
 import { DosPC } from './emulator.js';
+import { N64Console } from './n64.js';
 import { GAMES, DEFAULT_GAME, MAX_PLAYERS, gameOf, nextGame, netHint, pilotName } from './games.js';
 import { RoomLink, ROOM_NAME } from './net.js';
 import { Crowd, spawnNpc, spawnTaped, seatFor, setEye } from './avatars.js';
@@ -29,6 +30,7 @@ const ui = {
   intro: $('intro'), enter: $('enter-btn'), hud: $('hud'), prompt: $('prompt'), toast: $('toast'),
   caffeine: $('m-caffeine'), snacks: $('m-snacks'), cash: $('m-cash'), shares: $('m-shares'), clock: $('clock'), schedule: $('schedule'),
   monitor: $('monitor'), dos: $('dos'), dust: $('dust'), bsod: $('bsod'),
+  consoleBar: $('console-bar'), consoleStatus: $('console-status'),
   seatedBar: $('seated-bar'), stand: $('stand-btn'), drink: $('drink-btn'), eat: $('eat-btn'), gameBtn: $('game-btn'), seatedStatus: $('seated-status'),
   handle: $('handle'), netstatus: $('netstatus'),
   chat: $('chat'), chatLog: $('chat-log'), chatForm: $('chat-form'), chatInput: $('chat-input'),
@@ -58,6 +60,7 @@ const player = { pos: new THREE.Vector3(0, EYE, 1.2), yaw: 0, pitch: -0.08 };
 await Promise.race([document.fonts.load('20px "VT323"'), new Promise((r) => setTimeout(r, 1500))]);
 const room = buildRoom(scene);
 const pc = new DosPC(ui.dos);
+const n64 = new N64Console(); // the console under the TV: a terminal that runs N64 ROMs from the player's own drive
 const link = new RoomLink();
 const crowd = new Crowd(scene, room.stations);
 setEye(camera.position); // speech bubbles grow with distance so they stay readable
@@ -86,7 +89,7 @@ const regulars = [
 const speakers = new Map([macca, ...regulars].map((a) => [a.name.toLowerCase(), a]));
 
 /* ---------- state ---------- */
-let mode = 'intro'; // intro | walk | tween | seated | dialog
+let mode = 'intro'; // intro | walk | tween | seated | console | dialog
 const keys = new Set();
 const stats = { caffeine: 15, snacks: 40, dust: 0, cans: 0, handfuls: 0 };
 let target = null;
@@ -294,6 +297,11 @@ window.addEventListener('keydown', (e) => {
   if (e.target === ui.chatInput || e.target === ui.handle) return;
   if (e.target.closest?.('[data-owns-keys]')) return; // typing into Notepad, the DOS prompt, Minesweeper...
   if (dialog.isOpen()) return; // the message box owns the keyboard
+  if (mode === 'console') { // sitting in front of the TV: keys go to the terminal or the game; backtick stands up
+    if (e.code === 'Backquote') { e.preventDefault(); e.stopPropagation(); leaveConsole(); }
+    else if (n64.key(e)) e.stopPropagation();
+    return;
+  }
   if (mode === 'seated') {
     if (e.code === 'Backquote') { e.preventDefault(); e.stopPropagation(); standUp(); }
     else if (!ui.bsod.hidden) { e.preventDefault(); e.stopPropagation(); recoverFromCrash(); } // any key
@@ -314,7 +322,10 @@ window.addEventListener('keydown', (e) => {
     if (b && !b.ready) openRear(b); else openPcMenu(target.station);
   }
 }, true);
-window.addEventListener('keyup', (e) => keys.delete(e.code), true);
+window.addEventListener('keyup', (e) => {
+  keys.delete(e.code);
+  if (mode === 'console' && n64.key(e)) e.stopPropagation();
+}, true);
 window.addEventListener('blur', () => keys.clear());
 
 ui.stand.addEventListener('click', standUp);
@@ -363,6 +374,7 @@ const PROMPTS = {
   drink: () => 'E · Crack a Volt Cola',
   soda: () => 'E · Pour a Citrus Zap into a red cup',
   eat: () => 'E · Grab a handful of Nachoz or Cheez Curlz',
+  console: () => 'E · Play the console (it runs N64 ROMs from your own drive)',
   burner: (t) => (party.job ? `E · CD-R: writing ${Math.floor(party.burnProgress() * 100)}%` : `E · Burn a CD (${party.burnSpeedOf(t.station.index)}x)`),
 };
 
@@ -376,7 +388,8 @@ function interact(t) {
     if (!party.pcPowered(t.station.index)) toast(t.station.bench ? `${t.station.name} is switched off.` : `${t.station.name} has no power. Somebody should look at the extension lead.`);
     else if (who) toast(`${who.name} is on that one. Find a free PC.`);
     else sitDown(t.station);
-  } else if (t.kind === 'drink') drink();
+  } else if (t.kind === 'console') playConsole();
+  else if (t.kind === 'drink') drink();
   else if (t.kind === 'soda') soda();
   else if (t.kind === 'eat') eat();
   else if (t.kind === 'burner') openBurner(t.station.index);
@@ -875,6 +888,63 @@ function standUp() {
   });
 }
 
+/* ---------- the console under the TV ---------- */
+// E at the TV: drop onto the carpet in front of it. The TV shows the console's terminal, then the game.
+function playConsole() {
+  if (document.pointerLockElement) document.exitPointerLock();
+  ui.prompt.hidden = true;
+  keys.clear();
+  const { view, look } = room.tv;
+  const aim = look.clone(); aim.y -= 0.07; // aim a little below the glass so it sits high and the bar below never covers the prompt
+  startTween(view.clone(), cameraPoseLookingAt(view, aim), 0.9, () => {
+    mode = 'console';
+    ui.hud.hidden = true;
+    ui.consoleBar.hidden = false;
+    n64.enter();
+    refreshConsoleBar(true);
+  });
+}
+
+function leaveConsole() {
+  if (mode !== 'console') return;
+  n64.leave();
+  ui.consoleBar.hidden = true;
+  const { view, look } = room.tv;
+  const pos = new THREE.Vector3(view.x, EYE, view.z);
+  const q = cameraPoseLookingAt(pos, look);
+  startTween(pos, q, 0.7, () => {
+    const e = new THREE.Euler().setFromQuaternion(q, 'YXZ');
+    player.pos.copy(pos); player.yaw = e.y; player.pitch = e.x;
+    mode = 'walk';
+    ui.hud.hidden = false;
+    lockPointer();
+  });
+}
+n64.onstand = leaveConsole;
+n64.onplay = () => analytics.consoleStart();
+
+// the bar under the picture: buttons that do what the commands do, and what the console is up to
+const conBtn = (id, fn) => { const b = $(id); b.addEventListener('click', () => { fn(); b.blur(); }); return b; }; // blur: or Enter in the game would click it
+conBtn('con-stand', leaveConsole);
+conBtn('con-open', () => n64.run({ type: 'open-folder' }));
+conBtn('con-add', () => n64.run({ type: 'open-files' }));
+const conMenu = conBtn('con-menu', () => { if (n64.menu) n64.closeMenu(); else if (n64.running) n64.openMenu(); });
+const conReset = conBtn('con-reset', () => n64.run({ type: 'reset' }));
+const conSave = conBtn('con-save', () => n64.run({ type: 'save' }));
+const conLoad = conBtn('con-load', () => n64.run({ type: 'restore' }));
+let conShown = '';
+function refreshConsoleBar(force = false) {
+  const key = `${n64.status}|${n64.running}|${n64.menu}`;
+  if (!force && key === conShown) return;
+  conShown = key;
+  ui.consoleStatus.textContent = n64.status;
+  conMenu.disabled = !n64.running;
+  conReset.disabled = conSave.disabled = conLoad.disabled = !n64.running;
+}
+// ROM files and folders can be dropped on the page while you are at the console
+addEventListener('dragover', (e) => { if (mode === 'console' && e.dataTransfer?.types.includes('Files')) e.preventDefault(); });
+addEventListener('drop', (e) => { if (mode !== 'console') return; e.preventDefault(); n64.dropped(e.dataTransfer); });
+
 // A blue screen over your DOS window. Any key (or a click) restarts the game, with the case still hot.
 function showCrash() {
   ui.bsod.hidden = false;
@@ -1055,6 +1125,10 @@ function frame() {
   room.updateBenches();
   room.stations.forEach((st, i) => { st.screen.rebooting = party.rebooting(i) || party.pcBooting(i); });
   room.updateTv(dt);
+  n64.update(dt);
+  const picture = n64.picture();
+  room.tv.show(picture.kind, picture.texture);
+  if (mode === 'console') refreshConsoleBar();
   room.door.update(dt);
   if (mode !== 'intro') for (const m of banter.tick(dt)) ircSpeak(m);
   amp?.update(dt);
@@ -1535,4 +1609,4 @@ function updateDM() {
 }
 
 // handy for debugging from the console
-window.lan = { scene, camera, room, stats, player, sitDown, standUp, pc, link, crowd };
+window.lan = { scene, camera, room, stats, player, sitDown, standUp, pc, link, crowd, n64 };

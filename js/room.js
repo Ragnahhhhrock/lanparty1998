@@ -719,11 +719,31 @@ function buildLounge(scene, out, labelVolt, labelNachoz, labelCurlz) {
   for (const x of portX) set.add(box(0.04, 0.026, 0.012, consoleDark, x, 0.2275, portZ + 0.003));
   set.add(box(0.012, 0.012, 0.004, new THREE.MeshBasicMaterial({ color: 0xe2231a }), -0.14, 0.245, portZ + 0.002)); // power light (--volt)
   place(set, TV.x, 0, TV.z, -Math.PI / 2);
+  use(set, 'console');                                                       // E at the TV or the console: sit down and play (js/n64.js)
   out.colliders.push({ minX: TV.x - 0.275, maxX: TV.x + 0.275, minZ: TV.z - 0.575, maxZ: TV.z + 0.575 });
   const glow = new THREE.PointLight(0x9fb8ff, 2.4, 4.2, 2);
   glow.position.set(TV.x - 0.7, 0.8, TV.z);
   scene.add(glow);
   out.updateTv = (dt) => { gameScreen.update(dt); glow.intensity = 2.2 + Math.sin(gameScreen.clock * 9) * 0.25 + Math.sin(gameScreen.clock * 2.3) * 0.2; };
+
+  // What is on the glass: the four-player loop until somebody is at the console (js/n64.js), then the console's own
+  // picture (its terminal, or the game) with scanlines laid over it. view is where you sit on the carpet, look is the glass.
+  const scan = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.465), new THREE.MeshBasicMaterial({ map: T.crtScanlines(), transparent: true, depthWrite: false, toneMapped: false }));
+  scan.position.set(0, tvY + 0.03, 0.2475);
+  scan.visible = false;
+  set.add(scan);
+  const glassMat = glass.material;
+  out.tv = {
+    view: new THREE.Vector3(TV.x - 0.8, 0.88, TV.z),
+    look: new THREE.Vector3(TV.x - 0.247, tvY + 0.03, TV.z),
+    show(kind, texture) {
+      const map = texture ?? gameScreen.texture;
+      if (glassMat.map === map && scan.visible === (kind !== 'idle')) return;
+      glassMat.map = map;
+      glassMat.needsUpdate = true;
+      scan.visible = kind !== 'idle';
+    },
+  };
 
   // ---- coffee table
   const table = new THREE.Group();

@@ -52,6 +52,16 @@ export const GAMES = {
     // Descent wants a pilot before it shows its menu. Make one named after you, with the mouse set.
     pilot: { template: 'descent-pilot.plr', ext: 'PLR', config: descentConfig },
   },
+  duke: {
+    id: 'duke',
+    name: 'DUKE NUKEM 3D',
+    zip: 'duke-shareware.zip',
+    net: {
+      kind: 'lobby',
+      host: 'In SETUP pick the network game and start a new one.',
+      join: 'In SETUP pick the network game and join it.',
+    },
+  },
 };
 
 export const GAME_IDS = Object.keys(GAMES);

@@ -639,6 +639,7 @@ const BOXES = {
   hexen: { spine: '#5b2f86', title: 'HEXEN', tag: ['4 LEVEL DEMO · IPX', 'THREE STONES, ONE BLADE'] }, // --poster-nebula
   quake: { spine: '#3d352f', title: 'QUAKE', tag: ['SHAREWARE · IPX LOBBY', 'FULL 3D · PENTIUM RECOMMENDED'] }, // --poster-rock-dark
   descent: { spine: '#46697a', title: 'DESCENT', tag: ['SHAREWARE · IPX LOBBY', 'SIX WAYS OUT OF THE MINE'] }, // --poster-steel
+  duke: { spine: '#b4532a', title: 'DUKE NUKEM 3D', tag: ['SHAREWARE · IPX LOBBY', 'SHOOT FIRST, PARK LATER'] }, // --poster-planet
 };
 
 export const BOX_IDS = Object.keys(BOXES);
@@ -712,6 +713,21 @@ export function gameBoxFront(id) {
     sprite(['....11....', '...1221...', '..122221..', '.11111111.', '1111111111', '3.33..33.3'], { 1: chrome, 2: chromeDk, 3: amber }, 88, 252, 8); // the ship
     rect(chromeDk, 120, 236, 16, 16); rect(chrome, 124, 228, 8, 12);
     bandText(g, ['DESCENT'], 128, 52, 232, amber, ember, [40]);
+  } else if (id === 'duke') { // a city at dusk: skyline, a lit-up marquee, a searchlight, nobody in shot
+    rect(space, 0, 0, 256, 360);
+    [nebula, ember, volt, planet, nacho].forEach((col, i) => rect(col, 0, 40 + i * 36, 256, 36)); // dusk bands
+    for (let i = 0; i < 20; i++) rect(paper, 4 * ((r() * 64) | 0), 44 + 4 * ((r() * 12) | 0), 4, 4); // first stars
+    for (let i = 0; i < 6; i++) rect(amber, 128 + i * 12, 40 + i * 24, 8, 24); // a searchlight beam, stepped
+    [[8, 150, 44], [56, 118, 40], [100, 170, 52], [156, 130, 44], [204, 160, 48]].forEach(([x, y, w]) => { // towers
+      rect(black, x, y, w, 290 - y);
+      for (let wy = y + 12; wy < 280; wy += 16) for (let wx = x + 8; wx < x + w - 8; wx += 12) if (r() > 0.45) rect(amber, wx, wy, 4, 8);
+    });
+    rect(rockDk, 0, 290, 256, 30); rect(chromeDk, 0, 290, 256, 4); // the street
+    rect(black, 40, 214, 176, 68); rect(volt, 44, 218, 168, 60); // a cinema marquee, hard-edged
+    for (let x = 44; x < 212; x += 12) { rect(amber, x, 218, 4, 4); rect(amber, x, 274, 4, 4); } // chaser bulbs
+    rect(paper, 56, 230, 144, 28); rect(black, 60, 234, 136, 20); // the board
+    bandText(g, ['NOW SHOWING'], 128, 246, 128, phos, null, [16]);
+    bandText(g, ['DUKE NUKEM 3D'], 128, 52, 232, amber, ember, [40]);
   } else { // a game with no box art of its own yet
     rect(rockDk, 0, 0, 256, 360); rect(black, 16, 16, 224, 288);
     bandText(g, [b.title], 128, 180, 224, paper, null, [96, 40]);
@@ -1221,6 +1237,17 @@ export function couchFabric() {
   g.fillStyle = 'rgba(0,0,0,.08)';
   for (let i = 0; i < 260; i++) g.fillRect(Math.floor(r() * 128), Math.floor(r() * 128), 1, 2); // weave
   return tex(c, [1, 1]);
+}
+
+// Scanlines for the TV's glass while the console is on (a plane of this sits just in front of the picture).
+// Black at 22% on every other line; the glass shows about 480 lines, so the pitch matches.
+export function crtScanlines() {
+  const [c, g] = canvas(4, 480);
+  g.fillStyle = 'rgba(0,0,0,.22)';
+  for (let y = 1; y < 480; y += 2) g.fillRect(0, y, 4, 1);
+  const t = tex(c);
+  t.anisotropy = 1;
+  return t;
 }
 
 // What the four of them are playing on the TV: a four-player arena brawl, drawn flat.
