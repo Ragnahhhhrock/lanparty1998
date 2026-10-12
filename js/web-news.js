@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'fix', title: 'The pizza no longer beats you back from the phone',
+    text: 'The driver used to knock about half a minute after you put the receiver down, which meant Pizza Shack was cooking while you were still reading them the order. The oven now starts when you hang up, and he turns up about twenty-five minutes later, inside the thirty on the box. Long enough to lose a deathmatch and start another.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'The bean bag can be sat in',
     text: 'E at the bean bag drops you into the dent. There is a whump, a rustle of polystyrene and a squeak of vinyl on the way down, and you can look around the room from there. Any move key gets you out again, with the same noises in a lower voice. The dent turned out to be exactly your size.',
   },

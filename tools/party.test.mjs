@@ -521,13 +521,17 @@ test('the library fills up in milestones as files go round', () => {
   assert.deepEqual(names, WAREZ.map((w) => w.name));
 });
 
-test('the pizza costs money and has the driver knocking 8 game minutes later', () => {
+test('the pizza costs money and the driver knocks 25 game minutes after you hang up', () => {
   const p = new Party();
   const cash = p.cash;
   assert.ok(p.orderPizza());
   assert.equal(p.cash, cash - PIZZA.cost);
   assert.ok(!p.canOrderPizza(), 'one at a time');
   let arrived = 0; p.addEventListener('pizza-arrive', () => arrived++);
+  run(p, 600); // still on the phone: nothing is cooking yet
+  assert.equal(arrived, 0);
+  p.pizzaHungUp();
+  assert.ok(PIZZA.delay * SEC_PER_GAME_MIN >= 180, 'not round the corner');
   run(p, PIZZA.delay * SEC_PER_GAME_MIN - 5);
   assert.equal(arrived, 0);
   run(p, 10);

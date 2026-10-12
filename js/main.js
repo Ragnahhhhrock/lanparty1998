@@ -470,9 +470,9 @@ function openErrand(spec, onClosed) {
 }
 
 // swap what the open message box says (a call connecting) without giving the mouse back in between
-function swapErrand(spec) {
+function swapErrand(spec, onClosed) {
   if (mode !== 'dialog') return;
-  dialog.open(spec, () => { if (mode === 'dialog') { mode = 'walk'; lockPointer(); } });
+  dialog.open(spec, () => { onClosed?.(); if (mode === 'dialog') { mode = 'walk'; lockPointer(); } });
 }
 
 const clockText = (secs) => `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
@@ -637,6 +637,8 @@ const dazzaSpec = () => ({
 });
 
 const SPECS = { pizza: pizzaSpec, dazza: dazzaSpec };
+// what happens when the receiver goes down on a call: the pizza clock only starts once you have hung up
+const HUNG_UP = { pizza: () => party.pizzaHungUp() };
 
 function openPhone() {
   let tone = null;
@@ -666,7 +668,7 @@ function dialWall(contact) {
     title: 'WALL PHONE',
     render: () => ({ lines: [`Dialling ${contact.number}...`], progress: null, buttons: [{ label: 'Hang up', run: () => sfx.receiverClick() }] }),
   }, stop);
-  timer = setTimeout(() => { sfx.receiverClick(); swapErrand(SPECS[contact.id]()); }, call.duration * 1000);
+  timer = setTimeout(() => { sfx.receiverClick(); swapErrand(SPECS[contact.id](), HUNG_UP[contact.id]); }, call.duration * 1000);
 }
 
 // The mobile on the desk at PC-02: Snake, the phone book, and calls to the same numbers as the wall phone.
@@ -684,7 +686,7 @@ function openMobile() {
     },
     done: (result) => {
       mode = 'walk';
-      if (result?.call) openErrand(SPECS[result.call.id]());
+      if (result?.call) openErrand(SPECS[result.call.id](), HUNG_UP[result.call.id]);
       else lockPointer();
     },
   });
@@ -1566,7 +1568,7 @@ party.addEventListener('link-down', (e) => {
   linkChanged();
 });
 party.addEventListener('link-up', () => { chatLine('Link light is back on.', true); linkChanged(); });
-party.addEventListener('order', (e) => chatLine(e.detail.what === 'hub' ? 'Hub ordered. It is on its way.' : e.detail.what === 'pizza' ? `Pizza Shack: pepperoni ordered. $${PIZZA.cost}. The bloke says he is round the corner.` : "Dazza's dad is bringing the switch round.", true));
+party.addEventListener('order', (e) => chatLine(e.detail.what === 'hub' ? 'Hub ordered. It is on its way.' : e.detail.what === 'pizza' ? `Pizza Shack: pepperoni ordered. $${PIZZA.cost}. Thirty minutes or it is free, he says.` : "Dazza's dad is bringing the switch round.", true));
 party.addEventListener('pizza-arrive', () => { // the driver is at the door; the pizza reaches a table when you open it (handOver)
   delivery.waiting = true; delivery.knockIn = 0; delivery.knocks = 0; delivery.leaveIn = 0;
   driverLoad.visible = true; driver.group.visible = true;

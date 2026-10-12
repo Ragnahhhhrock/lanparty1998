@@ -21,7 +21,7 @@ export const NET = {
   switch: { label: '16-port switch', short: 'SWITCH', speed: 10 },
 };
 export const SHOP = { hubCost: 45, hubDelay: 10 };            // the hub: shop price, game minutes until it turns up
-export const PIZZA = { cost: 16, delay: 8, slices: 8 };          // a large pepperoni: price, game minutes until the driver knocks, slices in the box
+export const PIZZA = { cost: 16, delay: 25, slices: 8 };         // a large pepperoni: price, game minutes from hanging up until the driver knocks, slices in the box
 export const DAD = { delay: 20, warnAt: 5 * 60 + 30, returnAt: 6 * 60 }; // the switch is on loan until 6:00 AM
 export const COAX_FAULT_EVERY = [6, 12];                      // game minutes between dodgy T-connectors
 
@@ -456,7 +456,7 @@ export class Party extends EventTarget {
   }
 
   ordered(what) { return this.orders.some((o) => o.what === what); }
-  secondsUntil(what) { const o = this.orders.find((x) => x.what === what); return o ? Math.max(0, (o.at - this.now) * SEC_PER_GAME_MIN) : 0; }
+  secondsUntil(what) { const o = this.orders.find((x) => x.what === what); return !o ? 0 : o.at === Infinity ? PIZZA.delay * SEC_PER_GAME_MIN : Math.max(0, (o.at - this.now) * SEC_PER_GAME_MIN); }
 
   canOrderHub() { return this.net === 'coax' && !this.ordered('hub') && this.cash >= SHOP.hubCost; }
   orderHub() {
@@ -472,9 +472,14 @@ export class Party extends EventTarget {
   orderPizza() {
     if (!this.canOrderPizza()) return false;
     this.spend(PIZZA.cost);
-    this.orders.push({ what: 'pizza', at: this.now + PIZZA.delay });
+    this.orders.push({ what: 'pizza', at: Infinity }); // the oven starts when you hang up: see pizzaHungUp()
     this.emit('order', { what: 'pizza' });
     return true;
+  }
+  // the receiver goes down: now the Pizza Shack starts on it
+  pizzaHungUp() {
+    const o = this.orders.find((x) => x.what === 'pizza' && x.at === Infinity);
+    if (o) o.at = this.now + PIZZA.delay;
   }
 
   // Dazza's dad works in IT for the government. He won't put a switch on a coax mess.
