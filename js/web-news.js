@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'The front door has been rewritten',
+    text: 'The welcome window now says what the night actually has in it: a PC you build yourself, the pizza guy, the two phones, the lights, Snapster, Internet Explorer and the rest. The key list gains G for garlic bread and the other things E now does, and the window scrolls if your screen is short.',
+  },
+  {
     date: '1998-02-07', kind: 'fix', title: 'The mobile is off the couch',
     text: 'The Nokka 51 had been left on the middle couch cushion, which is a place nobody looks, and most of the party spent the evening ringing Dazza from the wall. It is now on the desk at PC-02, to the right of the mouse mat, where it can be seen from the middle of the room. Press E to pick it up. It rings the same numbers as before.',
   },

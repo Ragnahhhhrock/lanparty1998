@@ -49,6 +49,7 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 .share-btn[hidden] { display: none; }
 .share-status { font: var(--text-ui-sm)/1 var(--font-ui); min-height: 1em; }
 #intro { position: fixed; inset: 0; display: grid; place-items: center; background: var(--scrim); z-index: var(--z-dialog); padding: var(--gutter); }
+#intro > .w98-window { max-height: 100%; overflow-y: auto; } /* the longer intro scrolls on short screens instead of clipping Walk in */
 
 /* ---- HUD ---- */
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: var(--z-hud); }
