@@ -18,6 +18,8 @@ import { initLanamp } from './lanamp.js';
 import { initShare } from './share.js';
 import { Desktop } from './desktop.js';
 import { registerApps } from './apps.js';
+import { Wizard } from './wizard.js';
+import * as BUILD from './build.js';
 
 const $ = (id) => document.getElementById(id);
 initShare();
@@ -96,12 +98,29 @@ const canvas = renderer.domElement;
 const savedHandle = (() => { try { return localStorage.getItem('lan98-handle') || ''; } catch { return ''; } })();
 ui.handle.value = savedHandle;
 ui.handle.addEventListener('keydown', (e) => { if (e.key === 'Enter') ui.enter.click(); });
+/* ---------- the PC you build: BUILDPC.EXE comes between the intro and the basement ---------- */
+const wizard = new Wizard($('wizard'));
+const savedBuild = () => { try { return JSON.parse(localStorage.getItem('lan98-build')); } catch { return null; } };
+let myBuild = BUILD.sanitize(savedBuild());
+
 ui.enter.addEventListener('click', () => {
   const name = ui.handle.value.trim().toUpperCase().slice(0, 12) || `PLAYER${Math.floor(Math.random() * 90 + 10)}`;
   try { localStorage.setItem('lan98-handle', name); } catch { /* private mode */ }
   myName = name;
   ircMe(name);
   ui.intro.hidden = true;
+  wizard.open({
+    build: savedBuild(),
+    net: party.net,
+    onDone: (build) => {
+      myBuild = build;
+      try { localStorage.setItem('lan98-build', JSON.stringify(build)); } catch { /* private mode */ }
+      walkIn();
+    },
+  });
+});
+
+function walkIn() {
   ui.hud.hidden = false;
   ui.chat.hidden = false;
   desktop.start();
@@ -110,9 +129,9 @@ ui.enter.addEventListener('click', () => {
   startMusic();
   lockPointer();
   analytics.enterParty();
-  link.connect(name);
+  link.connect(myName);
   refreshStations();
-});
+}
 (savedHandle ? ui.enter : ui.handle).focus();
 
 function lockPointer() {

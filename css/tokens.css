@@ -24,6 +24,7 @@
   --w98-key: #e8e8e8;       /* keycap face */
   --w98-text: #000000;
   --w98-title-off: #5a5a5a; /* inactive title bar */
+  --w98-danger: #a00000;    /* error and over-budget text on grey (AA; always with words, never colour alone) */
 
   /* ---- Phosphor: anything shown "on a CRT" ---- */
   --crt-black: #000000;

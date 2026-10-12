@@ -216,6 +216,30 @@ Press any key to continue _</div>
     </div>
   </div>
 
+  <!-- BUILDPC.EXE: the shop wizard between the intro and the basement -->
+  <div id="wizard" hidden>
+    <div class="w98-window" role="dialog" aria-modal="true" aria-labelledby="wiz-title">
+      <div class="w98-title"><span id="wiz-title" class="w98-ttext">BUILDPC.EXE</span><b aria-hidden="true">×</b></div>
+      <div class="wiz-body">
+        <nav aria-label="Steps"><ol id="wiz-steps" class="wiz-steps"></ol></nav>
+        <section class="wiz-main">
+          <h2 id="wiz-head"></h2>
+          <p id="wiz-intro"></p>
+          <div id="wiz-pane"></div>
+          <ul id="wiz-notes" aria-live="polite"></ul>
+        </section>
+      </div>
+      <div class="wiz-statusbar" role="status">
+        <span>ACCOUNT <b id="wiz-acct"></b></span><span>BASKET <b id="wiz-basket"></b></span><span>LEFT <b id="wiz-left"></b></span><span id="wiz-ide"></span>
+      </div>
+      <div class="w98-actions wiz-actions">
+        <button id="wiz-std" class="w98-btn" type="button" title="Skip the shopping and take the usual machine">Standard PC</button>
+        <button id="wiz-back" class="w98-btn" type="button">&lt; Back</button>
+        <button id="wiz-next" class="w98-btn default" type="button">Next &gt;</button>
+      </div>
+    </div>
+  </div>
+
   <script src="vendor/js-dos/js-dos.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>
