@@ -13,7 +13,7 @@ export const NEWS = [
   },
   {
     date: '1998-02-07', kind: 'fix', title: 'The wall phone is off the switchboard',
-    text: 'The wall phone had been screwed to the wall directly in front of the main switchboard, so the breakers were behind the handset and the labels could not be read. It now hangs half a metre along the wall, towards the snack table. The breakers are still not to be touched.',
+    text: 'The wall phone had been screwed to the wall directly in front of the main switchboard, so the breakers were behind the handset and the labels could not be read. It now hangs on the clear stretch of wall between the switchboard and the Volt Cola poster. The breakers are still not to be touched.',
   },
   {
     date: '1998-02-07', kind: 'new', title: 'A mobile on the couch',
