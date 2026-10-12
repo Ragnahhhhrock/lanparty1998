@@ -521,7 +521,7 @@ test('the library fills up in milestones as files go round', () => {
   assert.deepEqual(names, WAREZ.map((w) => w.name));
 });
 
-test('the pizza costs money and turns up 25 game minutes later', () => {
+test('the pizza costs money and has the driver knocking 8 game minutes later', () => {
   const p = new Party();
   const cash = p.cash;
   assert.ok(p.orderPizza());

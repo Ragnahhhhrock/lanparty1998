@@ -101,6 +101,23 @@ export function door() {
   burst(t + 0.5, 0.05, 1800, 1.5, 0.5);
 }
 
+// three knuckle raps on a wooden door
+export function knock() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  for (let i = 0; i < 3; i++) {
+    burst(t + i * 0.24, 0.1, 170, 2.5, 0.9, 'lowpass');
+    burst(t + i * 0.24, 0.04, 900, 1.5, 0.35);
+  }
+}
+
+// aluminium foil being crumpled or peeled
+export function foil() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  for (let i = 0; i < 9; i++) burst(t + i * 0.05 + Math.random() * 0.03, 0.04, 3500 + Math.random() * 3500, 0.8, 0.3, 'highpass');
+}
+
 export function crunch() {
   if (!ctx) return;
   const t = ctx.currentTime;

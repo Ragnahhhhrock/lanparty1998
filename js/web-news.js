@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'The pizza guy knocks',
+    text: 'Order a large pepperoni on the phone and the driver now turns up about eight minutes later and knocks on the basement door, three raps at a time, until somebody lets him in. Open the door and he hands over the pizza, a can of Volt Cola, which you drink on the spot, and a garlic bread in foil that was a mistake on his docket and is yours. Press G to unwrap and eat it.',
+  },
+  {
     date: '1998-02-07', kind: 'fix', title: 'The wall phone is off the switchboard',
     text: 'The wall phone had been screwed to the wall directly in front of the main switchboard, so the breakers were behind the handset and the labels could not be read. It now hangs half a metre along the wall, towards the snack table. The breakers are still not to be touched.',
   },

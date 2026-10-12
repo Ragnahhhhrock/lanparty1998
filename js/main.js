@@ -90,10 +90,16 @@ const regulars = [
 // who is sitting where, by IRC nick, so what they say in the channel comes out of their mouths
 const speakers = new Map([macca, ...regulars].map((a) => [a.name.toLowerCase(), a]));
 
+// The pizza driver. He stands on the landing outside the door, facing in, and is only there while he is waiting to be let in.
+const driver = spawnNpc(scene, { name: 'DRIVER', color: '#b22a1e', yaw: Math.PI, arch: 'grunge', x: (room.door.minX + room.door.maxX) / 2, z: ROOM.minZ - 0.5, look: { headphones: false } }); // --pepperoni
+driver.group.visible = false;
+
 /* ---------- state ---------- */
 let mode = 'intro'; // intro | walk | tween | seated | console | dialog
 const keys = new Set();
 const stats = { caffeine: 15, snacks: 40, dust: 0, cans: 0, handfuls: 0 };
+const held = { garlic: false };                                   // the garlic bread in foil you are carrying
+const delivery = { waiting: false, knockIn: 0, knocks: 0, leaveIn: 0 }; // the pizza driver on the landing
 let target = null;
 let tween = null;
 let myName = 'YOU';
@@ -316,6 +322,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyM') { desktop.toggle('lanamp'); return; }
   if (e.code === 'KeyH') { e.preventDefault(); desktop.toggle('ie'); return; } // preventDefault: the window focuses its address bar, which would swallow the h
   if (e.code === 'KeyN') { toast(voices.toggle() ? 'Noises on.' : 'Noises off.'); return; }
+  if (e.code === 'KeyG') { eatGarlic(); return; }
   if (amp?.keys[e.code]) { amp.keys[e.code](); return; }
   keys.add(e.code);
   if (e.code === 'KeyE' && target) interact(target);
@@ -373,7 +380,7 @@ const PROMPTS = {
   mobile: () => 'E · Pick up the mobile',
   pizza: (t) => (t.box.slices > 0 ? `E · Eat a slice of pepperoni pizza (${t.box.slices} left)` : 'Empty box. Just grease.'),
   taped: () => 'E · Talk to DUCTAPE',
-  door: () => `E · ${room.door.open ? 'Close' : 'Open'} the door`,
+  door: () => `E · ${room.door.open ? 'Close' : 'Open'} the door${delivery.waiting && !room.door.open ? '  ·  Somebody is knocking' : ''}`,
   drink: () => 'E · Crack a Volt Cola',
   soda: () => 'E · Pour a Citrus Zap into a red cup',
   eat: () => 'E · Grab a handful of Nachoz or Cheez Curlz',
@@ -429,7 +436,7 @@ function useDoor() {
   const d = room.door;
   if (d.open && player.pos.z < ROOM.minZ + 0.3) { toast("You're standing in the doorway."); return; }
   sfx.door();
-  if (d.toggle()) { toast(MUM[doorOpens++ % MUM.length]); banter.react('door'); }
+  if (d.toggle() && !delivery.waiting) { toast(MUM[doorOpens++ % MUM.length]); banter.react('door'); }
 }
 
 /* ---------- errands: little message boxes ---------- */
@@ -726,18 +733,41 @@ const handSlice = (() => { // the slice you hold up in front of the camera
   g.visible = false; scene.add(camera); camera.add(g);
   return g;
 })();
-let handT = -1;
+// garlic bread: a foil-wrapped bundle (what you carry) and the loaf on its foil tray (what you eat)
+const foilMat = new THREE.MeshStandardMaterial({ color: 0xc9ced4, roughness: 0.35, metalness: 0.7 }); // --foil
+function foilBundle() {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.06, 0.09), foilMat));
+  const ridge = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.012, 0.025), foilMat); ridge.position.y = 0.036; g.add(ridge);
+  for (const sx of [-1, 1]) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.04, 0.05), foilMat); t.position.x = sx * 0.16; t.rotation.set(0.5, 0.3, 0.2); g.add(t); }
+  return g;
+}
+const handFoil = foilBundle();
+handFoil.visible = false; camera.add(handFoil);
+const handBread = (() => {
+  const g = new THREE.Group();
+  const std = (hex) => new THREE.MeshStandardMaterial({ color: hex, roughness: 0.7 });
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.008, 0.11), foilMat));                       // the peeled foil under it
+  const loaf = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.04, 0.08), std(0xd9a04a)); loaf.position.y = 0.024; g.add(loaf);   // --pizza-crust
+  const butter = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.01, 0.05), std(0xf2c14e)); butter.position.y = 0.047; g.add(butter); // --pizza-cheese
+  g.visible = false; camera.add(g);
+  return g;
+})();
+let handT = -1, handMesh = handSlice, handBase = 0.75;
 const HAND = { raise: 0.5, bite: 0.6, lower: 0.4 };
 function stepHandSlice(dt) {
+  handFoil.visible = held.garlic && handT < 0 && mode === 'walk';
+  handFoil.position.set(0.2, -0.3, -0.55);
+  handFoil.rotation.set(-0.35, 0.5, 0.15);
   if (handT < 0) return;
   handT += dt;
   const total = HAND.raise + 3 * HAND.bite + HAND.lower;
   const k = Math.min(1, handT / HAND.raise, (total - handT) / HAND.lower);
   const up = Math.max(0, k), bites = Math.max(0, Math.min(3, Math.floor((handT - HAND.raise) / HAND.bite)));
-  handSlice.position.set(0.14 - up * 0.12, -0.3 + up * 0.18, -0.6 + up * 0.12);
-  handSlice.rotation.set(-0.5 - up * 0.4, 0.4, 0.3);
-  handSlice.scale.setScalar(0.75 * (1 - bites * 0.3));
-  if (handT >= total) { handT = -1; handSlice.visible = false; }
+  handMesh.position.set(0.14 - up * 0.12, -0.3 + up * 0.18, -0.6 + up * 0.12);
+  handMesh.rotation.set(-0.5 - up * 0.4, 0.4, 0.3);
+  handMesh.scale.setScalar(handBase * (1 - bites * 0.3));
+  if (handT >= total) { handT = -1; handMesh.visible = false; handMesh = handSlice; handBase = 0.75; }
 }
 function eatPizza(box) {
   if (box.slices <= 0) { toast('Empty box. Just grease and one crust.'); return; }
@@ -752,6 +782,64 @@ function eatPizza(box) {
 }
 const PIZZA_LINES = ['Cold pepperoni. Still good.', 'A string of cheese reaches the box. You follow it.', 'Grease, salt and regret.', 'You eat the pizza like a man with a frag limit.'];
 stats.pizzaSlices = 0;
+
+// G: unwrap the garlic bread the driver gave you and eat it
+const GARLIC_LINES = ['Butter, garlic and a bit of foil. Worth the wait.', 'Still hot. The roof of your mouth objects.', 'You will smell of garlic until Tuesday.'];
+stats.garlic = 0;
+function eatGarlic() {
+  if (!held.garlic) { toast('You are not holding any garlic bread.'); return; }
+  if (handT >= 0) return;
+  held.garlic = false;
+  handMesh = handBread; handBase = 1; handT = 0; handBread.visible = true;
+  stats.snacks = Math.min(100, stats.snacks + 30);
+  stats.handfuls++;
+  sfx.foil();
+  setTimeout(() => sfx.crunch(), 450);
+  analytics.eatSnack(stats.snacks);
+  toast(GARLIC_LINES[stats.garlic++ % GARLIC_LINES.length]);
+}
+
+/* ---------- the pizza driver: knocks, waits on the landing, and hands it all over when the door opens ---------- */
+const driverLoad = (() => { // what he is holding out: the box, with a can and the foil bundle on top
+  const g = new THREE.Group();
+  const std = (hex, o = {}) => new THREE.MeshStandardMaterial({ color: hex, roughness: 0.7, ...o });
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.05, 0.42), std(0xb8935a))); // --cardboard
+  const bundle = foilBundle(); bundle.position.set(-0.07, 0.06, 0.05); g.add(bundle);
+  const can = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.033, 0.12, 14), std(0xc4161c, { metalness: 0.4, roughness: 0.4 })); // --volt-can
+  can.position.set(0.12, 0.085, -0.06); g.add(can);
+  g.position.set(0, 1.05, -0.4); // his front is -z
+  driver.group.add(g);
+  return g;
+})();
+const KNOCKS = [
+  'Three knocks on the basement door. That will be the pizza.',
+  'Three more knocks. He is not going away.',
+  'More knocking. Somebody open the door.',
+];
+function stepDelivery(dt) {
+  if (delivery.leaveIn > 0 && (delivery.leaveIn -= dt) <= 0) driver.group.visible = false;
+  if (!delivery.waiting) return;
+  const d = room.door;
+  if (d.open) { if (d.t > 0.7) handOver(); return; }
+  if ((delivery.knockIn -= dt) > 0) return;
+  delivery.knockIn = 9;
+  sfx.knock();
+  toast(KNOCKS[delivery.knocks % KNOCKS.length]);
+  if (delivery.knocks++ === 0) chatLine('Somebody is knocking on the basement door. Nobody is expecting anyone except the pizza.', true);
+}
+// the door is open and he is standing there: the pizza goes on a table, the Volt gets cracked, and the garlic bread is yours
+function handOver() {
+  delivery.waiting = false; delivery.leaveIn = 5;
+  driverLoad.visible = false;
+  const box = room.addPizza();
+  box.fresh = true;
+  held.garlic = true;
+  sfx.foil();
+  drink();
+  toast('He hands you the pizza, a Volt Cola and garlic bread in foil. G to unwrap it.');
+  chatLine('The driver hands over a large pepperoni, a can of Volt Cola and a garlic bread in foil. "The garlic bread is a mistake on the docket. Keep it." Press G to unwrap it.', true);
+  banter.react('pizza');
+}
 
 // the regulars eat and drink too: pizza from whichever box has a slice left, handfuls of Nachoz or Cheez Curlz, cans of Volt.
 // The man on the ceiling has his own pizza.
@@ -1180,11 +1268,13 @@ function frame() {
   if (mode !== 'intro') for (const m of banter.tick(dt)) ircSpeak(m);
   amp?.update(dt);
   stepHandSlice(dt);
+  stepDelivery(dt);
   stepEaters(dt, now);
   taped.idle(now);
   if ((tapedNext -= dt) < 0) { tapedNext = 12 + Math.random() * 10; if (taped.eatT < 0) taped.eat(); }
   if (macca.group.visible) macca.idle(now);
   for (const r of regulars) r.idle(now);
+  if (driver.group.visible) driver.idle(now);
   if (mode !== 'intro') gameNoise.tick(dt, speakerPcs(), { x: player.pos.x, z: player.pos.z, yaw: player.yaw, seated: mode === 'seated' });
   if (mode !== 'intro') party.tick(dt, { seatedPc: seatedAt?.index ?? null });
   if (link.online && mode === 'walk' && (sendTimer += dt) > 0.1) { sendTimer = 0; link.pos(player.pos.x, player.pos.z, player.yaw); }
@@ -1397,13 +1487,10 @@ party.addEventListener('link-down', (e) => {
   linkChanged();
 });
 party.addEventListener('link-up', () => { chatLine('Link light is back on.', true); linkChanged(); });
-party.addEventListener('order', (e) => chatLine(e.detail.what === 'hub' ? 'Hub ordered. It is on its way.' : e.detail.what === 'pizza' ? `Pepperoni ordered. $${PIZZA.cost}, and "30 minutes".` : "Dazza's dad is bringing the switch round.", true));
-party.addEventListener('pizza-arrive', () => {
-  const box = room.addPizza();
-  toast('The pizza is here. Large pepperoni, on the table.');
-  chatLine('The pizza guy dumps a large pepperoni on the table and leaves before anyone can tip.', true);
-  banter.react('pizza');
-  box.fresh = true;
+party.addEventListener('order', (e) => chatLine(e.detail.what === 'hub' ? 'Hub ordered. It is on its way.' : e.detail.what === 'pizza' ? `Pepperoni ordered. $${PIZZA.cost}. The bloke says he is round the corner.` : "Dazza's dad is bringing the switch round.", true));
+party.addEventListener('pizza-arrive', () => { // the driver is at the door; the pizza reaches a table when you open it (handOver)
+  delivery.waiting = true; delivery.knockIn = 0; delivery.knocks = 0; delivery.leaveIn = 0;
+  driverLoad.visible = true; driver.group.visible = true;
 });
 
 party.addEventListener('power-down', () => {

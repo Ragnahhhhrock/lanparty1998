@@ -12,7 +12,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 GROUPS = {
     "shell": ("w98-",),
     "crt": ("crt-", "phosphor", "dos-", "amber", "toast", "bsod"),
-    "basement": ("basement", "wood", "carpet", "ceiling", "beige", "paper", "duct-", "cardboard", "pizza-", "pepperoni", "power-", "couch", "beanbag", "oak", "tv-", "console-"),
+    "basement": ("basement", "wood", "carpet", "ceiling", "beige", "paper", "duct-", "cardboard", "pizza-", "pepperoni", "foil", "power-", "couch", "beanbag", "oak", "tv-", "console-"),
     "build": ("cable-", "mat-"),
     "media": ("floppy-", "disk-", "disc-", "case-"),
     "brand": ("volt", "nacho", "cheese", "curlz", "zap-", "cup-"),

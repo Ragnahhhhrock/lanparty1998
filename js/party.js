@@ -21,7 +21,7 @@ export const NET = {
   switch: { label: '16-port switch', short: 'SWITCH', speed: 10 },
 };
 export const SHOP = { hubCost: 45, hubDelay: 10 };            // the hub: shop price, game minutes until it turns up
-export const PIZZA = { cost: 16, delay: 25, slices: 8 };         // a large pepperoni: price, game minutes to deliver, slices in the box
+export const PIZZA = { cost: 16, delay: 8, slices: 8 };          // a large pepperoni: price, game minutes until the driver knocks, slices in the box
 export const DAD = { delay: 20, warnAt: 5 * 60 + 30, returnAt: 6 * 60 }; // the switch is on loan until 6:00 AM
 export const COAX_FAULT_EVERY = [6, 12];                      // game minutes between dodgy T-connectors
 
