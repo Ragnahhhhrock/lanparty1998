@@ -64,6 +64,14 @@ export function lightSwitch(on) {
   else burst(t + 0.05, 0.12, 400, 1, 0.15, 'lowpass');
 }
 
+// a lead going into a socket (on) or coming out of it (off): a short click and a plastic scrape
+export function plug(on = true) {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  burst(t, 0.04, on ? 1500 : 900, 2, 0.5);
+  burst(t + 0.03, 0.05, on ? 600 : 1200, 1.5, 0.3, 'lowpass');
+}
+
 // the power going out of some of the boxes: a thump and everything winding down
 export function powerCut() {
   if (!ctx) return;

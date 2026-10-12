@@ -86,6 +86,14 @@
       <div id="netstatus">Connecting to the hub...</div>
     </div>
     <div id="toast" hidden></div>
+    <aside id="setup" class="w98-window" aria-label="Setting up your PC" hidden>
+      <div class="w98-title"><span class="w98-ttext">SETUP.EXE</span></div>
+      <div class="setup-body">
+        <p id="setup-where"></p>
+        <div class="bar"><i id="setup-bar"></i></div>
+        <ul id="setup-list"></ul>
+      </div>
+    </aside>
   </div>
 
   <!-- chat feed, visible walking or seated -->
@@ -211,6 +219,22 @@ Press any key to continue _</div>
         <div class="w98-actions">
           <a class="w98-link" href="mailto:contact@lanparty1998.com">contact@lanparty1998.com</a>
           <button id="enter-btn" class="w98-btn default">Walk in</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setting up the PC you built: the checklist while you carry things to your table, and the back of the tower -->
+  <div id="rear" hidden>
+    <div class="w98-window" role="dialog" aria-modal="true" aria-labelledby="rear-title">
+      <div class="w98-title"><span id="rear-title" class="w98-ttext">BEHIND THE PC</span><b id="rear-x" aria-hidden="true">×</b></div>
+      <div class="rear-wrap">
+        <p>Leads lie on the table until you plug them in. The tower will not start until the screen, the keyboard, the mouse and the power are sorted.</p>
+        <div id="rear-body"></div>
+        <ul id="rear-status" aria-live="polite"></ul>
+        <div class="wiz-actions w98-actions">
+          <button id="rear-go" class="w98-btn default" type="button">Press the power button</button>
+          <button id="rear-close" class="w98-btn" type="button">Close</button>
         </div>
       </div>
     </div>

@@ -84,7 +84,7 @@ export class RoomLink extends EventTarget {
       }
       case 'bench': { // who has which BYOC bench, and what is on it
         const p = m.id === this.me?.id ? this.me : this.players.get(m.id);
-        if (p) { p.bench = m.bench; p.build = m.build; this.emit('bench', p); }
+        if (p) { p.bench = m.bench; p.build = m.build; p.up = !!m.up; this.emit('bench', p); }
         break;
       }
       case 'denied':

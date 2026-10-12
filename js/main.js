@@ -10,7 +10,7 @@ import * as sfx from './sfx.js';
 import * as voices from './voices.js';
 import { GameNoise } from './gaming.js';
 import { analytics } from './analytics.js';
-import { Party, PIZZA, BURNER, DISCS, NET, SHOP, PC_COUNT, OC, HEAT, RAM, NIGHT, SEC_PER_GAME_MIN, SHARE_STEPS, celsius } from './party.js';
+import { Party, PIZZA, BURNER, DISCS, NET, SHOP, PC_COUNT, PC_TOTAL, OC, HEAT, RAM, NIGHT, SEC_PER_GAME_MIN, SHARE_STEPS, celsius } from './party.js';
 import * as dialog from './dialog.js';
 import { Banter, IrcView, REGULARS } from './irc.js';
 import { Player } from './music.js';
@@ -20,6 +20,8 @@ import { Desktop } from './desktop.js';
 import { registerApps } from './apps.js';
 import { Wizard } from './wizard.js';
 import * as BUILD from './build.js';
+import { RearPanel } from './rear.js';
+import { SEAT_BASE, benchOfSeat } from './bench-plan.js';
 
 const $ = (id) => document.getElementById(id);
 initShare();
@@ -131,8 +133,143 @@ function walkIn() {
   analytics.enterParty();
   link.connect(myName);
   refreshStations();
+  startBench();
 }
 (savedHandle ? ui.enter : ui.handle).focus();
+
+/* ---------- the PC you built: your bench on the back table ---------- */
+// The server hands out PC-07 or PC-08. You carry the parts to the table (ghost outlines show where), plug everything in
+// from behind the tower (js/rear.js), press the button, watch the POST, and sit down at a PC that is on the LAN.
+// Rules are js/bench-plan.js, the table is js/bench.js, and what the box does once it is running is the same party.js as
+// every other PC in the room.
+const rear = new RearPanel($('rear'));
+const setupBox = { root: $('setup'), where: $('setup-where'), bar: $('setup-bar'), list: $('setup-list') };
+let myBench = null;
+let benchFallback = null;
+const lcFirst = (l) => (/^[A-Z][a-z]/.test(l) ? l[0].toLowerCase() + l.slice(1) : l);
+const benchPartName = (t) => lcFirst(room.benches[t.bench].setup.parts().find((p) => p.id === t.part)?.label ?? 'part');
+
+function startBench() {
+  clearTimeout(benchFallback);
+  if (link.online) link.send({ t: 'bench', build: myBuild, up: !!myBench?.ready });
+  // no room server (or an old one that has never heard of benches): the first bench is yours
+  benchFallback = setTimeout(() => { if (!myBench) takeBench(0); }, 2500);
+}
+
+function releaseBench() {
+  if (!myBench) return;
+  if (seatedAt === myBench.station && mode === 'seated') standUp();
+  party.benchOff(myBench.index, 'moved');
+  party.benchCabled(myBench.index, false);
+  myBench.release();
+  myBench = null;
+}
+
+function takeBench(i) {
+  if (i === null || i === undefined) {
+    releaseBench();
+    toast('Both benches are taken. Find a free PC.');
+    renderSetup();
+    return;
+  }
+  if (myBench?.plan.id === i) return;
+  releaseBench();
+  const b = room.benches[i];
+  myBench = b;
+  b.claim(myBuild, party.net);
+  syncBenchParty();
+  renderSetup();
+  refreshStations();
+  toast(`Your table is ${b.station.name}, on the back table. Carry your gear over.`);
+}
+
+// other players' benches: shown assembled once they have finished their POST
+function syncRemoteBenches() {
+  for (const b of room.benches) {
+    if (b === myBench) continue;
+    const p = [...link.players.values()].find((o) => o.bench === b.plan.id && o.up && o.build);
+    if (!p) { if (b.owner === 'remote') b.release(); continue; }
+    const build = BUILD.sanitize(p.build);
+    if (b.owner !== 'remote' || JSON.stringify(b.build) !== JSON.stringify(build)) b.showRemote(build);
+  }
+  refreshStations();
+}
+
+function syncBenchParty() {
+  if (!myBench) return;
+  party.benchCabled(myBench.index, myBench.setup.netCabled());
+  refreshLinks();
+}
+
+function openRear(b) {
+  if (b !== myBench || mode !== 'walk') return;
+  if (document.pointerLockElement) document.exitPointerLock();
+  ui.prompt.hidden = true;
+  mode = 'dialog';
+  rear.open(b, () => { if (mode === 'dialog') { mode = 'walk'; lockPointer(); } });
+}
+
+// the SETUP.EXE list in the corner: what is left to do
+function renderSetup() {
+  const b = myBench;
+  const show = !!b && !b.ready && mode !== 'intro';
+  setupBox.root.hidden = !show;
+  if (!show) return;
+  const s = b.setup;
+  setupBox.where.textContent = s.poweredOn
+    ? `${b.station.name} is starting up.`
+    : `Your table: ${b.station.name}, back table, between ${b.plan.between[0]} and ${b.plan.between[1]}. Look at an outline and press E.`;
+  const { done, total } = s.progress();
+  setupBox.bar.style.width = `${Math.round((done / total) * 100)}%`;
+  setupBox.list.replaceChildren(...s.checklist().map((it) => {
+    const li = document.createElement('li');
+    li.textContent = it.text + (it.optional ? ' (optional)' : '');
+    if (it.done) li.className = 'done';
+    else if (it.optional) li.className = 'opt';
+    return li;
+  }));
+}
+
+for (const b of room.benches) {
+  b.addEventListener('change', () => {
+    if (b !== myBench) return;
+    syncBenchParty();
+    renderSetup();
+  });
+  b.addEventListener('poweron', () => {
+    if (b !== myBench) return;
+    sfx.postBeep();
+    toast(`${b.station.name}: power on self test...`);
+    setTimeout(() => { if (mode === 'walk') sitDown(b.station); }, 0);   // the rear panel is closing; take the seat and watch it start
+  });
+  b.addEventListener('booted', () => {
+    if (b !== myBench) return;
+    const spec = BUILD.specOf(b.build);
+    party.benchOn(b.index, { ram: spec.ram, ocTable: spec.oc, burnSpeed: spec.burnSpeed });
+    link.send({ t: 'bench', build: myBuild, up: true });
+    refreshStations();
+    refreshLinks();
+    renderSetup();
+    if (seatedAt === b.station && mode === 'seated') startSeat(b.station);
+    else toast(`${b.station.name} is up. Press E to sit down.`);
+    chatLine(`${esc(myName)}'s PC-0${b.index + 1} ${party.pcs[b.index].cabled ? 'is on the network' : 'is up, with no network cable'}.`, true);
+  });
+  b.addEventListener('shutdown', (e) => {
+    if (b !== myBench) return;
+    party.benchOff(b.index, e.detail.why);
+    link.send({ t: 'bench', build: myBuild, up: false });
+    if (seatedAt === b.station && mode === 'seated') { toast(e.detail.why === 'power' ? `${b.station.name} goes black.` : `${b.station.name} is switched off.`); standUp(); }
+    if (e.detail.why === 'power') sfx.powerCut();
+    refreshLinks();
+    renderSetup();
+  });
+}
+party.addEventListener('bench-cable', (e) => {
+  sfx.plug(e.detail.cabled);
+  refreshLinks();
+  if (seatedAt?.index === e.detail.pc) updateDM();
+});
+
 
 function lockPointer() {
   if (document.activeElement?.closest?.('#desktop, #taskbar')) document.activeElement.blur(); // the keyboard goes back to the room
@@ -172,7 +309,10 @@ window.addEventListener('keydown', (e) => {
   if (amp?.keys[e.code]) { amp.keys[e.code](); return; }
   keys.add(e.code);
   if (e.code === 'KeyE' && target) interact(target);
-  if (e.code === 'KeyF' && target?.station) openPcMenu(target.station);
+  if (e.code === 'KeyF' && target?.station) {
+    const b = target.station.bench;
+    if (b && !b.ready) openRear(b); else openPcMenu(target.station);
+  }
 }, true);
 window.addEventListener('keyup', (e) => keys.delete(e.code), true);
 window.addEventListener('blur', () => keys.clear());
@@ -200,9 +340,16 @@ function findTarget() {
 const PROMPTS = {
   sit: (t) => {
     const who = link.occupant(t.station.index);
+    if (t.station.bench) return `E · Sit down at ${t.station.name}  ·  F · Open the case`;
     if (!party.pcPowered(t.station.index)) return `${t.station.name} · No power  ·  F · Open the case`;
     const fiddle = party.pcs[t.station.index].linkDown ? 'F · Cable is out' : 'F · Open the case';
     return who ? `${t.station.name} · ${who.name}'s sitting here  ·  ${fiddle}` : `E · Sit down at ${t.station.name}  ·  ${fiddle}`;
+  },
+  'bench-place': (t) => `E · Unpack the ${benchPartName(t)}`,
+  'bench-tower': (t) => {
+    const b = room.benches[t.bench];
+    const left = b.setup.missing().length;
+    return b.setup.poweredOn ? `${t.station.name} · Starting up...` : `E · Behind the PC: plug things in  ·  ${left ? `${left} thing${left > 1 ? 's' : ''} to sort` : 'ready to switch on'}`;
   },
   buddy: () => (party.buddy.state === 'back' ? 'E · Macca is back. Ask about the RAM' : 'E · Talk to Macca'),
   switch: () => `E · Turn the lights ${room.lightsOn ? 'off' : 'on'}`,
@@ -216,19 +363,23 @@ const PROMPTS = {
   drink: () => 'E · Crack a Volt Cola',
   soda: () => 'E · Pour a Citrus Zap into a red cup',
   eat: () => 'E · Grab a handful of Nachoz or Cheez Curlz',
-  burner: () => (party.job ? `E · CD-R: writing ${Math.floor(party.burnProgress() * 100)}%` : 'E · Burn a CD (2x)'),
+  burner: (t) => (party.job ? `E · CD-R: writing ${Math.floor(party.burnProgress() * 100)}%` : `E · Burn a CD (${party.burnSpeedOf(t.station.index)}x)`),
 };
 
 function interact(t) {
-  if (t.kind === 'sit') {
+  if (t.kind === 'bench-place') {
+    const b = room.benches[t.bench];
+    if (b.place(t.part)) sfx.plug(true);
+  } else if (t.kind === 'bench-tower') openRear(room.benches[t.bench]);
+  else if (t.kind === 'sit') {
     const who = link.occupant(t.station.index);
-    if (!party.pcPowered(t.station.index)) toast(`${t.station.name} has no power. Somebody should look at the extension lead.`);
+    if (!party.pcPowered(t.station.index)) toast(t.station.bench ? `${t.station.name} is switched off.` : `${t.station.name} has no power. Somebody should look at the extension lead.`);
     else if (who) toast(`${who.name} is on that one. Find a free PC.`);
     else sitDown(t.station);
   } else if (t.kind === 'drink') drink();
   else if (t.kind === 'soda') soda();
   else if (t.kind === 'eat') eat();
-  else if (t.kind === 'burner') openBurner();
+  else if (t.kind === 'burner') openBurner(t.station.index);
   else if (t.kind === 'shop') openShop();
   else if (t.kind === 'buddy') openMacca();
   else if (t.kind === 'switch') flipLights();
@@ -287,6 +438,8 @@ function openPcMenu(station) {
       const pc = party.pcs[i];
       const who = link.occupant(i);
       if (who) return { lines: [`${who.name} is sitting at this PC. Leave the case alone.`], progress: null, buttons: [{ label: 'Close' }] };
+      const behind = station.bench ? [{ label: 'Behind the PC', run: () => setTimeout(() => openRear(station.bench), 0) }] : [];
+      if (station.bench && !party.pcPowered(i)) return { lines: ['This PC is switched off.'], progress: null, buttons: [...behind, { label: 'Close' }] };
       if (!party.pcPowered(i)) { // the extension lead's out of the wall
         return {
           lines: [party.leadIn ? 'No power yet. It is going through POST.' : 'Dead. The power board behind this table is not getting anything. The extension lead has come out of the wall.'],
@@ -328,12 +481,13 @@ function openPcMenu(station) {
       // processor and heat
       if (pc.crashed) lines.push('This box has blue screened. Sit down and press a key.');
       else {
-        lines.push(`CPU: ${OC[pc.oc].label}. Case temperature ${celsius(pc.heat)}°C${party.fan.on ? '' : ', and the fan is off'}.`);
+        const table = party.ocTable(i);
+        lines.push(`CPU: ${table[pc.oc].label}. Case temperature ${celsius(pc.heat)}°C${party.fan.on ? '' : ', and the fan is off'}.`);
         if (progress === null && (pc.oc > 0 || pc.heat > 0)) progress = pc.heat / HEAT.crash;
-        const next = OC[(pc.oc + 1) % OC.length];
-        buttons.push({ label: pc.oc === OC.length - 1 ? `Put the jumpers back (${next.mhz}MHz)` : `Move the jumpers (${next.mhz}MHz)`, run: () => party.cycleOverclock(i), keep: true });
+        const next = table[(pc.oc + 1) % table.length];
+        buttons.push({ label: pc.oc === table.length - 1 ? `Put the jumpers back (${next.mhz}MHz)` : `Move the jumpers (${next.mhz}MHz)`, run: () => party.cycleOverclock(i), keep: true });
       }
-      buttons.push({ label: 'Close' });
+      buttons.push(...behind, { label: 'Close' });
       return { lines, progress, buttons };
     },
   });
@@ -449,17 +603,19 @@ function openDazzaDialog() {
   });
 }
 
-function openBurner() {
+function openBurner(pcIndex = BURNER.pc) {
+  const name = room.stations[pcIndex].name, speed = party.burnSpeedOf(pcIndex), own = pcIndex !== BURNER.pc;
   openErrand({
     title: 'CDWRITE.EXE',
     render: () => {
       const job = party.job;
-      if (!party.pcPowered(BURNER.pc)) return { lines: ['PC-04 has no power. The drive is dead and so is the write.'], progress: null, buttons: [{ label: 'Close' }] };
+      if (!party.pcPowered(pcIndex)) return { lines: [`${name} has no power. The drive is dead and so is the write.`], progress: null, buttons: [{ label: 'Close' }] };
       if (job) {
+        const at = room.stations[job.pc].name;
         return {
           lines: [
-            `Writing ${DISCS[job.kind].name} at ${BURNER.speed}x. ${Math.floor(party.burnProgress() * 100)}% done, ${clockText(party.burnSecondsLeft())} to go.`,
-            'Keep off PC-04 while it writes. One game of DOOM and it is a coaster.',
+            `Writing ${DISCS[job.kind].name} at ${job.speed}x on ${at}. ${Math.floor(party.burnProgress() * 100)}% done, ${clockText(party.burnSecondsLeft())} to go.`,
+            `Keep off ${at} while it writes. One game of DOOM and it is a coaster.`,
           ],
           progress: party.burnProgress(),
           buttons: [{ label: 'Close' }, { label: 'Cancel write', run: () => party.cancelBurn() }],
@@ -467,13 +623,13 @@ function openBurner() {
       }
       return {
         lines: [
-          `CD-R drive, ${BURNER.speed}x. The only burner in the basement, and it is in PC-04.`,
-          `A blank is $${BURNER.blankCost}. A ${party.burnMinutes()}-minute write. Mates pay $${DISCS.MIX.pays} for a MIX CD.`,
+          own ? `CD-R drive, ${speed}x. Yours: the other burner is in PC-04, and there is one blank on the go at a time.` : `CD-R drive, ${speed}x. The only burner in the basement, and it is in PC-04.`,
+          `A blank is $${BURNER.blankCost}. A ${party.burnMinutes(speed)}-minute write. Mates pay $${DISCS.MIX.pays} for a MIX CD.`,
           `Cash $${party.cash}. Discs burned: ${party.discs}. Coasters: ${party.coasters}.`,
         ],
         progress: null,
         buttons: [
-          { label: 'Burn a MIX CD', disabled: !party.canBurn(), run: () => party.startBurn('MIX'), keep: true },
+          { label: 'Burn a MIX CD', disabled: !party.canBurn(pcIndex), run: () => party.startBurn('MIX', pcIndex), keep: true },
           { label: 'Close' },
         ],
       };
@@ -649,8 +805,23 @@ function sitDown(station) {
     mode = 'seated';
     ui.hud.hidden = true;
     placeMonitorOverlay(station);
-    ui.monitor.hidden = false;
     ui.seatedBar.hidden = false;
+    if (station.bench && !station.bench.ready) { // still in its POST: watch the screen until it gets to Windows
+      ui.monitor.hidden = true;
+      ui.seatedStatus.textContent = 'Starting up...';
+      return;
+    }
+    startSeat(station);
+  });
+  sitDown.station = station;
+  analytics.sitDown(station);
+}
+
+// the PC is up and you are in front of it: the game's canvas goes over the glass and the machine boots
+function startSeat(station) {
+  {
+    applyCrtLook(station);
+    ui.monitor.hidden = false;
     pc.onReady = () => {
       analytics.gameStart(gameTitle());
       if (mode === 'seated') ui.seatedStatus.textContent = seatedStatusText();
@@ -666,9 +837,14 @@ function sitDown(station) {
       ui.seatedStatus.textContent = seatedStatusText();
     }
     updateDM();
-  });
-  sitDown.station = station;
-  analytics.sitDown(station);
+  }
+}
+
+// the tube you chose: a small one is soft and a bit dim, a 19-inch is sharp. Club PCs are all 17-inch.
+function applyCrtLook(station) {
+  const fx = station.bench?.build ? BUILD.specOf(station.bench.build).crt.fx : { blur: 0, bright: 1, flicker: false };
+  ui.monitor.style.filter = fx.blur || fx.bright !== 1 ? `blur(${fx.blur}px) brightness(${fx.bright})` : '';
+  ui.monitor.classList.toggle('flicker', !!fx.flicker);
 }
 
 function standUp() {
@@ -759,9 +935,10 @@ const trip = { t: 0, cool: 0, on: false, dir: new THREE.Vector3() };
 
 function cableUnderfoot() {
   for (const c of room.floorCables) {
+    if (c.active && !c.active()) continue;   // a bench's lead that is not fitted
     const gone = c.kind === 'fan' || c.kind === 'lead' ? false : c.kind === 'coax'
       ? party.net !== 'coax' || party.pcs[PC_COUNT - 1].linkDown  // the coax across the floor is the cable to PC-06
-      : party.net === 'coax' || party.pcs[c.pc].linkDown;         // an unplugged lead isn't lying there any more
+      : party.net === 'coax' || party.pcs[c.pc].linkDown || (c.pc >= PC_COUNT && !party.pcs[c.pc].cabled);   // an unplugged lead isn't lying there any more
     if (gone) continue;
     for (const p of c.pts) if (Math.hypot(p.x - player.pos.x, p.z - player.pos.z) < TRIP.radius) return c;
   }
@@ -875,6 +1052,7 @@ function frame() {
   crowd.update(dt, link.players, now);
   room.updateFan(dt, party.fan.on, party.fanSweep());
   room.updatePower(dt);
+  room.updateBenches();
   room.stations.forEach((st, i) => { st.screen.rebooting = party.rebooting(i) || party.pcBooting(i); });
   room.updateTv(dt);
   room.door.update(dt);
@@ -916,7 +1094,7 @@ function frame() {
   const playing = (mode === 'seated' && pc.running) || [...link.players.values()].some((p) => p.pc !== null);
   room.hddLeds.forEach((led, i) => { if (!party.pcPowered(i)) led.material.color.setHex(0x100000); else if (Math.random() < 0.15) led.material.color.setHex(Math.random() < 0.4 ? 0xff2a1a : 0x400000); });
   room.netLeds.forEach((led, i) => {
-    const used = i < 6; // one port per PC; the rest are spare
+    const used = i < PC_COUNT || !!party.pcs[i]?.cabled; // one port per PC; the rest are spare
     const up = !used || (party.pcLinkUp(i) && party.pcPowered(i));
     const busy = used && up && Math.random() < (playing ? 0.5 : 0.12);
     led.material.color.setHex(busy ? 0x4dff5a : (used && up ? 0x1b6e1b : 0x0a2a0a));
@@ -934,11 +1112,11 @@ function frame() {
     ui.clock.textContent = `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
     for (const s of room.screens) s.clock = ui.clock.textContent;
     ui.schedule.textContent = scheduleText();
-    ui.shares.textContent = `${party.sharingCount()}/${PC_COUNT} · ${Math.floor(party.swapped)}MB`;
+    ui.shares.textContent = `${party.sharingCount()}/${party.pcCount()} · ${Math.floor(party.swapped)}MB`;
     ui.caffeine.style.width = `${stats.caffeine}%`;
     ui.snacks.style.width = `${stats.snacks}%`;
     ui.dust.style.opacity = (stats.dust * 0.9).toFixed(2);
-    room.stations[BURNER.pc].screen.burn = party.job ? { pct: party.burnProgress(), secondsLeft: party.burnSecondsLeft() } : null;
+    room.stations.forEach((st, i) => { st.screen.burn = party.job?.pc === i ? { pct: party.burnProgress(), secondsLeft: party.burnSecondsLeft() } : null; });
     refreshLinks();
     dialog.refresh();
   }
@@ -967,7 +1145,7 @@ party.addEventListener('cash', (e) => { ui.cash.textContent = `$${e.detail}`; })
 // shooters until midnight, then StarCraft, which wants memory
 function scheduleText() {
   if (party.phase() === 'fps') return 'ON TONIGHT: shooters now, StarCraft at midnight';
-  return `ON TONIGHT: StarCraft. ${party.starcraftBoxes()} of ${PC_COUNT} PCs have the 32MB for it`;
+  return `ON TONIGHT: StarCraft. ${party.starcraftBoxes()} of ${party.pcCount()} PCs have the 32MB for it`;
 }
 
 // what the cables are doing, shown on the gear and on the screens
@@ -975,6 +1153,7 @@ function refreshLinks() {
   room.stations.forEach((st, i) => {
     room.setLoose(i, party.pcs[i].linkDown);
     room.setPower(i, party.pcPowered(i));
+    if (st.bench && (st.bench.owner !== 'me' || !st.bench.ready)) { st.screen.linkDown = false; st.screen.crashed = false; st.screen.rts = null; st.screen.rebooting = false; return; } // off or in POST: its own screen
     st.screen.linkDown = !party.pcLinkUp(i);
     st.screen.crashed = party.pcs[i].crashed;
     st.screen.oc = party.pcs[i].oc;
@@ -1002,6 +1181,11 @@ party.addEventListener('net', (e) => {
   };
   if (e.detail.reason === 'returned') { toast("Dazza's dad took his switch back. Hub it is."); chatLine("Dazza's dad took his switch back. Hub it is.", true); }
   else { toast(lines[e.detail.net]); chatLine(lines[e.detail.net], true); }
+  if (myBench) {   // the leads that were fitted for the old network come out
+    const gone = myBench.setNet(e.detail.net);
+    if (gone.length) { toast(`Your network lead is no good now. ${BUILD.PARTS.nic[myBuild.nic].ports.includes(e.detail.net === 'coax' ? 'bnc' : 'rj45') ? 'Plug the new one in.' : 'Your card has no socket for it.'}`); sfx.plug(false); }
+    syncBenchParty();
+  }
   linkChanged();
 });
 party.addEventListener('crash', (e) => {
@@ -1018,7 +1202,7 @@ party.addEventListener('crash', (e) => {
 party.addEventListener('reboot', refreshLinks);
 party.addEventListener('hot', (e) => banter.react('hot', room.stations[e.detail.pc].name));
 party.addEventListener('hot', (e) => chatLine(`${room.stations[e.detail.pc].name} is running hot. Is the fan on?`, true));
-party.addEventListener('oc', (e) => { toast(`${room.stations[e.detail.pc].name}: ${OC[e.detail.level].label}.`); refreshLinks(); });
+party.addEventListener('oc', (e) => { toast(`${room.stations[e.detail.pc].name}: ${party.ocTable(e.detail.pc)[e.detail.level].label}.`); refreshLinks(); });
 party.addEventListener('fan-on', () => { toast('Fan on.'); chatLine('The pedestal fan is spinning again.', true); });
 party.addEventListener('fan-off', (e) => {
   if (e.detail.why === 'tripped') { chatLine('The fan has lost its power.', true); return; }
@@ -1113,13 +1297,13 @@ party.addEventListener('power-up', () => {
   chatLine('The extension lead is back in. The three boxes are running memory tests. Shares will need fixing again.', true);
   refreshLinks();
 });
-party.addEventListener('burn-start', () => toast('CDWRITE: writing at 2x. Hands off PC-04.'));
+party.addEventListener('burn-start', (e) => toast(`CDWRITE: writing at ${e.detail.speed}x. Hands off ${room.stations[e.detail.pc].name}.`));
 party.addEventListener('burn-done', (e) => {
   toast(`Disc done. Mates pay $${e.detail.pays}.`);
   chatLine(`The CD-R finally spat out a ${DISCS[e.detail.kind].name}. +$${e.detail.pays}.`, true);
 });
 party.addEventListener('coaster', (e) => {
-  const why = { underrun: 'Buffer underrun. That one is a coaster.', crash: 'PC-04 blue screened mid-write. Coaster.', reboot: 'Windows restarted on PC-04 mid-write. Coaster.', power: 'PC-04 lost power mid-write. Coaster.' }[e.detail.reason] ?? 'Write cancelled. That disc is a coaster now.';
+  const why = { underrun: 'Buffer underrun. That one is a coaster.', crash: 'The burner PC blue screened mid-write. Coaster.', reboot: 'Windows restarted on the burner PC mid-write. Coaster.', power: 'The burner PC lost power mid-write. Coaster.' }[e.detail.reason] ?? 'Write cancelled. That disc is a coaster now.';
   toast(why);
   chatLine(why, true);
 });
@@ -1129,6 +1313,7 @@ party.addEventListener('coaster', (e) => {
 // keep name tags and idle screens in step with who's sitting where
 function refreshStations() {
   for (const st of room.stations) {
+    if (st.bench && !st.bench.ready) continue;   // an empty or half-built bench: bench.js keeps its screen
     const mine = seatedAt === st;
     const who = mine ? null : link.occupant(st.index);
     if (st.deskPhones) st.deskPhones.visible = !mine && !who; // somebody sitting there has them on
@@ -1191,9 +1376,15 @@ ui.chatForm.addEventListener('submit', (e) => {
 });
 ui.chatInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); closeChat(); } });
 
+link.addEventListener('bench', (e) => {
+  if (e.detail.id === link.me?.id) takeBench(e.detail.bench);
+  else syncRemoteBenches();
+});
 link.addEventListener('online', () => {
   crowd.clear();
   for (const p of link.players.values()) crowd.add(p);
+  if (mode !== 'intro') startBench();
+  syncRemoteBenches();
   if (seatedAt) link.send({ t: 'sit', pc: seatedAt.index });
   setNetStatus();
   refreshStations();
@@ -1202,6 +1393,7 @@ link.addEventListener('online', () => {
 });
 link.addEventListener('offline', () => {
   crowd.clear();
+  syncRemoteBenches();
   setNetStatus();
   refreshStations();
   updateDM();
@@ -1216,6 +1408,7 @@ link.addEventListener('join', (e) => {
 });
 link.addEventListener('leave', (e) => {
   crowd.remove(e.detail.id);
+  syncRemoteBenches();
   setNetStatus();
   refreshStations();
   chatLine(`${esc(e.detail.name)} left.`, true);

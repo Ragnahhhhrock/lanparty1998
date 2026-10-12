@@ -428,7 +428,7 @@ export class Party extends EventTarget {
     pc.cabled = cabled;
     pc.linkDown = false;
     if (!cabled && pc.share === 'ok') pc.share = 'broken';
-    this.emit(cabled ? 'link-up' : 'link-down', { pc: i, why: 'cable' });
+    this.emit('bench-cable', { pc: i, cabled });
     return true;
   }
 

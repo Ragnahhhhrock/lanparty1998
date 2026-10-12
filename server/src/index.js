@@ -65,7 +65,7 @@ export class Room {
     const used = new Set(sockets.map((ws) => this.info(ws)?.id));
     let id = crypto.randomUUID().slice(0, 8);
     while (used.has(id)) id = crypto.randomUUID().slice(0, 8);
-    server.serializeAttachment({ id, name: null, color: null, x: 0, z: 1.2, yaw: 0, pc: null, bench: null, build: null });
+    server.serializeAttachment({ id, name: null, color: null, x: 0, z: 1.2, yaw: 0, pc: null, bench: null, build: null, up: false });
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -150,9 +150,10 @@ export class Room {
         for (let b = 0; bench === null && b < BENCHES; b++) if (!taken.has(b)) bench = b;
         p.bench = bench;
         p.build = bench === null ? null : cleanBuild(msg.build);
+        p.up = bench !== null && msg.up === true;   // true once the PC has finished its POST: only then do the others see it
         if (bench === null && p.pc !== null && p.pc >= CLUB_PCS) { p.pc = null; this.broadcast({ t: 'seat', id: p.id, pc: null }); this.dropFromMatch(p.id); }
         this.save(ws, p);
-        this.broadcast({ t: 'bench', id: p.id, bench, build: p.build });
+        this.broadcast({ t: 'bench', id: p.id, bench, build: p.build, up: p.up });
         return;
       }
       case 'stand': {

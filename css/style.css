@@ -577,3 +577,48 @@ button.snap-th:focus-visible { outline: 1px dotted var(--w98-text); outline-offs
   .wiz-step { width: auto; }
   .wiz-main { overflow: visible; }
 }
+
+/* ---- Setting up the PC you built: the checklist (SETUP.EXE) and the back of the tower ---- */
+#setup { position: fixed; top: var(--space-4); left: var(--space-4); width: 280px; z-index: var(--z-hud); pointer-events: none; }
+#setup[hidden] { display: none; }
+.setup-body { padding: var(--space-2) var(--space-3) var(--space-3); display: grid; gap: var(--space-2); }
+#setup-where { margin: 0; font-size: var(--text-ui-sm); }
+#setup-bar { background: repeating-linear-gradient(90deg, var(--w98-title) 0 7px, transparent 7px 9px); }
+#setup-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-0); font-size: var(--text-ui-sm); }
+#setup-list li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: var(--space-1); }
+#setup-list li::before { content: '[ ]'; font: var(--text-crt-sm)/1 var(--font-crt); }
+#setup-list li.done::before { content: '[x]'; }
+#setup-list li.done { color: var(--w98-title-off); }
+#setup-list li.opt { font-style: italic; }
+@media (max-width: 640px) { #setup { width: calc(100vw - 2 * var(--gutter)); } #setup-list { display: none; } }
+
+#rear { position: fixed; inset: 0; display: grid; place-items: center; background: var(--scrim); z-index: var(--z-dialog); padding: var(--gutter); }
+#rear[hidden] { display: none; }
+#rear .w98-window { width: min(640px, 100%); max-height: calc(100vh - 2 * var(--gutter)); display: flex; flex-direction: column; }
+.rear-wrap { padding: var(--space-3); overflow-y: auto; scrollbar-color: var(--w98-face) var(--w98-shadow); }
+.rear-wrap > p { margin: 0 0 var(--space-3); }
+.rear-set { margin: 0 0 var(--space-3); padding: var(--space-2) var(--space-3); border: 1px solid var(--w98-shadow); box-shadow: 1px 1px 0 var(--w98-light), inset 1px 1px 0 var(--w98-light); }
+.rear-set legend { padding: 0 var(--space-1); font-weight: bold; }
+.rear-stop { margin: 0; color: var(--w98-danger); }
+.rear-row { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; border-bottom: 1px dotted var(--w98-shadow); }
+.rear-row:last-child { border-bottom: 0; }
+.rear-sw { width: 14px; height: 14px; box-shadow: var(--bevel-sunken); background: var(--w98-shadow); }
+.rear-sw.vga { background: var(--floppy-blue); }
+.rear-sw.kb { background: var(--cable-ps2); }
+.rear-sw.mouse { background: var(--floppy-green); }
+.rear-sw.audio { background: var(--zap-lime); }
+.rear-sw.mains { background: var(--power-plug); }
+.rear-sw.coax, .rear-sw.cat5 { background: var(--power-cord); }
+.rear-main { display: grid; gap: var(--space-0); min-width: 0; }
+.rear-h { font-size: var(--text-ui-sm); color: var(--w98-title-off); }
+.rear-row.in .rear-h { color: var(--w98-text); }
+.rear-why { font-size: var(--text-ui-sm); color: var(--w98-danger); }
+.rear-act { display: flex; gap: var(--space-2); align-items: center; }
+.rear-act .w98-btn { min-width: 0; padding: var(--space-1) var(--space-3); }
+.rear-act .wiz-select { flex: none; width: 150px; }
+#rear-status { list-style: none; margin: 0 0 var(--space-2); padding: 0; display: grid; gap: var(--space-1); }
+#rear-status li { padding: var(--space-1) var(--space-2); background: var(--w98-light); box-shadow: var(--bevel-sunken); }
+#rear-status li.err { color: var(--w98-danger); }
+#rear-status li.err::before { content: 'STOP:'; font-weight: bold; margin-right: var(--space-1); }
+#rear-status li.warn::before { content: 'NOTE:'; font-weight: bold; margin-right: var(--space-1); }
+@media (max-width: 640px) { .rear-row { grid-template-columns: 14px minmax(0, 1fr); } .rear-act { grid-column: 2; } }
