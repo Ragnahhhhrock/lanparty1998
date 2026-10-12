@@ -1,4 +1,4 @@
-// The mobile phone from the coffee table, held up in front of you: a candy-bar handset with a green LCD, a navigation
+// The mobile phone from the desk at PC-02, held up in front of you: a candy-bar handset with a green LCD, a navigation
 // row and a keypad. What it does is in js/handset.js (and Snake in js/snake.js); this is the plastic and the sound.
 // Keyboard: 0-9 * # work as the keypad, arrows or W A S D move, Enter or Space is the big left key, Backspace is C,
 // Esc backs out (and puts the phone down from the home screen). 2 4 6 8 steer the snake as well.

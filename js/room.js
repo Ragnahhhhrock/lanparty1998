@@ -762,8 +762,9 @@ function buildLounge(scene, out, labelVolt, labelNachoz, labelCurlz) {
     scene.add(r);
   }
 
-  // a candy-bar mobile phone somebody left on the middle couch cushion: slate shell, green screen, grey keys. It lies
-  // face up with its top end toward -z. Colours are tokens: --phone-body, --phone-body-light, --lcd, --disk-metal.
+  // a candy-bar mobile phone somebody left on the desk at PC-02, to the right of the mouse mat: slate shell, green
+  // screen, grey keys. It lies face up with its top end toward the monitor. Colours are tokens: --phone-body,
+  // --phone-body-light, --lcd, --disk-metal.
   const mobile = new THREE.Group();
   const shell = std(0x2d3a44, { roughness: 0.55 });            // --phone-body
   const bezel = std(0x4a5a66, { roughness: 0.5 });             // --phone-body-light
@@ -778,7 +779,10 @@ function buildLounge(scene, out, labelVolt, labelNachoz, labelCurlz) {
   const mobileHit = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.17), new THREE.MeshBasicMaterial({ visible: false }));
   mobileHit.position.y = 0.04;
   mobile.add(mobileHit);
-  place(mobile, 3.2, 0.41, -0.82, 1.2);
+  { // PC-02's own space: x 0.6 is right of the mouse mat (which ends at 0.44) and clear of the tower (which ends at 0.615 but only reaches z 0.12); z 0.27 is near the front edge, where you can see it
+    const s = STATIONS[1], lx = 0.6, lz = 0.27, c = Math.cos(s.face), n = Math.sin(s.face);
+    place(mobile, s.x + lx * c + lz * n, TABLE_Y, s.z - lx * n + lz * c, s.face + 0.35);
+  }
   use(mobile, 'mobile');
 
   // drinks: standing, tipped over, and a flat two-litre on the carpet

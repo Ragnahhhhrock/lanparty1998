@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'fix', title: 'The mobile is off the couch',
+    text: 'The Nokka 51 had been left on the middle couch cushion, which is a place nobody looks, and most of the party spent the evening ringing Dazza from the wall. It is now on the desk at PC-02, to the right of the mouse mat, where it can be seen from the middle of the room. Press E to pick it up. It rings the same numbers as before.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'The pizza guy knocks',
     text: 'Order a large pepperoni on the phone and the driver now turns up about eight minutes later and knocks on the basement door, three raps at a time, until somebody lets him in. Open the door and he hands over the pizza, a can of Volt Cola, which you drink on the spot, and a garlic bread in foil that was a mistake on his docket and is yours. Press G to unwrap and eat it.',
   },

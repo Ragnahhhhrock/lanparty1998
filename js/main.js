@@ -649,7 +649,7 @@ function dialWall(contact) {
   timer = setTimeout(() => { sfx.receiverClick(); swapErrand(SPECS[contact.id]()); }, call.duration * 1000);
 }
 
-// The mobile on the coffee table: Snake, the phone book, and calls to the same numbers as the wall phone.
+// The mobile on the desk at PC-02: Snake, the phone book, and calls to the same numbers as the wall phone.
 function openMobile() {
   if (mode !== 'walk') return;
   if (document.pointerLockElement) document.exitPointerLock();

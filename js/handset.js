@@ -1,4 +1,4 @@
-// The candy-bar mobile on the coffee table, with no DOM so `node tools/phone.test.mjs` can test it.
+// The candy-bar mobile on the desk at PC-02, with no DOM so `node tools/phone.test.mjs` can test it.
 // A Handset is the phone's brain: which screen it is on, what each key does there, and what it wants played.
 // js/phone.js is the plastic around it (the keys, the LCD, the keyboard) and plays the sounds it asks for.
 //
