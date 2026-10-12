@@ -169,7 +169,7 @@ ${box('Tonight\'s schedule', `<table class="w-tbl" cellspacing="0" cellpadding="
       const heading = show === 'fix' ? 'Bug fixes' : show === 'new' ? 'New features' : 'What\'s New';
       return `<h2>${heading}</h2>
 <p>Updates from the webmaster, newest first. ${tag('new')} means we added something. ${tag('fix')} means something was broken and is not now.</p>
-<p>Show: ${show ? '<a href="news.htm">Everything</a>' : '<b>Everything</b>'} | ${show === 'new' ? '<b>New features</b>' : '<a href="news.htm?show=new">New features</a>'} | ${show === 'fix' ? '<b>Bug fixes</b>' : '<a href="news.htm?show=fix">Bug fixes</a>'}</p>
+<a id="latest" name="latest"></a><p>Show: ${show ? '<a href="news.htm">Everything</a>' : '<b>Everything</b>'} | ${show === 'new' ? '<b>New features</b>' : '<a href="news.htm?show=new">New features</a>'} | ${show === 'fix' ? '<b>Bug fixes</b>' : '<a href="news.htm?show=fix">Bug fixes</a>'}</p>
 ${newsTable(entries)}
 <p class="w-more">${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}. Found something broken? <a href="mailto:${CONTACT}">Tell the webmaster</a>.</p>`;
     },

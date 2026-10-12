@@ -636,6 +636,6 @@ export function registerApps(desktop, { irc, lanamp, gameTime }) {
   desktop.adopt('irc', irc, { title: 'mIRC32 - [#lanparty98]', icon: 'irc', resize: true, min: [260, 140] });
   desktop.adopt('lanamp', lanamp, { title: 'LANamp 2.0', icon: 'amp' });
   for (const app of [ie, minesweeper, solitaire, downhill, snapster, calculator, notepad, paint, dosPrompt, defrag, help, run, shutdown]) desktop.define(app);
-  desktop.startWith = [{ id: 'ie', arg: `${HOME}news.htm` }]; // walk in and the browser is already on the news
+  desktop.startWith = [{ id: 'ie', arg: `${HOME}news.htm#latest` }]; // walk in and the browser is already on the news
   desktop.setMenu(MENU);
 }
