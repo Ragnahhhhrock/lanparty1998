@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'The CD-ROM drives have a working eject button',
+    text: 'Every PC in the basement has a CD-ROM drive in the front of the case, and the button on it works. Press E at the button to push the tray out or pull it back in. Three of the machines were left with the tray out and a disc sitting in it; those now close like the rest. The CD-R burner in PC-04 is the drive above, and it still only wants to burn.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'The pizza box has a lid, and it moves',
     text: 'Press F at a Pizza Shack box to flip the lid shut or prop it open again, or press E at a shut one to lift it before you eat. Some of the boxes in the basement were already open when you came down and some were shut, and the pizza guy brings his either way. The regulars lift the lid on a shut box before they take a slice.',
   },

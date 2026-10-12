@@ -101,10 +101,13 @@ function crt(screenTexture) {
 function tower(burner = false) {
   const g = new THREE.Group();
   g.add(box(0.19, 0.44, 0.44, beige, 0, 0.22, 0));
+  const cdIndex = burner ? 1 : 0;   // the CD-ROM drive: the top 5.25" bay, or the one under the CD-R burner
   for (let i = 0; i < 2; i++) {
     if (i === 0 && burner) continue; // the top bay is the CD-R drive, below
+    if (i === cdIndex) continue;     // and this one is the CD-ROM drive, below that
     g.add(box(0.15, 0.04, 0.01, beigeDark, 0, 0.38 - i * 0.05, 0.222)); // 5.25" bays
   }
+  const cdrom = cdRomDrive(g, 0.38 - cdIndex * 0.05);
   let drive = null;
   if (burner) {
     drive = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.04), new THREE.MeshStandardMaterial({ map: T.cdrDrive(), roughness: 0.7 }));
@@ -115,7 +118,41 @@ function tower(burner = false) {
   const power = box(0.015, 0.008, 0.004, new THREE.MeshBasicMaterial({ color: 0x33ff55 }), -0.04, 0.12, 0.223);
   const hdd = box(0.015, 0.008, 0.004, new THREE.MeshBasicMaterial({ color: 0x400000 }), 0.04, 0.12, 0.223);
   g.add(power, hdd);
-  return { group: g, hdd, drive, power };
+  return { group: g, hdd, drive, power, cdrom };
+}
+
+// A CD-ROM drive in a 5.25" bay at height y: the faceplate, a tray that slides out of the slot, and a small invisible target
+// over the eject button (the button is drawn on the faceplate by T.cdDrive). cdrom.toggle() opens or closes it; step(dt)
+// slides the tray. The tray is hidden while it is all the way in, so it does not poke through the front of the case.
+const TRAY_IN = 0.17, TRAY_OUT = 0.28, TRAY_SECONDS = 1.3;
+function cdRomDrive(tower, y) {
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.04), new THREE.MeshStandardMaterial({ map: T.cdDrive('CD-ROM 24x'), roughness: 0.7 }));
+  face.position.set(0, y, 0.2275);
+  tower.add(face);
+  const tray = new THREE.Group();
+  tray.add(box(0.12, 0.003, 0.12, beigeDark, 0, 0, 0));
+  tray.position.set(0, y - 0.004, TRAY_IN);
+  tray.visible = false;
+  tower.add(tray);
+  // the eject button is at u = 114/150, v = 28/40 of the faceplate texture
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.016, 0.03), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.set(0.039, y - 0.008, 0.235);
+  tower.add(hit);
+  const d = { tray, hit, open: false, t: 0 };
+  d.setOpen = (open, instant = false) => { d.open = open; if (instant) { d.t = open ? 1 : 0; d.apply(); } };
+  d.toggle = () => { d.setOpen(!d.open); return d.open; };
+  d.apply = () => {
+    const e = d.t * d.t * (3 - 2 * d.t);   // ease in and out
+    tray.position.z = TRAY_IN + (TRAY_OUT - TRAY_IN) * e;
+    tray.visible = d.t > 0.02;
+  };
+  d.step = (dt) => {
+    const goal = d.open ? 1 : 0;
+    if (d.t === goal) return;
+    d.t = d.t < goal ? Math.min(goal, d.t + dt / TRAY_SECONDS) : Math.max(goal, d.t - dt / TRAY_SECONDS);
+    d.apply();
+  };
+  return d;
 }
 
 // A pair of desktop speakers, one each side of the monitor, the way every PC with a sound card had them.
@@ -1027,6 +1064,7 @@ function buildPizza(scene, out) {
     return place(x, TABLE_Y + stack * 0.09, z, yaw, 8, Math.random() < 0.5 && stack === 0);
   };
   out.updatePizza = (dt) => { for (const b of out.pizzaBoxes) b.step(dt); };
+  out.updateTrays = (dt) => { for (const st of out.stations) st.tower.cdrom?.step(dt); };
 }
 
 // The man taped to the ceiling. The duct and the tape are built here; main.js puts the man in.
@@ -1177,9 +1215,10 @@ function buildMedia(scene, out) {
       const top = stack(g, 0.52, TOWER_TOP, -0.1, P.stack, 0.3 + i);
       if (P.topCd) cd(g, P.topCd, 0.5, top, -0.1, 0.9);
     } else cd(g, 'cdr', 0.52, TOWER_TOP, -0.1, 0.4);
-    if (P.tray && i !== BURNER.pc) { // the CD-ROM tray left sticking out of the front, with a disc in it
-      g.add(box(0.12, 0.003, 0.12, beigeDark, 0.52, TABLE_Y + 0.376, 0.18));
-      cd(g, 'silver', 0.52, TABLE_Y + 0.378, 0.19, 0.3 + i);
+    if (P.tray && i !== BURNER.pc) { // the CD-ROM tray left sticking out of the front, with a disc in it (the eject button closes it)
+      const drive = st.tower.cdrom;
+      cd(drive.tray, 'silver', 0, 0.0022, 0.01, 0.3 + i);
+      drive.setOpen(true, true);
     }
     for (const [x, z, yaw] of P.floppies ?? []) loose(g, x, TABLE_Y, z, yaw);
     for (const [x, z, kind, yaw] of P.cds ?? []) cd(g, kind, x, TABLE_Y, z, yaw);
@@ -1457,6 +1496,7 @@ export function buildRoom(scene) {
       for (const o of [tw.drive, hit]) o.userData.interact = { kind: 'burner', station };
       station.burner = true;
     }
+    tw.cdrom.hit.userData.interact = { kind: 'eject', station };   // after the 'sit' pass above, so the button wins over the case
 
     can.traverse((o) => { o.userData.interact = { kind: 'drink' }; });
     out.interactables.push(can);

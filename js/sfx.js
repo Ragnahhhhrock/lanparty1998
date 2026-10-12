@@ -74,6 +74,15 @@ export function plug(on = true) {
   burst(t + 0.03, 0.05, on ? 600 : 1200, 1.5, 0.3, 'lowpass');
 }
 
+// a CD-ROM tray: the button, a small motor whirring while it slides, and a clunk at the end
+export function tray(open = true) {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  burst(t, 0.03, 1800, 2, 0.4);                                      // the button
+  burst(t + 0.08, 1.0, open ? 700 : 600, 4, 0.12);                   // the motor
+  burst(t + 1.2, 0.06, open ? 300 : 500, 1.5, 0.3, 'lowpass');       // the end stop
+}
+
 // the power going out of some of the boxes: a thump and everything winding down
 export function powerCut() {
   if (!ctx) return;

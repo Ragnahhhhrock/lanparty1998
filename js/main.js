@@ -387,6 +387,7 @@ const PROMPTS = {
   soda: () => 'E · Pour a Citrus Zap into a red cup',
   eat: () => 'E · Grab a handful of Nachoz or Cheez Curlz',
   console: () => 'E · Play the console (it runs N64 ROMs from your own drive)',
+  eject: (t) => `E · ${t.station.tower.cdrom?.open ? 'Close' : 'Open'} the CD-ROM tray`,
   burner: (t) => (party.job ? `E · CD-R: writing ${Math.floor(party.burnProgress() * 100)}%` : `E · Burn a CD (${party.burnSpeedOf(t.station.index)}x)`),
 };
 
@@ -404,6 +405,7 @@ function interact(t) {
   else if (t.kind === 'drink') drink();
   else if (t.kind === 'soda') soda();
   else if (t.kind === 'eat') eat();
+  else if (t.kind === 'eject') { const open = t.station.tower.cdrom.toggle(); sfx.tray(open); }
   else if (t.kind === 'burner') openBurner(t.station.index);
   else if (t.kind === 'shop') openShop();
   else if (t.kind === 'buddy') openMacca();
@@ -1265,6 +1267,7 @@ function frame() {
   room.updateFan(dt, party.fan.on, party.fanSweep());
   room.updatePower(dt);
   room.updatePizza(dt);
+  room.updateTrays(dt);
   room.updateBenches();
   room.stations.forEach((st, i) => { st.screen.rebooting = party.rebooting(i) || party.pcBooting(i); });
   room.updateTv(dt);
