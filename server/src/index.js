@@ -3,6 +3,8 @@
 // deathmatch. Game traffic itself does not pass through here (DOOM's IPX packets go
 // peer to peer over WebRTC); this only coordinates.
 
+import { handleReminders, runDue } from './reminders.js';
+
 const MAX_PLAYERS = 16;
 const PCS = 8;           // six club PCs, then the two BYOC benches (seats 6 and 7)
 const CLUB_PCS = 6;
@@ -12,9 +14,17 @@ const GAMES = new Set(['doom', 'heretic', 'hexen', 'quake', 'descent', 'duke']);
 // shirt colours: tokens --shirt-1 .. --shirt-8 in css/tokens.css
 const COLORS = ['#e2231a', '#2b6fd6', '#e8c21b', '#3aa35a', '#9b4dca', '#f28a1c', '#20b2aa', '#d94f8a'];
 
+export { Reminders } from './reminders.js';
+
 export default {
-  async fetch(request, env) {
+  // every five minutes: send any reminder the organiser scheduled that is now due
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runDue(env));
+  },
+
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname.startsWith('/reminders') || url.pathname.startsWith('/admin/reminders')) return handleReminders(request, env, ctx);
     const m = url.pathname.match(/^\/room\/([a-z0-9-]{1,32})$/i);
     if (m && request.headers.get('Upgrade') === 'websocket') {
       const id = env.ROOMS.idFromName(m[1].toLowerCase());

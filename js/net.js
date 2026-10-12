@@ -4,6 +4,8 @@
 const params = new URLSearchParams(location.search);
 const LOCAL = ['localhost', '127.0.0.1'].includes(location.hostname);
 const SERVER = params.get('server') || (LOCAL ? 'ws://127.0.0.1:8787' : 'wss://room.lanparty1998.com');
+// the same server over HTTP, for the party reminders (js/app-reminders.js)
+export const HTTP_SERVER = SERVER.replace(/^ws/, 'http');
 export const ROOM_NAME = (params.get('room') || 'basement').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 32) || 'basement';
 
 export class RoomLink extends EventTarget {

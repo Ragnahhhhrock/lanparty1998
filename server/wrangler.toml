@@ -14,3 +14,20 @@ class_name = "Room"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Room"]
+
+# Party reminders: sign-ups, schedules and who has had which email (js/app-reminders.js is the window in the room)
+[[durable_objects.bindings]]
+name = "REMINDERS"
+class_name = "Reminders"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Reminders"]
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+REMIND_FROM = "LAN Party '98 <party@lanparty1998.com>"
+# Secrets, set in the Cloudflare dashboard (Workers > lanparty1998-room > Settings > Variables and Secrets):
+#   RESEND_API_KEY, ADMIN_TOKEN

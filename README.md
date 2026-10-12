@@ -147,14 +147,15 @@ Sent from `js/analytics.js`:
 | `light_switch` | `on` (the lights were switched on or off) |
 | `party_summary` | `cans_total`, `handfuls_total`, `games_total`, `play_seconds` (on tab close) |
 
-### Inviting people
+### Party reminders
 
-`tools/remind.mjs` emails everyone on a list and tells them to come and play. Copy `tools/invitees.example.csv` to `tools/invitees.csv` (gitignored: it holds real addresses) and add `email,name` lines.
+Players ask for an email before the next party from **Start > Programs > Party Reminders** (or **Run...** > `remind`). They type their address, get a confirmation email, click the link, and are on the list. Every email has an unsubscribe link, and unsubscribing deletes the address. The organiser opens **File > Organiser...** in the same window, enters the password, and sees how many people are confirmed, then picks a date and time (or **Send now**), an optional "Doors open" line and an optional private room. Scheduled sends go out within five minutes of their time.
 
-```
-node tools/remind.mjs                          # dry run: lists who would get it, sends nothing
-node tools/remind.mjs --send                   # sends (needs RESEND_API_KEY and REMIND_FROM)
-node tools/remind.mjs --room friday --when "Sat 7:30 PM"
-```
+It lives in the room server (`server/src/reminders.js`; the window is `js/app-reminders.js`). Sign-ups are kept in a Durable Object, limited to 5 per IP per hour and 300 confirmation emails a day, and a hidden field catches bots. One-time setup in the Cloudflare dashboard (Workers > lanparty1998-room > Settings > Variables and Secrets), then redeploy:
 
-The email is plain text, links to https://lanparty1998.com (or a private `?room=`), and tells people to reply STOP to be dropped from the list. `node tools/remind.test.mjs` checks the list parsing and the message.
+- `RESEND_API_KEY`: a Resend key with sending access to lanparty1998.com (the domain is verified in Resend).
+- `ADMIN_TOKEN`: the organiser password. Make it long; ten wrong tries from one address locks that address out for an hour.
+
+`REMIND_FROM` (the sender) is in `server/wrangler.toml`. Resend's free plan sends 100 emails a day, so a bigger list needs a paid plan. To try it locally: `cd server && npx wrangler dev --var EMAIL_DRY_RUN:1 --var ADMIN_TOKEN:test` logs the emails instead of sending them. `node tools/reminders.test.mjs` checks the address rules and the email text.
+
+`tools/remind.mjs` is the older command-line version for a list you keep yourself (`tools/invitees.csv`, gitignored): `node tools/remind.mjs` is a dry run, `--send` sends it (needs `RESEND_API_KEY` and `REMIND_FROM` in the environment). `node tools/remind.test.mjs` tests it.
