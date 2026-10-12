@@ -129,6 +129,7 @@ const META = {
   hexen: { year: 1995, genre: 'First-person shooter', note: 'The 4 level demo. Bigger levels, switches that open things on the other side of the map.' },
   quake: { year: 1996, genre: 'First-person shooter', note: 'Real 3D. Hungry for RAM, so mind the 16MB.' },
   descent: { year: 1995, genre: 'Six-degrees-of-freedom shooter', note: 'You are a ship in a mine. Up and down are suggestions.' },
+  duke: { year: 1996, genre: 'First-person shooter', note: 'Episode one, L.A. in a bad mood. The shareware release, and the one that wants SETUP before a network game.' },
 };
 
 const howNet = (g) => (g.net.kind === 'setup'
@@ -192,7 +193,7 @@ ${box('On the desktop', `<table class="w-tbl" cellspacing="0" cellpadding="0">
 <p class="w-more">Start > Programs > Games, or Start > Run.</p>`)}
 <a id="midnight" name="midnight"></a>
 ${box('At midnight', `<p><b>StarCraft.</b> Somebody kicks off a game at midnight and the chat says so. Free PCs with at least 32MB show it running; the rest show a DOS error. The game itself is not here, because it is not shareware, so sitting down still runs the shooter you chose.</p>`)}
-${box('Looks like a game, is not', `<p><b>DUKE NUKEM 3D</b> is a poster. The game is not here, and neither are the characters. <b>The console under the TV</b> has four pads and a brawl on a loop. You can look at it. Six more game boxes and film posters are on the walls (IRON HYMN, VOID HARVEST and so on); they are all made up. The shelf on the left wall holds a box for each game that runs on the PCs. Those pictures are made up too.</p>`)}
+${box('Looks like a game, is not', `<p><b>The DUKE NUKEM 3D poster</b> on the wall is just a poster, and the characters are not here. The shareware episode is on the PCs, though, and has a box on the shelf. <b>The console under the TV</b> has four pads and a brawl on a loop. You can look at it. Six more game boxes and film posters are on the walls (IRON HYMN, VOID HARVEST and so on); they are all made up. The shelf on the left wall holds a box for each game that runs on the PCs. Those pictures are made up too.</p>`)}
 <p><a href="howto.htm">How to start a deathmatch</a> | <a href="news.htm">What's new</a></p>`,
   },
 
@@ -205,7 +206,7 @@ ${box('Looks like a game, is not', `<p><b>DUKE NUKEM 3D</b> is a poster. The gam
 <li>Walk up to any PC whose screen says FREE and press <b>E</b>. DOOM boots on its own.</li>
 <li>The <b>Game</b> button on the bar at the bottom of the screen reboots the PC into the next game.</li>
 <li>To deathmatch, one seated player clicks <b>Host a deathmatch</b>. Others sitting at PCs click <b>Join deathmatch</b> (up to ${MAX_PLAYERS}). The host clicks <b>Start</b>.</li>
-<li>Lobby games (Quake, Descent) have their own Multiplayer menu: one player hosts, the rest join. The status line tells you which entries to pick.</li>
+<li>Lobby games (Quake, Descent, Duke Nukem 3D) have their own multiplayer menu: one player hosts, the rest join. The status line tells you which entries to pick.</li>
 </ol>
 ${box('Keys', `<table class="w-tbl" cellspacing="0" cellpadding="0">
 <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> + mouse</td><td>Walk and look</td></tr>
@@ -281,6 +282,8 @@ ${box('Contact', `<p>E-mail the webmaster at <a href="mailto:${CONTACT}">${CONTA
 <tr><td><b>HERETIC</b></td><td>QUICKEN</td><td>You cannot die</td></tr>
 <tr><td><b>HERETIC</b></td><td>RAMBO</td><td>Every weapon</td></tr>
 <tr><td><b>QUAKE</b></td><td>god, noclip</td><td>Press the ~ key first for the console</td></tr>
+<tr><td><b>DUKE NUKEM 3D</b></td><td>dnkroz</td><td>You cannot die</td></tr>
+<tr><td><b>DUKE NUKEM 3D</b></td><td>dnstuff</td><td>Every weapon, every item</td></tr>
 <tr><td><b>DESCENT</b></td><td>?</td><td>Dad has the manual</td></tr>
 </table>
 <p>Typing a cheat in a deathmatch is what we call losing.</p>

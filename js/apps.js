@@ -426,7 +426,7 @@ const dosPrompt = {
       const name = cmd.toLowerCase();
       if (!name) return;
       if (COMMANDS[name]) COMMANDS[name](rest.join(' '));
-      else if (['doom', 'heretic', 'hexen', 'quake', 'descent'].includes(name) && cwd === 'C:\\' + name.toUpperCase()) print('Not enough memory.');
+      else if (['doom', 'heretic', 'hexen', 'quake', 'descent', 'duke3d'].includes(name) && cwd === 'C:\\' + name.toUpperCase()) print('Not enough memory.');
       else print('Bad command or file name');
     };
     print(BANNER);

@@ -8,6 +8,11 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'Duke Nukem 3D has come round',
+    text: 'Somebody brought the shareware episode on a floppy and it is now on every PC, with a box on the shelf. Sit down, press the Game button until it says DUKE NUKEM 3D, and walk around a cinema that has seen better days. For a network game, host and joiners both pick the network game in SETUP, as the manual says.',
+    link: ['/games.htm', 'All the games'],
+  },
+  {
     date: '1998-02-06', kind: 'new', title: 'The lights have a switch',
     text: 'There is a light switch on the back wall by the stairs door. Turn the ceiling tubes off and the room is nearly dark, and the monitors become the light: each one glows on the keyboard, the table and your face, in the colour of whatever is on it. Teal for Windows, green for Solitaire, grey for DOS. The switch has a small orange dot so you can find it.',
   },
