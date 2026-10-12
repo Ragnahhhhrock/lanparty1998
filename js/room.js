@@ -831,7 +831,7 @@ function buildLounge(scene, out, labelVolt, labelNachoz, labelCurlz) {
   bag2.scale.set(1, 0.4, 1);
   place(bag2, 3.62, 0.0, -0.3, 2.4);
   const bag3 = chipBag(labelCurlz);    // a bag of Cheez Curlz open on the table, orange fingers everywhere
-  place(bag3, 4.3, T0, -0.95, -0.7);
+  place(bag3, 3.6, 0, -1.05, -0.7);   // on the carpet beside the table, off the pizza's end
   use(bag3, 'eat');
 
   // ---- four pads, wired to the console: three on the cushions, one on the carpet
@@ -942,16 +942,22 @@ export function shackBoxMats() {
 
 // A pizza box with a pepperoni pizza cut in eight. setSlices(n) leaves n slices in the box.
 // Colours are tokens: --cardboard, --pizza-crust, --pizza-cheese, --pepperoni.
-function pizzaBox(slices = 8) {
+const LID_OPEN = -1.9, LID_SHUT = -Math.PI;   // the lid's hinge angle: propped open, and flat on top of the box
+function pizzaBox(slices = 8, open = true) {
   const g = new THREE.Group();
   const mats = shackBoxMats();
   const crust = new THREE.MeshStandardMaterial({ color: 0xd9a04a, roughness: 0.8 });
   const cheese = new THREE.MeshStandardMaterial({ color: 0xf2c14e, roughness: 0.55 });
   const pep = new THREE.MeshStandardMaterial({ color: 0xb22a1e, roughness: 0.6 });
   g.add(box(0.44, 0.045, 0.44, mats.base, 0, 0.0225, 0));
-  const lid = new THREE.Group();            // propped open against the wall of the table
-  lid.position.set(0, 0.045, 0.22); lid.rotation.x = -1.9;
-  lid.add(box(0.44, 0.012, 0.44, mats.lid, 0, 0, 0.22));
+  // the lid hinges on the back edge. Its panel sits 4 cm off the hinge line so that, shut, it clears the pizza, and its
+  // four lips (plain cardboard) hang down over the sides of the box when it is shut
+  const lid = new THREE.Group();
+  lid.position.set(0, 0.045, 0.22);
+  lid.add(box(0.44, 0.012, 0.44, mats.lid, 0, -0.04, 0.22));
+  const card = mats.base[2];
+  for (const x of [-0.218, 0.218]) lid.add(box(0.004, 0.04, 0.44, card, x, -0.02, 0.22));
+  for (const z of [0.002, 0.438]) lid.add(box(0.44, 0.04, 0.004, card, 0, -0.02, z));
   g.add(lid);
   const slicesList = [];
   for (let i = 0; i < 8; i++) {
@@ -967,24 +973,36 @@ function pizzaBox(slices = 8) {
     g.add(sl);
     slicesList.push(sl);
   }
-  const out = { group: g, slices, max: 8 };
+  const out = { group: g, slices, max: 8, open, lid, t: open ? 1 : 0 };   // t: 0 shut .. 1 open, eased toward `open` by step()
   out.setSlices = (n) => {
     out.slices = n;
-  slicesList.forEach((sl, i) => { sl.visible = i < n; });
+    slicesList.forEach((sl, i) => { sl.visible = i < n; });
+  };
+  const pose = () => { const e = out.t * out.t * (3 - 2 * out.t); lid.rotation.x = LID_SHUT + (LID_OPEN - LID_SHUT) * e; };
+  out.setOpen = (on, snap = false) => { out.open = on; if (snap) out.t = on ? 1 : 0; pose(); };
+  out.toggle = () => { out.setOpen(!out.open); return out.open; };
+  out.step = (dt) => { // the lid swings over a quarter of a second
+    const goal = out.open ? 1 : 0;
+    if (out.t === goal) return;
+    out.t = goal > out.t ? Math.min(goal, out.t + dt * 4) : Math.max(goal, out.t - dt * 4);
+    pose();
   };
   out.setSlices(slices);
+  pose();
   return out;
 }
 
 // Half-eaten pizzas lying about, and the ones that get delivered. out.pizzaBoxes holds them all.
+// Every spot keeps a 0.44 m square clear of cans, bags, disks, game boxes and the PC towers (checked by tools/room.test.mjs),
+// and a box that spawns gets its lid open or shut at random, so the party is a mix.
 const PIZZA_SPOTS = [ // where deliveries are put down: x, y, z, yaw
-  [1.4, 0, 4.25, 0.3], [4.0, 0, 4.25, 3.3], [-4.0, 0, -4.25, 0.1],   // not the back table's middle: that is where the BYOC benches are
+  [1.4, 0, 4.25, 0.3], [4.0, 0, 4.25, 3.3], [-3.9, 0, -4.25, 0.1],   // gaps in the tables, not the back table's middle: that is where the BYOC benches are
 ];
 function buildPizza(scene, out) {
   out.pizzaBoxes = [];
   let delivered = 0;
-  const place = (x, y, z, yaw, slices) => {
-    const b = pizzaBox(slices);
+  const place = (x, y, z, yaw, slices, open = true) => {
+    const b = pizzaBox(slices, open);
     b.group.position.set(x, y, z); b.group.rotation.y = yaw;
     scene.add(b.group);
     b.group.traverse((o) => { o.userData.interact = { kind: 'pizza', box: b }; });
@@ -992,18 +1010,23 @@ function buildPizza(scene, out) {
     out.pizzaBoxes.push(b);
     return b;
   };
-  // already on the go when you walk in
-  place(-5.45, TABLE_Y, 0.58, 0.2, 3);   // the snack table
-  place(1.95, TABLE_Y, 4.2, 2.9, 2);     // between PC-05 and PC-06
-  place(-1.4, TABLE_Y, 4.25, 0.5, 4);    // between PC-04 and PC-05
-  place(-3.6, 0, -2.4, 0.9, 1);          // on the carpet, where somebody put it down
-  place(COFFEE.x, COFFEE.top, COFFEE.z, Math.PI / 2 + 0.1, 5); // the coffee table, lid toward the TV
+  // already on the go when you walk in: some with the lid propped open, some shut
+  place(-5.45, TABLE_Y, -1.5, 0.2, 3, true);    // the snack table, at the quiet end
+  place(-1.4, TABLE_Y, 4.25, 0.5, 4, false);    // between PC-04 and PC-05
+  place(1.7, 0, 1.9, 2.9, 2, false);            // on the carpet, where somebody put it down
+  place(-3.6, 0, -2.4, 0.9, 1, true);           // on the carpet by the back table
+  place(COFFEE.x, COFFEE.top, COFFEE.z, Math.PI / 2 + 0.1, 5, true); // the coffee table, lid toward the TV
   out.addPizza = () => {
     const [x, y, z, yaw] = PIZZA_SPOTS[delivered % PIZZA_SPOTS.length];
     const stack = Math.floor(delivered / PIZZA_SPOTS.length);
     delivered++;
-    return place(x, TABLE_Y + stack * 0.05, z, yaw, 8);
+    if (stack > 0) { // the spot is taken: this one goes on top, so the box underneath has to be shut
+      const below = out.pizzaBoxes.filter((b) => Math.abs(b.group.position.x - x) < 0.01 && Math.abs(b.group.position.z - z) < 0.01).pop();
+      below?.setOpen(false, true);
+    }
+    return place(x, TABLE_Y + stack * 0.09, z, yaw, 8, Math.random() < 0.5 && stack === 0);
   };
+  out.updatePizza = (dt) => { for (const b of out.pizzaBoxes) b.step(dt); };
 }
 
 // The man taped to the ceiling. The duct and the tape are built here; main.js puts the man in.
@@ -1253,7 +1276,7 @@ const BOX_SPOTS = [
   // the front table
   ['heretic', -4.42, TABLE_Y, 4.15, 3.4], ['doom', 4.42, TABLE_Y, 4.2, 5.9], ['quake', 2.1, TABLE_Y, 4.0, 0.2],
   // the snack table and the couch
-  ['hexen', -5.45, TABLE_Y, -1.6, 1.3], ['descent', 3.05, 0.41, -1.0, 0.7],
+  ['hexen', -4.4, 0.003, -1.0, 1.3], ['descent', 3.05, 0.41, -1.0, 0.7],
   // the carpet
   ['heretic', -2.3, 0.003, 0.3, 2.1], ['doom', 1.6, 0.003, -1.7, 4.4], ['quake', 1.45, 0.003 + BOX.d, -1.62, 4.9], // a pair, one on the other
   ['descent', -4.6, 0.003, -1.9, 0.3], ['hexen', 1.0, 0.003, 2.7, 3.7], ['doom', -0.6, 0.003, -2.6, 1.1],
@@ -1291,7 +1314,9 @@ function buildChips(scene, out) {
 
   // Lay `counts` ({nacho, curl, crumb}) over a rectangle at height y, skipping any circle in `avoid` ([x, z, r]).
   // Most pieces lie flat; the odd chip leans on its neighbour.
+  const pizzaAvoid = out.pizzaBoxes.map((b) => [b.group.position.x, b.group.position.z, 0.31]); // nothing is spilled under a pizza box
   const spill = (parent, rect, y, counts, avoid = []) => {
+    if (parent === scene) avoid = [...avoid, ...pizzaAvoid];
     const [x0, x1, z0, z1] = rect;
     for (const [kind, n] of Object.entries(counts)) {
       if (!n) continue;

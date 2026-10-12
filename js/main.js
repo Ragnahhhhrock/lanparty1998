@@ -327,6 +327,7 @@ window.addEventListener('keydown', (e) => {
   if (amp?.keys[e.code]) { amp.keys[e.code](); return; }
   keys.add(e.code);
   if (e.code === 'KeyE' && target) interact(target);
+  if (e.code === 'KeyF' && target?.kind === 'pizza') flipLid(target.box);
   if (e.code === 'KeyF' && target?.station) {
     const b = target.station.bench;
     if (b && !b.ready) openRear(b); else openPcMenu(target.station);
@@ -379,7 +380,7 @@ const PROMPTS = {
   shop: () => 'E · Read the computer shop price list',
   phone: () => 'E · Use the phone',
   mobile: () => 'E · Pick up the mobile',
-  pizza: (t) => (t.box.slices > 0 ? `E · Eat a slice of pepperoni pizza (${t.box.slices} left)` : 'Empty box. Just grease.'),
+  pizza: (t) => (!t.box.open ? 'E · Open the pizza box' : `${t.box.slices > 0 ? `E · Eat a slice of pepperoni pizza (${t.box.slices} left)` : 'Empty box. Just grease.'}  ·  F · Close the lid`),
   taped: () => 'E · Talk to DUCTAPE',
   door: () => `E · ${room.door.open ? 'Close' : 'Open'} the door${delivery.waiting && !room.door.open ? '  ·  Somebody is knocking' : ''}`,
   drink: () => 'E · Crack a Volt Cola',
@@ -411,7 +412,7 @@ function interact(t) {
   else if (t.kind === 'fan') party.setFan(!party.fan.on, 'switch');
   else if (t.kind === 'phone') openPhone();
   else if (t.kind === 'mobile') openMobile();
-  else if (t.kind === 'pizza') eatPizza(t.box);
+  else if (t.kind === 'pizza') { if (t.box.open) eatPizza(t.box); else flipLid(t.box); }
   else if (t.kind === 'taped') talkToTaped();
   else if (t.kind === 'door') useDoor();
 }
@@ -770,6 +771,11 @@ function stepHandSlice(dt) {
   handMesh.scale.setScalar(handBase * (1 - bites * 0.3));
   if (handT >= total) { handT = -1; handMesh.visible = false; handMesh = handSlice; handBase = 0.75; }
 }
+// the lid of a Pizza Shack box: F flips it either way, and E on a shut box opens it
+function flipLid(box) {
+  const open = box.toggle();
+  if (open) sfx.foil(); else sfx.thud();
+}
 function eatPizza(box) {
   if (box.slices <= 0) { toast('Empty box. Just grease and one crust.'); return; }
   if (handT >= 0) return;
@@ -856,7 +862,7 @@ function stepEaters(dt, now) {
   let kind = SNACKING[Math.floor(Math.random() * SNACKING.length)];
   if (kind === 'pizza') {
     const box = room.pizzaBoxes.find((b) => b.slices > 0 && Math.random() < 0.6) ?? room.pizzaBoxes.find((b) => b.slices > 0);
-    if (box) box.setSlices(box.slices - 1); else kind = 'snack'; // box is empty: reach for the chips
+    if (box) { box.setOpen(true); box.setSlices(box.slices - 1); } else kind = 'snack'; // box is empty: reach for the chips; a shut box gets its lid lifted first
   }
   who.eat(kind);
 }
@@ -1258,6 +1264,7 @@ function frame() {
   crowd.update(dt, link.players, now);
   room.updateFan(dt, party.fan.on, party.fanSweep());
   room.updatePower(dt);
+  room.updatePizza(dt);
   room.updateBenches();
   room.stations.forEach((st, i) => { st.screen.rebooting = party.rebooting(i) || party.pcBooting(i); });
   room.updateTv(dt);

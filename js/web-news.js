@@ -8,6 +8,14 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'The pizza box has a lid, and it moves',
+    text: 'Press F at a Pizza Shack box to flip the lid shut or prop it open again, or press E at a shut one to lift it before you eat. Some of the boxes in the basement were already open when you came down and some were shut, and the pizza guy brings his either way. The regulars lift the lid on a shut box before they take a slice.',
+  },
+  {
+    date: '1998-02-07', kind: 'fix', title: 'The pizza boxes are off the bags and the tower',
+    text: 'Three boxes had been put down on top of things: one on the Cheez Curlz bags at the snack table, one jammed against the tower at PC-06 and the QUAKE box, and one on the open bag on the coffee table. Each has been moved to a clear patch of table or carpet, the HEXEN box has gone to the carpet to make room, the open Curlz bag now sits on the floor by the coffee table, and the second delivery goes on a free spot of table instead of on the first.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'The pizza place has a name',
     text: 'The pizza place is now Pizza Shack, which is on the phone book, the menu and the magnet by the wall phone. Every box in the basement has a red band round the walls with the name on it, and the lid has the roof, the chimney and the promise of thirty minutes printed inside. The driver turns up in a red Pizza Shack shirt with the roof on the chest, holding the box shut. The garlic bread is still a mistake on his docket.',
   },
