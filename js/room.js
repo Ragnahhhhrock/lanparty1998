@@ -477,7 +477,7 @@ function buildErrands(scene, out) {
   phone.add(box(0.07, 0.24, 0.1, beige, 0, 0, 0));
   phone.add(box(0.06, 0.05, 0.05, beigeDark, 0, 0.02, 0.07));
   phone.add(box(0.045, 0.05, 0.012, black, 0, 0.06, 0.056));
-  phone.position.set(ROOM.minX + 0.05, 1.3, -3.2);
+  phone.position.set(ROOM.minX + 0.05, 1.3, -2.55);                  // beside the switchboard (power.js, z -3.3), not on top of it
   scene.add(phone);
   const phoneHit = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.4), new THREE.MeshBasicMaterial({ visible: false }));
   phoneHit.position.copy(phone.position).add(new THREE.Vector3(0.15, 0, 0));

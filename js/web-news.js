@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'fix', title: 'The wall phone is off the switchboard',
+    text: 'The wall phone had been screwed to the wall directly in front of the main switchboard, so the breakers were behind the handset and the labels could not be read. It now hangs half a metre along the wall, towards the snack table. The breakers are still not to be touched.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'A mobile on the couch',
     text: 'Somebody has left a Nokka 51 on the middle couch cushion, next to the DESCENT box. Press E to pick it up. It has a menu, a phone book, keys that beep, and Snake: 2, 4, 6 and 8 or the arrows steer, the walls are fatal, and a bug turns up after every fifth bit of food and is worth more the quicker you get it. It rings the same numbers as the wall phone, and Mum.',
   },
