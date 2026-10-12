@@ -10,7 +10,7 @@ import { callPlan, engagedPlan } from './tones.js';
 
 // Everybody the basement can ring. The wall phone and the mobile share this book.
 export const CONTACTS = [
-  { id: 'pizza', name: 'Pizza place', number: '9555 0173' },
+  { id: 'pizza', name: 'Pizza Shack', number: '9555 0173' },
   { id: 'dazza', name: 'Dazza', number: '9555 0199' },
   { id: 'mum', name: 'Mum', number: '9555 0100' },
 ];

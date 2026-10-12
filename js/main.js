@@ -1,7 +1,7 @@
 // LAN Party '98: walk the basement with everyone else who's online, grab a free PC,
 // play a shareware game (DOOM, Quake, Hexen, Heretic, Descent), and start a deathmatch with whoever's sitting down.
 import * as THREE from 'three';
-import { buildRoom, ROOM } from './room.js';
+import { buildRoom, ROOM, shackBoxMats } from './room.js';
 import { DosPC } from './emulator.js';
 import { N64Console } from './n64.js';
 import { GAMES, DEFAULT_GAME, MAX_PLAYERS, gameOf, nextGame, netHint, pilotName } from './games.js';
@@ -91,7 +91,8 @@ const regulars = [
 const speakers = new Map([macca, ...regulars].map((a) => [a.name.toLowerCase(), a]));
 
 // The pizza driver. He stands on the landing outside the door, facing in, and is only there while he is waiting to be let in.
-const driver = spawnNpc(scene, { name: 'DRIVER', color: '#b22a1e', yaw: Math.PI, arch: 'grunge', x: (room.door.minX + room.door.maxX) / 2, z: ROOM.minZ - 0.5, look: { headphones: false } }); // --pepperoni
+const driver = spawnNpc(scene, { name: 'DRIVER', color: '#b22a1e', yaw: Math.PI, arch: 'grunge', x: (room.door.minX + room.door.maxX) / 2, z: ROOM.minZ - 0.5,
+  look: { headphones: false, top: { color: 0xb22a1e, sleeves: 0.2, length: 0.6, width: 1.1 }, print: 'shack' } }); // a red Pizza Shack tee: --pepperoni, with the roof printed on the chest
 driver.group.visible = false;
 
 /* ---------- state ---------- */
@@ -577,14 +578,14 @@ function openShop() {
 // The wall phone. Picking it up gives you a dial tone, and the dial tone goes on until you choose a number or hang up.
 // Choosing one dials it (the keypad tones), and the line rings until somebody answers. The numbers are in js/handset.js.
 const pizzaSpec = () => ({
-  title: 'PIZZAMENU.TXT',
+  title: 'SHACK.TXT',
   render: () => {
     const buttons = [{ label: 'Hang up' }];
     let lines;
     if (party.ordered('pizza')) lines = [`Pepperoni is on its way. The delivery bloke says ${clockText(party.secondsUntil('pizza'))}, and he has said that twice.`];
     else {
       lines = [
-        'HOT & FRESH PIZZA. Delivered in 30 min.',
+        'PIZZA SHACK. Hot & fresh, delivered in 30 min.',
         `1. Large pepperoni, ${PIZZA.slices} slices ... $${PIZZA.cost}`,
         '2. Large pepperoni, extra pepperoni ... same pizza',
         `Cash $${party.cash}.`,
@@ -624,10 +625,10 @@ function openPhone() {
   openErrand({
     title: 'WALL PHONE',
     render: () => ({
-      lines: ['The phone is on the wall by the stairs, with the pizza place magnet stuck next to it. Whose number do you want?'],
+      lines: ['The phone is on the wall by the stairs, with the Pizza Shack magnet stuck next to it. Whose number do you want?'],
       progress: null,
       buttons: [
-        { label: 'Pizza place', run: () => setTimeout(() => dialWall(CONTACTS[0]), 0) },
+        { label: 'Pizza Shack', run: () => setTimeout(() => dialWall(CONTACTS[0]), 0) },
         { label: 'Dazza', run: () => setTimeout(() => dialWall(CONTACTS[1]), 0) },
         { label: 'Hang up', run: () => sfx.receiverClick() },
       ],
@@ -803,7 +804,7 @@ function eatGarlic() {
 const driverLoad = (() => { // what he is holding out: the box, with a can and the foil bundle on top
   const g = new THREE.Group();
   const std = (hex, o = {}) => new THREE.MeshStandardMaterial({ color: hex, roughness: 0.7, ...o });
-  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.05, 0.42), std(0xb8935a))); // --cardboard
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.05, 0.42), shackBoxMats().closed)); // the Pizza Shack box, shut
   const bundle = foilBundle(); bundle.position.set(-0.07, 0.06, 0.05); g.add(bundle);
   const can = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.033, 0.12, 14), std(0xc4161c, { metalness: 0.4, roughness: 0.4 })); // --volt-can
   can.position.set(0.12, 0.085, -0.06); g.add(can);
@@ -1487,7 +1488,7 @@ party.addEventListener('link-down', (e) => {
   linkChanged();
 });
 party.addEventListener('link-up', () => { chatLine('Link light is back on.', true); linkChanged(); });
-party.addEventListener('order', (e) => chatLine(e.detail.what === 'hub' ? 'Hub ordered. It is on its way.' : e.detail.what === 'pizza' ? `Pepperoni ordered. $${PIZZA.cost}. The bloke says he is round the corner.` : "Dazza's dad is bringing the switch round.", true));
+party.addEventListener('order', (e) => chatLine(e.detail.what === 'hub' ? 'Hub ordered. It is on its way.' : e.detail.what === 'pizza' ? `Pizza Shack: pepperoni ordered. $${PIZZA.cost}. The bloke says he is round the corner.` : "Dazza's dad is bringing the switch round.", true));
 party.addEventListener('pizza-arrive', () => { // the driver is at the door; the pizza reaches a table when you open it (handOver)
   delivery.waiting = true; delivery.knockIn = 0; delivery.knocks = 0; delivery.leaveIn = 0;
   driverLoad.visible = true; driver.group.visible = true;

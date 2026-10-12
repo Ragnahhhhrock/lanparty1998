@@ -365,13 +365,53 @@ export function curlzBag() {
   return tex(c);
 }
 
-export function pizzaLid() {
+// PIZZA SHACK: the parody pizza chain (the delivery boxes and the driver's shirt). The mark is a red lean-to roof
+// with a chimney and a pizza for a window, drawn in hard 1-cell steps. Colours are tokens:
+// --pepperoni (roof, print), --pizza-cheese (the pizza), --paper (shirt print), --cardboard (box).
+const SHACK = { red: '#b22a1e', cheese: '#f2c14e', paper: '#e8e1cc', cardboard: '#b8935a' };
+
+// the roof mark, centred on cx with its top at `top`; one cell is `cell` pixels. 38 cells wide, 16 high.
+function drawShack(g, cx, top, cell, { roof, pizza, pep }) {
+  const rect = (col, x, y, w, h) => { g.fillStyle = col; g.fillRect(cx + x * cell, top + y * cell, w * cell, h * cell); };
+  rect(roof, 5, 0, 3, 8);                                            // chimney, behind the roof
+  for (let r = 0; r < 10; r++) { const hw = 2 + Math.round(r * 1.6); rect(roof, -hw, 4 + r, hw * 2, 1); } // the roof, in steps
+  rect(roof, -19, 14, 38, 2);                                        // the eave, overhanging
+  for (let dy = -3; dy <= 3; dy++) { const dx = Math.round(Math.sqrt(9.5 - dy * dy)); rect(pizza, -dx, 10 + dy, dx * 2, 1); } // the pizza in the window
+  rect(pep, -2, 9, 1, 1); rect(pep, 1, 11, 1, 1); rect(pep, 0, 8, 1, 1);                                              // pepperoni
+}
+
+// The lid, outside: the mark, the name, the promise. 256x256 for the 0.44 m lid.
+// `turned` draws it a half turn round: the face that shows when the lid is propped open hangs upside down on a plain box.
+export function shackLid(turned = false) {
   const [c, g] = canvas(256, 256);
-  g.fillStyle = '#cfb48a'; g.fillRect(0, 0, 256, 256);
-  g.strokeStyle = '#b9154a'; g.lineWidth = 6; g.strokeRect(14, 14, 228, 228);
-  g.font = 'bold 30px Georgia, serif'; g.fillStyle = '#b9154a'; g.textAlign = 'center';
-  g.fillText('HOT & FRESH', 128, 120); g.font = 'italic 20px Georgia, serif'; g.fillText('Delivered in 30 min', 128, 152);
-  g.fillStyle = 'rgba(120,70,20,.25)'; g.beginPath(); g.arc(190, 190, 26, 0, Math.PI * 2); g.fill(); // grease ring
+  if (turned) { g.translate(256, 256); g.rotate(Math.PI); }
+  g.fillStyle = SHACK.cardboard; g.fillRect(0, 0, 256, 256);
+  g.fillStyle = 'rgba(0,0,0,.12)'; g.beginPath(); g.arc(196, 196, 24, 0, Math.PI * 2); g.fill(); // grease ring
+  g.strokeStyle = SHACK.red; g.lineWidth = 6; g.strokeRect(14, 14, 228, 228);
+  drawShack(g, 128, 30, 4, { roof: SHACK.red, pizza: SHACK.cheese, pep: SHACK.red });
+  g.textAlign = 'center'; g.fillStyle = SHACK.red;
+  g.font = `40px ${CRT_FONT}`; g.fillText('PIZZA SHACK', 128, 140);
+  g.fillRect(40, 152, 176, 3);
+  g.font = `24px ${CRT_FONT}`; g.fillText('HOT & FRESH', 128, 184);
+  g.font = `18px ${CRT_FONT}`; g.fillText('DELIVERED IN 30 MIN', 128, 210);
+  return tex(c);
+}
+
+// The wall of the box: a red band with the name on it, 512x52 for a 0.44 x 0.045 m side.
+export function shackBoxSide() {
+  const [c, g] = canvas(512, 52);
+  g.fillStyle = SHACK.red; g.fillRect(0, 0, 512, 52);
+  g.fillStyle = SHACK.paper; g.textAlign = 'center';
+  g.font = `26px ${CRT_FONT}`; g.fillText('PIZZA SHACK  ·  HOT & FRESH', 256, 35);
+  return tex(c);
+}
+
+// The driver's chest print on a red shirt: cream roof, name underneath. Transparent round it so the shirt shows through.
+export function shackShirt() {
+  const [c, g] = canvas(128, 128);
+  drawShack(g, 64, 22, 3, { roof: SHACK.paper, pizza: SHACK.cheese, pep: SHACK.red });
+  g.textAlign = 'center'; g.fillStyle = SHACK.paper;
+  g.font = `26px ${CRT_FONT}`; g.fillText('PIZZA SHACK', 64, 102);
   return tex(c);
 }
 

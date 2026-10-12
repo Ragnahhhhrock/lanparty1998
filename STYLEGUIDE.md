@@ -62,6 +62,8 @@ Use tokens by name. Never introduce a raw hex value in CSS, canvas code or a tem
 `--skin` … `--skin-5` · `--hair`, `--hair-black`, `--hair-blond`, `--hair-red` · `--eye-white` (eyeballs, teeth) · `--iris-brown` / `--iris-blue` / `--iris-green` · `--lip` (blended into each person's skin tone) · `--clothes-*`, `--neon-*`, `--shirt-1` … `--shirt-8`, `--denim`, `--shoe`. Shading on faces and clothes is derived from these in code, never a new hex.
 
 ### Brand accents
+**Pizza Shack** (parody pizza chain) is printed in `--pepperoni` on `--cardboard` boxes, with `--paper` on the driver's red shirt and `--pizza-cheese` for the pizza in the mark. It adds no colours of its own. VT323 only; the mark and wordmark are drawn in `js/textures.js` (`shackLid`, `shackBoxSide`, `shackShirt`).
+
 `--volt #e2231a` (caffeine, UI red) · `--volt-can #c4161c` · `--volt-yellow #ffd400` · `--nacho #f28a1c` (snacks) · `--nacho-navy #1d1a5c` · `--cheese #ffcc00` · `--curlz-bag #1f7a4d` (Cheez Curlz bag) · `--curlz #ffa51f` (the curls) · `--zap-green #4aa52a` / `--zap-lime #b5d334` / `--zap-dark #1c5a1e` (Citrus Zap, the green two-litre: green label, `--volt-yellow` wordmark, `--volt-can` stripe, `--zap-dark` cap) · `--cup-red #d42b22` (disposable party cups) · Power fittings (3D only): `--power-cord #151515` (leads) · `--power-plug #f2f0e6` (plugs, plates, the light switch) · `--power-brass #b8a060` (pins) · `--power-lead #e8c21b` (the yellow extension lead) · `--power-board #e9e4d2` (power boards) · `--power-neon #ff6a1a` (a board's lit switch) · `--power-switch-glow #ffb040` (the light switch's dot) · `--power-tube-off #3d4146` (a ceiling tube, off)
 
 ### Phone
@@ -144,7 +146,7 @@ All defined in `css/style.css` and shown on `/styleguide.html`.
 - Short sentences. British/Australian-neutral spelling is fine; be consistent within a piece.
 - Errors talk like DOS: "Bad command or file name." Not "Oops! Something went wrong."
 - No emoji, no exclamation-mark hype, no "retro vibes", no "nostalgia trip".
-- Parody brands only: **Volt Cola**, **Nachoz**, **Cheez Curlz**, **Citrus Zap** and **Nokka** (the mobile phone). Never use real snack, drink or hardware brand names or logos. Real game titles (DOOM, Quake…) may be named as text but never shown with their logos or box art.
+- Parody brands only: **Volt Cola**, **Nachoz**, **Cheez Curlz**, **Citrus Zap**, **Nokka** (the mobile phone) and **Pizza Shack** (the pizza chain: its mark is original, a red lean-to roof with a chimney and a pizza for a window; no real chain's logo or roof shape). Never use real snack, drink or hardware brand names or logos. Real game titles (DOOM, Quake…) may be named as text but never shown with their logos or box art.
 
 ## 7. Imagery and textures
 

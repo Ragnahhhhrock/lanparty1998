@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'The pizza place has a name',
+    text: 'The pizza place is now Pizza Shack, which is on the phone book, the menu and the magnet by the wall phone. Every box in the basement has a red band round the walls with the name on it, and the lid has the roof, the chimney and the promise of thirty minutes printed inside. The driver turns up in a red Pizza Shack shirt with the roof on the chest, holding the box shut. The garlic bread is still a mistake on his docket.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'Shout me a Volt Cola, any time',
     text: 'The Volt Cola button used to live in the welcome window and vanished the moment you walked in. It now sits on the taskbar, between the open windows and the clock, in bold with a can on it, so you can shout the webmaster a $5 Volt Cola from anywhere in the basement. Press Tab to free the mouse and click it. The button in the welcome window is bolder too.',
   },

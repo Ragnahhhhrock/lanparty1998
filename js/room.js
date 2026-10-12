@@ -923,18 +923,35 @@ function buildGamers(scene, out, labelVolt) {
   }
 }
 
+// The Pizza Shack box: plain cardboard, red print on the walls and the lid. Shared by every box, including the one the driver carries.
+// Colours are tokens: --cardboard, and the print in js/textures.js (--pepperoni, --paper, --pizza-cheese).
+let shackMats = null;
+export function shackBoxMats() {
+  return shackMats ??= (() => {
+    const card = new THREE.MeshStandardMaterial({ color: 0xb8935a, roughness: 0.95 });         // --cardboard
+    const wall = new THREE.MeshStandardMaterial({ map: T.shackBoxSide(), roughness: 0.9 });
+    const lidIn = new THREE.MeshStandardMaterial({ map: T.shackLid(true), roughness: 0.95 });  // the face that shows when it is propped open
+    const lidOut = new THREE.MeshStandardMaterial({ map: T.shackLid(), roughness: 0.95 });
+    return {
+      base: [wall, wall, card, card, wall, wall],  // +x, -x, +y, -y, +z, -z
+      lid: [card, card, lidIn, lidOut, card, card],
+      closed: [wall, wall, lidIn, card, wall, wall],  // a closed box, the one the driver holds out: the print faces the person he is handing it to
+    };
+  })();
+}
+
 // A pizza box with a pepperoni pizza cut in eight. setSlices(n) leaves n slices in the box.
 // Colours are tokens: --cardboard, --pizza-crust, --pizza-cheese, --pepperoni.
 function pizzaBox(slices = 8) {
   const g = new THREE.Group();
-  const card = new THREE.MeshStandardMaterial({ color: 0xb8935a, roughness: 0.95 });
+  const mats = shackBoxMats();
   const crust = new THREE.MeshStandardMaterial({ color: 0xd9a04a, roughness: 0.8 });
   const cheese = new THREE.MeshStandardMaterial({ color: 0xf2c14e, roughness: 0.55 });
   const pep = new THREE.MeshStandardMaterial({ color: 0xb22a1e, roughness: 0.6 });
-  g.add(box(0.44, 0.045, 0.44, card, 0, 0.0225, 0));
+  g.add(box(0.44, 0.045, 0.44, mats.base, 0, 0.0225, 0));
   const lid = new THREE.Group();            // propped open against the wall of the table
   lid.position.set(0, 0.045, 0.22); lid.rotation.x = -1.9;
-  lid.add(box(0.44, 0.012, 0.44, card, 0, 0, 0.22));
+  lid.add(box(0.44, 0.012, 0.44, mats.lid, 0, 0, 0.22));
   g.add(lid);
   const slicesList = [];
   for (let i = 0; i < 8; i++) {

@@ -6,6 +6,7 @@
 // they sit at their own PCs or on the couch, playing.
 import * as THREE from 'three';
 import { headphones } from './headphones.js';
+import { shackShirt } from './textures.js';
 
 // colours are tokens from css/tokens.css (--skin-N, --hair-*, --eye-white, --iris-*, --lip, --clothes-*, --neon-*, --denim, --shoe, --shirt-N)
 const mats = new Map();
@@ -269,6 +270,17 @@ function buildBody(look) {
   P.cyl(torso, topM, [0, th - len / 2 - 0.02, 0], half * 0.99, half * (look.top.width > 1.2 ? 1.0 : 0.9), len - 0.04, { seg: 18, sz: 0.118 / half });
   P.ell(torso, topM, [0, th - 0.045, 0], [half + (bare ? -0.01 : 0.012), 0.08, 0.118], undefined, 14); // chest and shoulder line
   P.ell(torso, topM, [0, th - len + 0.01, 0], [half * (look.top.width > 1.2 ? 1.0 : 0.9), 0.02, 0.118], undefined, 14); // hem
+  if (look.print === 'shack') { // the Pizza Shack chest print: a curved patch that hugs the shirt, 1.5 mm proud of it
+    const bf = look.top.width > 1.2 ? 1.0 : 0.9;                       // the shirt's bottom radius, as a share of half
+    const py = th - 0.2, k = (py - (th - len)) / (len - 0.04);          // where the print sits, 0 at the hem and 1 at the collar
+    const rx = half * (bf + (0.99 - bf) * k) + 0.0015, rz = 0.118 * (rx / half);
+    const size = 0.24, arc = 2 * Math.asin(Math.min(0.99, size / 2 / rx));
+    const patch = new THREE.Mesh(
+      new THREE.CylinderGeometry(1, 1, size, 16, 1, true, Math.PI - arc / 2, arc),   // front is -z, which is theta = pi
+      new THREE.MeshStandardMaterial({ map: shackShirt(), transparent: true, alphaTest: 0.5, roughness: 0.85 }));
+    patch.position.set(0, py, 0); patch.scale.set(rx, 1, rz);
+    torso.add(patch);
+  }
   // neck and collar
   P.cyl(torso, skin, [0, th + 0.035, 0], 0.046, 0.05, 0.12, { seg: 10 });
   P.torus(torso, topDark, [0, th + 0.002, 0], 0.062, 0.013, [Math.PI / 2, 0, 0], [1, 1.1, 1]);
