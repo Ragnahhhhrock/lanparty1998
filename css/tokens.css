@@ -68,6 +68,7 @@
   --floppy-yellow: #e8c21b;
   --floppy-green: #3aa35a;
   --floppy-grey: #8a8d92;
+  --cart-shell: #8c8f94;    /* game cartridges: grey plastic (label art reuses the poster and brand tokens) */
   --disk-metal: #b9bdc2;    /* shutters on 3.5" disks, spindle posts */
   --disk-case: #26262b;     /* black plastic library cases, tubs, jewel case trays */
   --disk-smoke: #3a3d42;    /* smoked lids */

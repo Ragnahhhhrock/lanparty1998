@@ -196,6 +196,56 @@ export function discFace(kind = 'silver', text = '') {
   return tex(c);
 }
 
+// the label on a game cartridge: invented titles and flat, hard-edged art (never a real game, logo or character).
+// Colours are tokens: --poster-*, --snow*, --zap-*, --volt, --amber, --paper, --clothes-black.
+export const CART_TITLES = ['HOVER RALLY', 'SNOW DASH', 'PUCK SMASH', 'DINO DIG', 'SKY PILOT', 'BLOCK BRAWL'];
+export function cartLabel(n = 0) {
+  const [c, g] = canvas(144, 80);
+  const i = ((n % CART_TITLES.length) + CART_TITLES.length) % CART_TITLES.length;
+  const rect = (col, x, y, w, h) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  const sky = '#7fb4dc', steel = '#46697a', space = '#0b1033', nebula = '#5b2f86', planet = '#b4532a'; // --poster-sky --poster-steel --poster-space --poster-nebula --poster-planet
+  const chrome = '#c9d5dd', chromeDk = '#5e6c76', rock = '#6e6055', rockDk = '#3d352f';             // --poster-chrome --poster-chrome-dark --poster-rock --poster-rock-dark
+  const snow = '#f4f8ff', shade = '#c3d0e4', green = '#4aa52a', greenDk = '#1c5a1e', lime = '#b5d334'; // --snow --snow-shade --zap-green --zap-dark --zap-lime
+  const volt = '#e2231a', amber = '#ffcc00', paper = '#e8e1cc', black = '#141414', ember = '#7a1a12'; // --volt --amber --paper --clothes-black --poster-ember
+  const H = 62; // the picture; the title strip sits under it
+  if (i === 0) { // a hover car on a road running to the mountains
+    rect(sky, 0, 0, 144, H); rect(steel, 0, 28, 144, 10); for (let x = 0; x < 144; x += 24) rect(chromeDk, x, 22, 12, 6);
+    rect(rock, 0, 38, 144, H - 38); rect(black, 40, 38, 64, H - 38);
+    for (let k = 0; k < 4; k++) { rect(amber, 70, 40 + k * 6, 4, 3); rect(chrome, 40 - k * 4, 38 + k * 6, 4, 4); rect(chrome, 100 + k * 4, 38 + k * 6, 4, 4); }
+    rect(volt, 56, 42, 32, 10); rect(ember, 56, 50, 32, 4); rect(chrome, 62, 38, 20, 5); rect(amber, 58, 46, 4, 3); rect(amber, 82, 46, 4, 3);
+  } else if (i === 1) { // a sledder between spruces on a white slope
+    rect(sky, 0, 0, 144, H); rect(snow, 0, 30, 144, H - 30); for (let x = 0; x < 144; x += 16) rect(shade, x, 34 + ((x / 16) % 3) * 6, 12, 3);
+    for (const [x, y] of [[12, 12], [112, 6], [124, 22]]) { rect(greenDk, x, y + 14, 4, 6); rect(green, x - 6, y + 8, 16, 6); rect(green, x - 3, y + 2, 10, 6); rect(green, x, y - 4, 4, 6); }
+    rect(black, 58, 48, 30, 3); rect(volt, 62, 40, 14, 8); rect(amber, 66, 34, 6, 6); rect(shade, 90, 50, 20, 3);
+  } else if (i === 2) { // a rink from above, a puck and a stick
+    rect(chrome, 0, 0, 144, H); rect(chromeDk, 0, 0, 144, 3); rect(chromeDk, 0, H - 3, 144, 3);
+    rect(volt, 70, 3, 4, H - 6); rect('#2b6fd6', 20, 3, 3, H - 6); rect('#2b6fd6', 121, 3, 3, H - 6);  // --floppy-blue
+    disc(g, 72, 31, 12, volt); disc(g, 72, 31, 8, chrome); rect(volt, 70, 29, 4, 4);
+    rect(black, 94, 44, 26, 5); rect(rockDk, 118, 38, 5, 11); rect(black, 100, 30, 12, 12); rect(chromeDk, 102, 32, 8, 8);
+  } else if (i === 3) { // a green dig-dug dinosaur under an orange sky
+    rect(planet, 0, 0, 144, H); rect(amber, 108, 8, 14, 14); rect(rock, 0, 44, 144, H - 44); rect(rockDk, 0, 52, 144, 10);
+    for (let x = 6; x < 144; x += 22) rect(rockDk, x, 46 + ((x / 22) % 2) * 3, 6, 3);
+    rect(green, 44, 26, 44, 20); rect(green, 80, 16, 20, 14); rect(greenDk, 92, 20, 4, 4); rect(green, 36, 36, 10, 8); rect(green, 24, 40, 14, 4);
+    rect(lime, 52, 22, 6, 4); rect(lime, 64, 20, 6, 6); rect(lime, 76, 22, 6, 4); rect(greenDk, 50, 46, 8, 6); rect(greenDk, 74, 46, 8, 6);
+    rect(chrome, 100, 34, 18, 4); rect(chromeDk, 112, 30, 4, 12);
+  } else if (i === 4) { // a chrome fighter and a rust planet
+    rect(space, 0, 0, 144, H); for (let k = 0; k < 22; k++) rect(k % 4 ? paper : amber, (k * 37) % 140, (k * 23) % 56, 2, 2);
+    disc(g, 108, 40, 22, planet); disc(g, 108, 40, 14, '#b4532a'); rect(ember, 92, 44, 32, 4); rect(nebula, 0, 50, 70, 6);
+    rect(chrome, 30, 26, 44, 6); rect(chromeDk, 30, 32, 44, 4); rect(chrome, 48, 14, 8, 30); rect(chromeDk, 48, 36, 8, 8); rect(volt, 74, 27, 8, 4); rect(amber, 22, 28, 8, 4);
+  } else { // two blocky fighters under a purple sky, a VS between them
+    rect(nebula, 0, 0, 144, H); rect(rockDk, 0, 48, 144, H - 48); rect(rock, 0, 48, 144, 4);
+    rect(volt, 14, 22, 22, 26); rect(amber, 18, 12, 14, 10); rect(black, 22, 16, 3, 3); rect(volt, 36, 30, 10, 6);
+    rect('#2b6fd6', 108, 22, 22, 26); rect(paper, 112, 12, 14, 10); rect(black, 119, 16, 3, 3); rect('#2b6fd6', 98, 30, 10, 6); // --floppy-blue
+    rect(amber, 60, 20, 6, 20); rect(amber, 78, 20, 6, 20); rect(amber, 66, 36, 12, 4); rect(amber, 66, 24, 12, 4);
+  }
+  rect(black, 0, H, 144, 80 - H);
+  g.font = `22px ${CRT_FONT}`; g.textAlign = 'center';
+  const t = CART_TITLES[i], k = Math.min(1, 132 / Math.max(1, g.measureText(t).width));
+  g.font = `${Math.round(22 * k)}px ${CRT_FONT}`;
+  g.fillStyle = amber; g.fillText(t, 72, H + 14);
+  return tex(c);
+}
+
 // the paper insert in a jewel case: a coloured band with the title in it
 export function jewelInsert(title, band = '#000080') {
   const [c, g] = canvas(142, 124);

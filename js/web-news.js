@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'Game cartridges, left where they were dropped',
+    text: 'Somebody brought a bag of cartridges for the console under the TV and has not taken them home. There are grey ones on the TV stand and the shelf next to the console, one in the slot, and more on the coffee table, under it, and on the carpet in front of the screen. A few have found their way onto the PC tables. Six titles, all of them made up: Hover Rally, Snow Dash, Puck Smash, Dino Dig, Sky Pilot and Block Brawl. Mind where you step.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'This site has a front door',
     text: 'Everything in this browser can now be read outside the basement as well. What\'s New, Games, How to Play, the Guestbook, Links and Dazza\'s page each have an address of their own, such as lanparty1998.com/news, and they open in any browser without walking down the stairs. The news can be filtered the same way, at /news/new and /news/fix. The old .htm addresses still work.',
   },

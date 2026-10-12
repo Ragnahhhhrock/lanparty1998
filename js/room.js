@@ -22,6 +22,44 @@ function box(w, h, d, mat, x = 0, y = 0, z = 0) {
   return m;
 }
 
+// A game cartridge, the grey slab with a stepped back that plugs into the top of a console: 10 x 7.4 x 1.7 cm, label
+// toward +z, its edge connector at y = 0. Geometry and materials are shared; the six labels are invented (textures.js).
+// Colours are tokens: --cart-shell, --console-dark, --disk-metal, --paper.
+const CART = { w: 0.1, h: 0.074, d: 0.017 };
+const cartShared = {};
+function cartridge(n = 0) {
+  const sh = cartShared.shell ?? (cartShared.shell = {
+    shell: new THREE.MeshStandardMaterial({ color: 0x8c8f94, roughness: 0.55 }),
+    dark: new THREE.MeshStandardMaterial({ color: 0x44474b, roughness: 0.6 }),
+    pins: new THREE.MeshStandardMaterial({ color: 0xb9bdc2, metalness: 0.8, roughness: 0.35 }),
+    labels: [],
+    labelGeo: new THREE.PlaneGeometry(0.076, 0.042),
+  });
+  const i = ((n % T.CART_TITLES.length) + T.CART_TITLES.length) % T.CART_TITLES.length;
+  const label = sh.labels[i] ?? (sh.labels[i] = new THREE.MeshStandardMaterial({ map: T.cartLabel(i), roughness: 0.7 }));
+  const g = new THREE.Group();
+  g.add(box(CART.w, 0.05, CART.d, sh.shell, 0, 0.049, 0));                           // the body
+  g.add(box(0.076, 0.016, CART.d, sh.shell, 0, 0.016 + 0.008, 0));                   // the narrower foot
+  g.add(box(0.058, 0.01, 0.0016, sh.pins, 0, 0.005, 0));                             // the edge connector
+  g.add(box(CART.w - 0.012, 0.012, 0.005, sh.shell, 0, 0.068, -CART.d / 2 - 0.0025)); // the step on the back
+  for (const x of [-0.036, -0.012, 0.012, 0.036]) g.add(box(0.005, 0.01, 0.002, sh.dark, x, 0.068, CART.d / 2 + 0.0005)); // grip ridges
+  g.add(box(0.082, 0.048, 0.0012, sh.dark, 0, 0.047, CART.d / 2 + 0.0004));          // the label's recess
+  const art = new THREE.Mesh(sh.labelGeo, label);
+  art.position.set(0, 0.047, CART.d / 2 + 0.0012);
+  g.add(art);
+  return g;
+}
+// the same cartridge lying label-up on a surface at height y (the group's origin is its middle, so it can be turned about it)
+function cartridgeFlat(n, x, y, z, yaw = 0) {
+  const outer = new THREE.Group(), c = cartridge(n);
+  c.rotation.x = -Math.PI / 2;
+  c.position.z = CART.h / 2;
+  outer.add(c);
+  outer.position.set(x, y + CART.d / 2, z);
+  outer.rotation.y = yaw;
+  return outer;
+}
+
 // 6 ft fold-in-half trestle table: 183.8 x 76.2 cm, 73.7 cm high, almond top with a centre seam, brown steel legs.
 const TABLE_LEN = 1.838, TABLE_DEPTH = 0.762;
 const tableTopMat = new THREE.MeshStandardMaterial({ color: 0xe6dcc3, roughness: 0.85 });
@@ -750,11 +788,19 @@ function buildLounge(scene, out, labelVolt, labelNachoz, labelCurlz) {
 
   set.add(box(0.3, 0.07, 0.24, consoleBody, 0, 0.2175, 0.0));                // console
   set.add(box(0.12, 0.01, 0.1, consoleDark, 0, 0.2575, -0.03));              // cartridge slot
-  set.add(box(0.1, 0.06, 0.02, consoleDark, 0, 0.29, -0.03));                // cartridge
-  set.add(box(0.07, 0.034, 0.004, std(0xe8e1cc, { roughness: 0.8 }), 0, 0.292, -0.018)); // its label (--paper)
+  const inSlot = cartridge(0);                                               // the cartridge in the slot, label to the front
+  inSlot.position.set(0, 0.2575, -0.03);
+  set.add(inSlot);
   const portZ = 0.12, portX = [-0.105, -0.035, 0.035, 0.105];
   for (const x of portX) set.add(box(0.04, 0.026, 0.012, consoleDark, x, 0.2275, portZ + 0.003));
   set.add(box(0.012, 0.012, 0.004, new THREE.MeshBasicMaterial({ color: 0xe2231a }), -0.14, 0.245, portZ + 0.002)); // power light (--volt)
+  // cartridges left round the console: beside the TV on the stand, on the shelf either side of the console, a pair stacked
+  set.add(cartridgeFlat(1, 0.48, TV.stand, 0.1, 0.25));
+  set.add(cartridgeFlat(4, -0.47, TV.stand, 0.14, -0.3));
+  set.add(cartridgeFlat(2, -0.47, TV.stand + CART.d, 0.12, 0.5));
+  set.add(cartridgeFlat(3, 0.38, 0.1825, 0.02, 0.4));
+  set.add(cartridgeFlat(5, 0.4, 0.1825 + CART.d, 0.04, -0.2));
+  set.add(cartridgeFlat(0, -0.38, 0.1825, 0.04, -0.35));
   place(set, TV.x, 0, TV.z, -Math.PI / 2);
   use(set, 'console');                                                       // E at the TV or the console: sit down and play (js/n64.js)
   out.colliders.push({ minX: TV.x - 0.275, maxX: TV.x + 0.275, minZ: TV.z - 0.575, maxZ: TV.z + 0.575 });
@@ -1257,6 +1303,17 @@ function buildMedia(scene, out) {
   cd(scene, 'silver', 4.7, 0.003, -1.3, 0.4); cd(scene, 'printed', 3.6, 0.003, -0.15, 1.7);
   put(scene, jewel(2, 'silver'), 4.62, 0.005, -0.6, 0.9);
   loose(scene, 3.7, 0.003, -1.3, 1.2);
+
+  // ---- cartridges: on the carpet in front of the TV, on and under the coffee table, round the snack table and the PCs
+  scene.add(cartridgeFlat(0, TV.x - 0.62, 0.003, TV.z - 0.38, 0.9), cartridgeFlat(3, TV.x - 0.9, 0.003, TV.z + 0.45, -0.4),
+    cartridgeFlat(5, TV.x - 0.45, 0.003, TV.z + 0.8, 2.2), cartridgeFlat(1, TV.x - 1.35, 0.003, TV.z - 0.1, 1.5));
+  scene.add(cartridgeFlat(2, 4.38, COFFEE.top, -1.38, Math.PI / 2 + 0.2), cartridgeFlat(4, 4.05, COFFEE.top, -0.45, 0.3),
+    cartridgeFlat(0, 4.06, COFFEE.top + CART.d, -0.45, 0.9), cartridgeFlat(5, 4.3, 0.13, -0.58, 0.8));
+  scene.add(cartridgeFlat(3, 3.35, 0.003, -0.4, 2.6), cartridgeFlat(1, 3.45, 0.003, -1.75, 0.2), cartridgeFlat(4, 4.8, 0.003, -1.75, 1.2));
+  scene.add(cartridgeFlat(2, -5.38, TABLE_Y, -0.2, 0.3), cartridgeFlat(5, -4.35, 0.003, -0.5, 1.9));
+  scene.add(cartridgeFlat(1, 1.6, TABLE_Y, -4.45, 0.4), cartridgeFlat(3, -0.35, TABLE_Y, 4.58, 2.8), cartridgeFlat(0, 3.2, TABLE_Y, 4.58, 1.3));
+  scene.add(cartridgeFlat(4, -1.0, 0.003, 2.4, 0.9));
+  out.stations.forEach((st, i) => { if (i % 2 === 0) st.group.add(cartridgeFlat(i + 2, 0.42, TABLE_Y, -0.3, 0.2 + i)); });
 
   // ---- on the carpet: dropped, kicked, stood on
   loose(scene, -1.0, 0.003, 0.8, 0.4); loose(scene, 2.3, 0.003, -1.1, 2.0); loose(scene, -3.3, 0.003, -2.9, 5.5);
