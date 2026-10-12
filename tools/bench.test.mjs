@@ -188,3 +188,40 @@ test('once on, a box cannot be started again', () => {
   s.poweredOn = true;
   assert.equal(s.canBoot(), false);
 });
+
+test('every part of every build fits on its bench and nothing sits on anything else', () => {
+  const overlaps = (a, b) => a[0] < b[1] && b[0] < a[1] && a[2] < b[3] && b[2] < a[3];
+  for (const crt of B.CRT) for (const mat of B.MAT) for (const kb of B.KEYBOARD) for (const audio of B.AUDIO) {
+    const L = P.layoutFor({ ...B.defaultBuild(), crt: crt.id, mat: mat.id, keyboard: kb.id, audio: audio.id });
+    const name = `${crt.id} ${mat.id} ${kb.id} ${audio.id}`;
+    const feet = { monitor: L.monitor.foot, tower: L.tower.foot, keyboard: L.keyboard.foot, mouse: L.mouse.foot, ...(L.speakers ? { speakerL: L.speakers.feet[0], speakerR: L.speakers.feet[1] } : {}) };
+    for (const [part, f] of Object.entries(feet)) {
+      assert.ok(f[0] >= P.RIG_SPAN.left - 1e-9 && f[1] <= P.RIG_SPAN.right + 1e-9, `${name}: ${part} is inside the span`);
+      assert.ok(f[3] <= P.TABLE_DEPTH / 2, `${name}: ${part} is not off the front of the table`);
+    }
+    const names = Object.keys(feet);
+    for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) {
+      assert.equal(overlaps(feet[names[i]], feet[names[j]]), false, `${name}: ${names[i]} on ${names[j]}`);
+    }
+    if (L.mat) assert.equal(overlaps(L.mat.foot, L.keyboard.foot), false, `${name}: mat on keyboard`);
+    if (L.mat) assert.equal(overlaps(L.mat.foot, L.tower.foot), false, `${name}: mat on tower`);
+  }
+});
+
+test('a bigger tube is a bigger piece of glass and the seat keeps the same distance from it', () => {
+  const ks = B.CRT.map((c) => P.layoutFor({ ...B.defaultBuild(), crt: c.id }));
+  for (let i = 1; i < ks.length; i++) assert.ok(ks[i].k > ks[i - 1].k);
+  assert.ok(Math.abs(ks[2].k - 1) < 1e-9, 'the 17-inch is the club size');
+  for (const L of ks) {
+    const glassZ = L.monitor.z + 0.157 * L.k;
+    assert.ok(Math.abs(L.seat.z - glassZ - 0.36) < 1e-9);
+    assert.ok(Math.abs(L.monitor.z - 0.34 * L.k - -0.46) < 1e-9, 'the back is always in the same place');
+  }
+});
+
+test('the club PCs layout is what the 17-inch default gives', () => {
+  const L = P.layoutFor(B.defaultBuild());
+  assert.equal(L.monitor.z.toFixed(3), '-0.120');
+  assert.equal(L.tower.x, 0.52);
+  assert.equal(L.keyboard.z, 0.24);
+});

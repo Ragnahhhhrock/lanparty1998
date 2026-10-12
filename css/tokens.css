@@ -99,6 +99,10 @@
   --power-switch-glow: #ffb040; /* the light switch's glow dot, found in the dark */
   --power-tube-off: #3d4146;    /* a ceiling tube, off */
 
+  /* ---- Build: the PC you carry to your table (3D only; the VGA lead is --floppy-blue, the mouse lead --floppy-green, the audio lead --zap-lime) ---- */
+  --cable-ps2: #7a3f98;     /* the keyboard lead's purple plug and its socket on the back of the tower */
+  --mat-cloth: #1c3b6e;     /* a cloth mouse mat; the large one is --poster-ember and the hard plastic one --disk-case */
+
   /* ---- Apps: the little programs on the desktop ---- */
   /* Minesweeper numbers: the classic hues, darkened where needed to pass AA on the grey; 4 and 7 reuse shell colours */
   --mine-1: #0000ff;

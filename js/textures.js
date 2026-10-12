@@ -112,6 +112,33 @@ export function cdrDrive() {
   return tex(c);
 }
 
+// the front of a 5.25" CD-ROM or CD-R drive of your own: tray slot, headphone socket, activity LED, and what it is.
+// label: 'CD-ROM 24x' or 'CD-R  4x'
+export function cdDrive(label) {
+  const [c, g] = canvas(150, 40);
+  g.fillStyle = '#d6cdb4'; g.fillRect(0, 0, 150, 40);                    // --beige
+  g.fillStyle = '#0a0a0a'; g.fillRect(8, 10, 134, 4);                    // --w98-dark: tray slot
+  g.fillStyle = '#808080'; g.fillRect(8, 15, 134, 1);                    // --w98-shadow
+  g.font = 'bold 13px Tahoma, sans-serif'; g.fillStyle = '#0a0a0a'; g.fillText(label, 8, 33);
+  g.fillStyle = '#808080'; g.beginPath(); g.arc(98, 28, 3, 0, Math.PI * 2); g.fill();   // the headphone socket
+  g.fillStyle = '#dfdfdf'; g.fillRect(108, 24, 12, 8);                   // --w98-hilite: eject
+  g.fillStyle = '#808080'; g.fillRect(108, 31, 12, 1);
+  g.fillStyle = '#3cff5a'; g.fillRect(126, 26, 12, 6);                   // activity LED
+  return tex(c);
+}
+
+// The badge on the front of a case: the processor and the memory, in silver on black plastic. 0.1 x 0.025 m.
+export function caseBadge(line1, line2 = '') {
+  const [c, g] = canvas(160, 40);
+  g.fillStyle = '#26262b'; g.fillRect(0, 0, 160, 40);                    // --disk-case
+  g.fillStyle = '#3a3d42'; g.fillRect(0, 0, 160, 2); g.fillRect(0, 38, 160, 2); // --disk-smoke
+  g.font = `22px ${CRT_FONT}`; g.fillStyle = '#cfd3d8';                  // --disc-silver
+  g.textAlign = 'center';
+  g.fillText(line1, 80, line2 ? 17 : 27, 150);
+  if (line2) { g.fillStyle = '#8f949a'; g.fillText(line2, 80, 35, 150); } // --disc-edge
+  return tex(c);
+}
+
 // the computer shop's price list, left on the snack table
 export function priceList() {
   const [c, g] = canvas(192, 256);
@@ -874,6 +901,31 @@ export class Screen {
     const lines = Math.min(SCRIPT.length, Math.floor(cycle));
     for (let i = 0; i < lines; i++) this.text(g, SCRIPT[i], 8, 20 + i * 17);
     if (Math.floor(t * 2) % 2) this.text(g, '_', 8, 20 + lines * 17);
+  }
+
+  // a PC that is switched off, or has nothing plugged into it: the glass is dark
+  off(g) { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); }
+
+  // The power-on self test of a PC somebody built (js/build.js postLines): the lines come up at their own times
+  // and the memory count climbs. this.postInfo = { lines, seconds, start } with start in performance.now() seconds.
+  post(g) {
+    g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+    const p = this.postInfo;
+    if (!p) return;
+    const e = performance.now() / 1000 - p.start;
+    const rows = Math.floor((H - 10) / 12);
+    const shown = p.lines.filter((l) => l.at <= e);
+    const tail = shown.slice(-rows);
+    tail.forEach((l, i) => {
+      let text = l.text;
+      if (l.counter) {
+        const k = Math.min(1, (e - l.at) / 1.4);
+        text = k >= 1 ? `Memory Test : ${l.counter}K OK` : `Memory Test : ${Math.floor(l.counter * k)}K`;
+      }
+      this.text(g, text, 6, 13 + i * 12, '#aaaaaa', 15);
+    });
+    if (e >= p.seconds - 0.3) this.text(g, 'Starting Windows 98...', 6, 13 + Math.min(tail.length + 1, rows - 1) * 12, '#aaaaaa', 15);
+    else if (Math.floor(e * 2.5) % 2) { g.fillStyle = '#aaaaaa'; g.fillRect(6, 13 + Math.min(tail.length, rows - 1) * 12 - 9, 7, 10); }
   }
 
   win98(g, t) {

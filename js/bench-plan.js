@@ -20,7 +20,7 @@ export const benchOfSeat = (pc) => (Number.isInteger(pc) && pc >= SEAT_BASE && p
 
 // What a rig takes up on the table, either side of the bench's x (speakers and the mouse at the left, the tower at the right).
 // Checked against the club PCs in the tests so nothing overlaps.
-export const RIG_SPAN = { left: -0.36, right: 0.64 };
+export const RIG_SPAN = { left: -0.40, right: 0.64 };
 export const CLUB_X = [-2.8, 0, 2.8];
 export const TABLE_HALF = (5 * 1.838) / 2;            // five 6 ft tables end to end (js/room.js)
 
@@ -42,6 +42,38 @@ export function partsFor(build) {
     { id: 'audio', label: s.audio.name },
   );
   return list;
+}
+
+/* ---------------------------------------------------------------- where everything sits */
+
+export const TABLE_DEPTH = 0.762;
+export const CRT_BASE_W = 0.32;    // the 17-inch tube the club PCs have: everything else is scaled from its glass
+
+// Where each part of a build goes on its bench, in the station's space, with the box it takes up ([x0, x1, z0, z1])
+// so the tests can check nothing overlaps. The monitor's back always ends at the same place, so a bigger tube grows
+// toward you. `seat` is where your eye goes when you sit: always the same distance from the glass, so a small
+// monitor looks small.
+export function layoutFor(build) {
+  const s = specOf(build);
+  const k = s.crt.glass[0] / CRT_BASE_W;
+  const monZ = -0.46 + 0.34 * k;
+  const split = s.keyboard.id === 'kbSplit';
+  const kbW = split ? 0.5 : 0.46;
+  const mat = { matNone: null, matCloth: { w: 0.2, d: 0.18 }, matHard: { w: 0.22, d: 0.2 }, matLarge: { w: 0.34, d: 0.26 } }[s.mat.id];
+  const matX = s.mat.id === 'matLarge' ? 0.4 : 0.34;
+  const mouseX = s.mat.id === 'matLarge' ? 0.4 : 0.33;
+  const spk = 0.16 * k + 0.15;
+  const box = (x, z, w, d) => [x - w / 2, x + w / 2, z - d / 2, z + d / 2];
+  return {
+    k,
+    monitor: { x: 0, z: monZ, k, foot: [-0.21 * k, 0.21 * k, monZ - 0.34 * k, monZ + 0.15 * k] },
+    tower: { x: 0.52, z: -0.1, foot: box(0.52, -0.1, 0.19, 0.44) },
+    keyboard: { x: -0.02, z: 0.24, w: kbW, foot: box(-0.02, 0.24, kbW, 0.17) },
+    mouse: { x: mouseX, z: 0.26, foot: box(mouseX, 0.26, 0.06, 0.1) },
+    mat: mat ? { x: matX, z: 0.25, ...mat, foot: box(matX, 0.25, mat.w, mat.d) } : null,
+    speakers: s.speakers ? { x: spk, z: -0.1, feet: [[-spk - 0.05, -spk + 0.05, -0.155, -0.045], [spk - 0.05, spk + 0.05, -0.155, -0.045]] } : null,
+    seat: { x: 0, y: 0.225 * k, z: monZ + 0.157 * k + 0.36 },
+  };
 }
 
 /* ---------------------------------------------------------------- what gets plugged in */
