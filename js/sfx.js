@@ -1,4 +1,6 @@
 // Tiny synthesised sound kit: fluorescent hum, can fizz, chip crunch. No audio files.
+import { callPlan, engagedPlan, dtmf, DIAL_HZ } from './tones.js';
+
 let ctx, master;
 
 export const audioContext = () => ctx;
@@ -312,3 +314,102 @@ export function pickup(vol = 1, pan = 0, pitch = 1) {
     osc.start(t + at); osc.stop(t + at + 0.1);
   });
 }
+
+/* ---------- the phones ----------
+   The wall phone and the mobile. The tones themselves (dial tone, keypad, ring-back, engaged) are data in js/tones.js;
+   this plays them. Every sound that can go on a while hands back { stop() } so hanging up cuts it off. */
+const NO_SOUND = { stop() {} };
+
+// sine tones, together, for a while: a plan from js/tones.js
+function playPlan(plan) {
+  if (!ctx) return NO_SOUND;
+  const t0 = ctx.currentTime + 0.02;
+  const out = ctx.createGain(); out.gain.value = 0.5;
+  out.connect(master);
+  const oscs = [];
+  for (const seg of plan.segments) {
+    const g = ctx.createGain();
+    const a = t0 + seg.at, z = a + seg.dur;
+    g.gain.setValueAtTime(0, a);
+    g.gain.linearRampToValueAtTime(seg.vol / seg.freqs.length, a + 0.008);
+    g.gain.setValueAtTime(seg.vol / seg.freqs.length, z - 0.008);
+    g.gain.linearRampToValueAtTime(0, z);
+    g.connect(out);
+    for (const f of seg.freqs) {
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+      o.connect(g); o.start(a); o.stop(z + 0.02);
+      oscs.push(o);
+    }
+  }
+  return {
+    stop() {
+      const now = ctx.currentTime;
+      out.gain.cancelScheduledValues(now);
+      out.gain.setTargetAtTime(0, now, 0.01);
+      for (const o of oscs) { try { o.stop(now + 0.05); } catch { /* already finished */ } }
+    },
+  };
+}
+
+// lifting the receiver: the dial tone, a steady 425 Hz, until you dial or put it down
+export function dialTone() {
+  if (!ctx) return NO_SOUND;
+  receiverClick();
+  const t = ctx.currentTime + 0.12;
+  const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = DIAL_HZ;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.14, t + 0.02);
+  o.connect(g).connect(master); o.start(t);
+  return {
+    stop() {
+      const now = ctx.currentTime;
+      g.gain.cancelScheduledValues(now);
+      g.gain.setTargetAtTime(0, now, 0.01);
+      try { o.stop(now + 0.06); } catch { /* already stopped */ }
+    },
+  };
+}
+
+// dialling a number and waiting for it to ring: { stop(), duration } (seconds)
+export function dialCall(number, options) {
+  const plan = callPlan(number, options);
+  return { ...playPlan(plan), duration: plan.duration };
+}
+
+// no such number, or it is busy
+export function engaged() {
+  const plan = engagedPlan();
+  return { ...playPlan(plan), duration: plan.duration };
+}
+
+// the plastic clunk of a receiver going up or down
+export function receiverClick() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  burst(t, 0.05, 700, 1.2, 0.7, 'lowpass');
+  burst(t + 0.01, 0.03, 2400, 2, 0.3);
+}
+
+// a key on the mobile: the keypad beep (the same two tones the wall phone dials with, short and quiet)
+export function phoneKey(key = '5') {
+  if (!ctx) return;
+  const f = dtmf(key) ?? [1000];
+  const plan = { segments: [{ at: 0, dur: 0.07, freqs: f, vol: 0.28 }], duration: 0.07 };
+  playPlan(plan);
+}
+
+// one square-wave blip, like a 1998 phone speaker: for Snake
+export function phoneBlip(freq, dur = 0.08, vol = 0.14, at = 0) {
+  if (!ctx) return;
+  const t = ctx.currentTime + at;
+  const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = freq;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(master); o.start(t); o.stop(t + dur + 0.02);
+}
+
+// Snake: a chirp for food, a bigger one for the bonus, a falling run when you hit something
+export const snakeEat = () => { phoneBlip(880, 0.05); phoneBlip(1320, 0.06, 0.14, 0.05); };
+export const snakeBonus = () => [660, 880, 1100, 1320].forEach((f, i) => phoneBlip(f, 0.06, 0.14, i * 0.06));
+export const snakeDie = () => [440, 330, 247, 165].forEach((f, i) => phoneBlip(f, 0.14, 0.16, i * 0.14));
+export const snakeStart = () => [523, 659, 784].forEach((f, i) => phoneBlip(f, 0.07, 0.12, i * 0.07));

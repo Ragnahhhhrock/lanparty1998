@@ -762,6 +762,25 @@ function buildLounge(scene, out, labelVolt, labelNachoz, labelCurlz) {
     scene.add(r);
   }
 
+  // a candy-bar mobile phone somebody left on the middle couch cushion: slate shell, green screen, grey keys. It lies
+  // face up with its top end toward -z. Colours are tokens: --phone-body, --phone-body-light, --lcd, --disk-metal.
+  const mobile = new THREE.Group();
+  const shell = std(0x2d3a44, { roughness: 0.55 });            // --phone-body
+  const bezel = std(0x4a5a66, { roughness: 0.5 });             // --phone-body-light
+  const lcdMat = new THREE.MeshBasicMaterial({ color: 0xa3b88f }); // --lcd
+  const keyMat = std(0xb9bdc2, { roughness: 0.5 });            // --disk-metal
+  mobile.add(box(0.052, 0.022, 0.134, shell, 0, 0.011, 0));    // the body
+  mobile.add(box(0.01, 0.016, 0.01, shell, 0.018, 0.028, -0.062)); // the stub of an aerial
+  mobile.add(box(0.042, 0.001, 0.032, bezel, 0, 0.0225, -0.038));
+  mobile.add(box(0.034, 0.001, 0.024, lcdMat, 0, 0.0235, -0.038)); // the screen
+  mobile.add(box(0.026, 0.002, 0.008, keyMat, 0, 0.023, -0.008));  // the big menu key
+  for (let r = 0; r < 4; r++) for (let c = -1; c <= 1; c++) mobile.add(box(0.012, 0.002, 0.011, keyMat, c * 0.014, 0.023, 0.007 + r * 0.017));
+  const mobileHit = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.17), new THREE.MeshBasicMaterial({ visible: false }));
+  mobileHit.position.y = 0.04;
+  mobile.add(mobileHit);
+  place(mobile, 3.2, 0.41, -0.82, 1.2);
+  use(mobile, 'mobile');
+
   // drinks: standing, tipped over, and a flat two-litre on the carpet
   const can = (x, y, z, yaw = 0, tip = 0) => { const c = voltCan(labelVolt); c.position.set(x, y, z); c.rotation.set(0, yaw, tip); scene.add(c); use(c, 'drink'); return c; };
   can(4.4, T0, -1.45); can(4.17, T0, -0.7);

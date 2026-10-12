@@ -119,6 +119,12 @@
   --snow: #f4f8ff;
   --snow-shade: #c3d0e4;
 
+  /* ---- Phone: the candy-bar mobile on the coffee table (a parody; keys reuse --disk-metal, labels --w98-text) ---- */
+  --phone-body: #2d3a44;      /* slate shell */
+  --phone-body-light: #4a5a66; /* its bevel highlight and the seam round the screen */
+  --lcd: #a3b88f;             /* the green-grey screen, lit (AA with --lcd-ink) */
+  --lcd-ink: #1b2616;         /* pixels, text and the snake */
+
   /* ---- Web: the pages inside Internet Explorer (they sit on --beige-light; links are --w98-title) ---- */
   --web-visited: #551a8b;   /* visited links: the classic purple, AA on --beige-light */
   --web-width: 520px;       /* the page column; the site is built for 800x600 */
@@ -207,6 +213,7 @@
   --bevel-small: inset -1px -1px var(--w98-dark), inset 1px 1px var(--w98-light);
   --bevel-key: inset -1px -1px var(--w98-shadow), inset 1px 1px var(--w98-light);
   --bevel-cell: inset 1px 1px var(--w98-shadow); /* an opened Minesweeper square */
+  --bevel-phone: inset 2px 2px var(--phone-body-light), inset -2px -2px var(--crt-black); /* the phone's shell */
   --title-gradient: linear-gradient(90deg, var(--w98-title), var(--w98-title2));
   --text-shadow-hard: 2px 2px 0 #000;
 

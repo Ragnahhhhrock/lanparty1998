@@ -13,6 +13,8 @@ import { GameNoise } from './gaming.js';
 import { analytics } from './analytics.js';
 import { Party, PIZZA, BURNER, DISCS, NET, SHOP, PC_COUNT, PC_TOTAL, OC, HEAT, RAM, NIGHT, SEC_PER_GAME_MIN, SHARE_STEPS, celsius } from './party.js';
 import * as dialog from './dialog.js';
+import * as phone from './phone.js';
+import { CONTACTS } from './handset.js';
 import { Banter, IrcView, REGULARS } from './irc.js';
 import { Player } from './music.js';
 import { initLanamp } from './lanamp.js';
@@ -296,7 +298,7 @@ document.addEventListener('mousemove', (e) => {
 window.addEventListener('keydown', (e) => {
   if (e.target === ui.chatInput || e.target === ui.handle) return;
   if (e.target.closest?.('[data-owns-keys]')) return; // typing into Notepad, the DOS prompt, Minesweeper...
-  if (dialog.isOpen()) return; // the message box owns the keyboard
+  if (dialog.isOpen() || phone.isOpen()) return; // the message box and the phone own the keyboard
   if (mode === 'console') { // sitting in front of the TV: keys go to the terminal or the game; backtick stands up
     if (e.code === 'Backquote') { e.preventDefault(); e.stopPropagation(); leaveConsole(); }
     else if (n64.key(e)) e.stopPropagation();
@@ -368,6 +370,7 @@ const PROMPTS = {
   fan: () => `E · Turn the fan ${party.fan.on ? 'off' : 'on'}`,
   shop: () => 'E · Read the computer shop price list',
   phone: () => 'E · Use the phone',
+  mobile: () => 'E · Pick up the mobile',
   pizza: (t) => (t.box.slices > 0 ? `E · Eat a slice of pepperoni pizza (${t.box.slices} left)` : 'Empty box. Just grease.'),
   taped: () => 'E · Talk to DUCTAPE',
   door: () => `E · ${room.door.open ? 'Close' : 'Open'} the door`,
@@ -399,6 +402,7 @@ function interact(t) {
   else if (t.kind === 'lead') party.plugLead();
   else if (t.kind === 'fan') party.setFan(!party.fan.on, 'switch');
   else if (t.kind === 'phone') openPhone();
+  else if (t.kind === 'mobile') openMobile();
   else if (t.kind === 'pizza') eatPizza(t.box);
   else if (t.kind === 'taped') talkToTaped();
   else if (t.kind === 'door') useDoor();
@@ -429,12 +433,18 @@ function useDoor() {
 }
 
 /* ---------- errands: little message boxes ---------- */
-function openErrand(spec) {
+function openErrand(spec, onClosed) {
   if (mode !== 'walk') return;
   if (document.pointerLockElement) document.exitPointerLock();
   keys.clear();
   ui.prompt.hidden = true;
   mode = 'dialog';
+  dialog.open(spec, () => { onClosed?.(); if (mode === 'dialog') { mode = 'walk'; lockPointer(); } });
+}
+
+// swap what the open message box says (a call connecting) without giving the mouse back in between
+function swapErrand(spec) {
+  if (mode !== 'dialog') return;
   dialog.open(spec, () => { if (mode === 'dialog') { mode = 'walk'; lockPointer(); } });
 }
 
@@ -557,61 +567,98 @@ function openShop() {
   });
 }
 
+// The wall phone. Picking it up gives you a dial tone, and the dial tone goes on until you choose a number or hang up.
+// Choosing one dials it (the keypad tones), and the line rings until somebody answers. The numbers are in js/handset.js.
+const pizzaSpec = () => ({
+  title: 'PIZZAMENU.TXT',
+  render: () => {
+    const buttons = [{ label: 'Hang up' }];
+    let lines;
+    if (party.ordered('pizza')) lines = [`Pepperoni is on its way. The delivery bloke says ${clockText(party.secondsUntil('pizza'))}, and he has said that twice.`];
+    else {
+      lines = [
+        'HOT & FRESH PIZZA. Delivered in 30 min.',
+        `1. Large pepperoni, ${PIZZA.slices} slices ... $${PIZZA.cost}`,
+        '2. Large pepperoni, extra pepperoni ... same pizza',
+        `Cash $${party.cash}.`,
+      ];
+      buttons.unshift({ label: `Order a large pepperoni ($${PIZZA.cost})`, disabled: !party.canOrderPizza(), run: () => party.orderPizza(), keep: true });
+    }
+    return { lines, progress: null, buttons };
+  },
+});
+
+const dazzaSpec = () => ({
+  title: 'DAZZA.TEL',
+  render: () => {
+    const buttons = [{ label: 'Hang up' }];
+    let lines;
+    if (party.net === 'switch') {
+      lines = ["Dazza's dad works in IT for the government. The switch has a sticker on it.", 'He wants it back before 6:00 AM, in the same condition. Do not spill Volt on it.'];
+    } else if (party.dadLent) {
+      lines = ["Dazza's dad took his switch back. He is not lending it twice."];
+    } else if (party.ordered('switch')) {
+      lines = [`Dazza's dad is driving the switch over: ${clockText(party.secondsUntil('switch'))}.`];
+    } else if (party.net === 'coax') {
+      lines = ["Dazza's dad works in IT for the government. He has a 16-port switch in the boot of his car.", '"Get a hub in first. I am not plugging it into a coax mess."'];
+    } else {
+      lines = ["Dazza's dad works in IT for the government. He has a 16-port switch he is not supposed to take home.", 'He will lend it for the night, and he wants it back by 6:00 AM.'];
+      buttons.unshift({ label: 'Ask Dazza to borrow it', disabled: !party.canBorrowSwitch(), run: () => party.borrowSwitch(), keep: true });
+    }
+    return { lines, progress: null, buttons };
+  },
+});
+
+const SPECS = { pizza: pizzaSpec, dazza: dazzaSpec };
+
 function openPhone() {
+  let tone = null;
+  const hangUp = () => { tone?.stop(); tone = null; };
   openErrand({
     title: 'WALL PHONE',
     render: () => ({
       lines: ['The phone is on the wall by the stairs, with the pizza place magnet stuck next to it. Whose number do you want?'],
       progress: null,
-      buttons: [{ label: 'Pizza place', run: () => openPizzaMenu() }, { label: 'Dazza', run: () => openDazza() }, { label: 'Hang up' }],
+      buttons: [
+        { label: 'Pizza place', run: () => setTimeout(() => dialWall(CONTACTS[0]), 0) },
+        { label: 'Dazza', run: () => setTimeout(() => dialWall(CONTACTS[1]), 0) },
+        { label: 'Hang up', run: () => sfx.receiverClick() },
+      ],
     }),
-  });
+  }, hangUp);
+  if (mode === 'dialog') tone = sfx.dialTone();
 }
 
-function openPizzaMenu() {
-  setTimeout(() => openErrand({
-    title: 'PIZZAMENU.TXT',
-    render: () => {
-      const buttons = [{ label: 'Hang up' }];
-      let lines;
-      if (party.ordered('pizza')) lines = [`Pepperoni is on its way. The delivery bloke says ${clockText(party.secondsUntil('pizza'))}, and he has said that twice.`];
-      else {
-        lines = [
-          'HOT & FRESH PIZZA. Delivered in 30 min.',
-          `1. Large pepperoni, ${PIZZA.slices} slices ... $${PIZZA.cost}`,
-          '2. Large pepperoni, extra pepperoni ... same pizza',
-          `Cash $${party.cash}.`,
-        ];
-        buttons.unshift({ label: `Order a large pepperoni ($${PIZZA.cost})`, disabled: !party.canOrderPizza(), run: () => party.orderPizza(), keep: true });
-      }
-      return { lines, progress: null, buttons };
-    },
-  }), 0);
-}
-
-function openDazza() {
-  setTimeout(() => openDazzaDialog(), 0);
-}
-
-function openDazzaDialog() {
+// dial a contact on the wall phone: the keypad tones, then ringing, then the call connects to their dialog
+function dialWall(contact) {
+  const call = sfx.dialCall(contact.number, { digits: true });
+  let timer = 0;
+  const stop = () => { clearTimeout(timer); call.stop(); };
+  analytics.phoneCall(contact.id, 'wall');
   openErrand({
-    title: 'DAZZA.TEL',
-    render: () => {
-      const buttons = [{ label: 'Hang up' }];
-      let lines;
-      if (party.net === 'switch') {
-        lines = ["Dazza's dad works in IT for the government. The switch has a sticker on it.", 'He wants it back before 6:00 AM, in the same condition. Do not spill Volt on it.'];
-      } else if (party.dadLent) {
-        lines = ["Dazza's dad took his switch back. He is not lending it twice."];
-      } else if (party.ordered('switch')) {
-        lines = [`Dazza's dad is driving the switch over: ${clockText(party.secondsUntil('switch'))}.`];
-      } else if (party.net === 'coax') {
-        lines = ["Dazza's dad works in IT for the government. He has a 16-port switch in the boot of his car.", '"Get a hub in first. I am not plugging it into a coax mess."'];
-      } else {
-        lines = ["Dazza's dad works in IT for the government. He has a 16-port switch he is not supposed to take home.", 'He will lend it for the night, and he wants it back by 6:00 AM.'];
-        buttons.unshift({ label: 'Ask Dazza to borrow it', disabled: !party.canBorrowSwitch(), run: () => party.borrowSwitch(), keep: true });
-      }
-      return { lines, progress: null, buttons };
+    title: 'WALL PHONE',
+    render: () => ({ lines: [`Dialling ${contact.number}...`], progress: null, buttons: [{ label: 'Hang up', run: () => sfx.receiverClick() }] }),
+  }, stop);
+  timer = setTimeout(() => { sfx.receiverClick(); swapErrand(SPECS[contact.id]()); }, call.duration * 1000);
+}
+
+// The mobile on the coffee table: Snake, the phone book, and calls to the same numbers as the wall phone.
+function openMobile() {
+  if (mode !== 'walk') return;
+  if (document.pointerLockElement) document.exitPointerLock();
+  keys.clear();
+  ui.prompt.hidden = true;
+  mode = 'dialog';
+  phone.open({
+    clock: () => ui.clock.textContent,
+    onEvent: (e) => {
+      if (e.type === 'ring') analytics.phoneCall(e.contact?.id ?? 'unknown', 'mobile');
+      else if (e.type === 'snake') analytics.snakeOver(e.score, e.eaten);
+    },
+    done: (result) => {
+      mode = 'walk';
+      if (result?.call) openErrand(SPECS[result.call.id]());
+      else lockPointer();
     },
   });
 }

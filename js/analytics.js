@@ -27,6 +27,12 @@ export const analytics = {
   // The ceiling lights, switched `on` or off.
   lightSwitch(on) { track('light_switch', { on }); },
 
+  // Rang somebody: `who` is 'pizza', 'dazza', 'mum' or 'unknown'; `from` is the 'wall' phone or the 'mobile'.
+  phoneCall(who, from) { track('phone_call', { who, from }); },
+
+  // A game of Snake on the mobile ended with this score.
+  snakeOver(score, eaten) { track('snake_over', { score, food_eaten: eaten }); },
+
   sitDown(station) {
     seatedAt = performance.now();
     track('sit_down', { station: station?.name || 'you' });

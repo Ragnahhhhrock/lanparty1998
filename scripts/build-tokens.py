@@ -16,7 +16,7 @@ GROUPS = {
     "build": ("cable-", "mat-"),
     "media": ("floppy-", "disk-", "disc-", "case-"),
     "brand": ("volt", "nacho", "cheese", "curlz", "zap-", "cup-"),
-    "apps": ("mine-", "felt", "card-", "snow"),
+    "apps": ("mine-", "felt", "card-", "snow", "phone-", "lcd"),
     "web": ("web-",),
     "posters": ("poster-",),
     "people": ("link-led", "skin", "denim", "shoe", "hair", "eye-", "iris-", "lip", "clothes-", "neon-", "shirt-"),

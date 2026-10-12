@@ -8,6 +8,14 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'A mobile on the couch',
+    text: 'Somebody has left a Nokka 51 on the middle couch cushion, next to the DESCENT box. Press E to pick it up. It has a menu, a phone book, keys that beep, and Snake: 2, 4, 6 and 8 or the arrows steer, the walls are fatal, and a bug turns up after every fifth bit of food and is worth more the quicker you get it. It rings the same numbers as the wall phone, and Mum.',
+  },
+  {
+    date: '1998-02-07', kind: 'new', title: 'The wall phone has a dial tone',
+    text: 'Pick up the phone on the wall and you get a dial tone until you choose a number or hang up. Choose one and it dials with the keypad tones, then rings twice before somebody answers. Hang up early and it stops. The pizza place and Dazza are still the only two who pick up.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'Internet Explorer opens bigger',
     text: 'The browser now opens at a decent size, not a postage stamp, and is scrolled past the banner to the news when you walk in, so the latest few updates are in front of you before you have touched anything. Smaller screens get as much window as there is room for. Drag a corner if you want it larger still.',
     link: ['/news.htm', 'All the news'],
