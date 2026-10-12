@@ -1,6 +1,7 @@
 // Procedural canvas textures: everything in the room is drawn here, no image files.
 import * as THREE from 'three';
 import { feedFresh, feedGlow } from './feed.js';
+import { drawScreen as drawDuel } from './spectator.js';
 
 const CRT_FONT = '"VT323", "Lucida Console", monospace';
 
@@ -970,6 +971,7 @@ export class Screen {
     this.t0 = seed * 3.7;
     this.message = '';
     this.feed = null;    // the picture of the player's game sent from their PC: { bitmap, at, glow } (see pushFeed)
+    this.bot = null;     // a regular playing a bot deathmatch here: { sim, index } (see js/spectator.js)
     this.feedSeq = 0;
     this.draw(0);
   }
@@ -1002,7 +1004,10 @@ export class Screen {
   }
 
   // what the CRT throws into a dark room while it shows a live game: [colour, gain], or null for the usual by-screen colours
-  liveGlow() { return this.live() ? this.feed.glow : null; }
+  liveGlow() {
+    if (this.bot && !this.free) return this.bot.sim.glow(this.bot.index);
+    return this.live() ? this.feed.glow : null;
+  }
 
   setMode(mode, message = '') { this.mode = mode; this.message = message; this.draw(performance.now() / 1000); }
 
@@ -1266,6 +1271,7 @@ export class Screen {
   }
 
   remote(g, t) { // somebody else's game, seen over their shoulder
+    if (this.bot) return this.duel(g);
     g.fillStyle = '#000000'; g.fillRect(0, 0, W, H);
     // a suggestion of a 90s shooter: grey walls, a brown floor, the status bar (token colours only)
     g.fillStyle = '#808080'; g.fillRect(0, 0, W, 90);       // --w98-shadow
@@ -1283,6 +1289,16 @@ export class Screen {
     g.fillStyle = '#000000'; g.fillRect(0, 0, W, H);                                   // --crt-black
     g.imageSmoothingEnabled = true;
     g.drawImage(this.feed.bitmap, 0, 0, W, H);
+    this.tube(g);
+  }
+
+  // spectator mode: a regular's bot deathmatch, drawn from their own eyes (js/spectator.js)
+  duel(g) {
+    drawDuel(g, this.bot.sim, this.bot.index, { w: W, h: H, font: CRT_FONT });
+    this.tube(g);
+  }
+
+  tube(g) {
     g.fillStyle = 'rgba(0, 0, 0, 0.22)';
     for (let y = 1; y < H; y += 3) g.fillRect(0, y, W, 1);                             // scanlines
     const v = g.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, H * 0.9);

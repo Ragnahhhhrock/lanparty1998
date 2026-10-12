@@ -1281,6 +1281,7 @@ function frame() {
   if (mode !== 'intro') voice.update(camera, dt);
   room.updateFan(dt, party.fan.on, party.fanSweep());
   room.updatePower(dt);
+  room.updateDuel(dt);
   room.updatePizza(dt);
   room.updateTrays(dt);
   room.updateBenches();

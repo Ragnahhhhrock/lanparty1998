@@ -116,7 +116,7 @@ const REACT = {
 
 // What each regular is playing, so their game talk matches the screen they are looking at.
 // 'console' is the telly on the couch. Dazza is on the phone but still has a game in mind.
-export const GAME_OF = { 'K-Rad': 'quake', n00bslayer: 'doom', 'xX_Ghoul_Xx': 'descent', PhatBass: 'console', Macca: 'console', Dazza: 'hexen' };
+export const GAME_OF = { 'K-Rad': 'doom', n00bslayer: 'doom', 'xX_Ghoul_Xx': 'descent', PhatBass: 'console', Macca: 'console', Dazza: 'hexen' };
 
 // Gamer talk, one pool per game. Specific, dry and a bit too serious about it. {t} is another player.
 // Names of weapons and moves are fine as text; there is nothing from the games' art or code in here.

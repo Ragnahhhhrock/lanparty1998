@@ -6,6 +6,7 @@ import { buildBenches } from './bench.js';
 import { BURNER } from './party.js';
 import { headphones } from './headphones.js';
 import { GAME_IDS } from './games.js';
+import { Deathmatch } from './spectator.js';
 
 export const ROOM = { minX: -6, maxX: 6, minZ: -5, maxZ: 5, height: 2.8 };
 const TABLE_Y = 0.74;
@@ -958,7 +959,8 @@ function buildLounge(scene, out, labelVolt, labelNachoz, labelCurlz) {
 //   out.gamerScreens    the screens to redraw each frame, with out.screens
 const GAMER_DESKS = [
   // right wall, two PCs facing the wall. Players face +x.
-  { x: 5.45, z: 2.0, segments: 2, yaw: -Math.PI / 2, pcs: [['K-Rad', 1.25, 'DEATHMATCH', 'speakers'], ['n00bslayer', 2.75, 'FRAGGING', 'speakers']] },
+  // The pair on this wall are bots playing each other: spectator mode (js/spectator.js). The fifth entry is which fighter.
+  { x: 5.45, z: 2.0, segments: 2, yaw: -Math.PI / 2, pcs: [['K-Rad', 1.25, 'DEATHMATCH', 'speakers', 0], ['n00bslayer', 2.75, 'DEATHMATCH', 'speakers', 1]] },
   // front-left corner, where the snack table leaves off. Players face -x.
   { x: -5.45, z: 1.838 + TABLE_LEN / 2, segments: 1, yaw: Math.PI / 2, pcs: [['xX_Ghoul_Xx', 1.838 + TABLE_LEN / 2, 'DEATHMATCH', 'headphones']] },
 ];
@@ -967,6 +969,9 @@ const COUCH_SEATS = [['MACCA', 0], ['PhatBass', 2]]; // [who, cushion]: 0 is the
 function buildGamers(scene, out, labelVolt) {
   out.seats = {};
   out.gamerScreens = [];
+  const duel = new Deathmatch();                  // K-Rad against n00bslayer, one match after another, for as long as the page is open
+  out.duel = duel;
+  out.updateDuel = (dt) => duel.update(dt);
   GAMER_DESKS.forEach((d, di) => {
     const t = foldingTable(d.segments);
     t.rotation.y = Math.PI / 2;
@@ -975,13 +980,14 @@ function buildGamers(scene, out, labelVolt) {
     const half = (d.segments * TABLE_LEN) / 2;
     out.colliders.push({ minX: d.x - TABLE_DEPTH / 2, maxX: d.x + TABLE_DEPTH / 2, minZ: d.z - half, maxZ: d.z + half });
 
-    d.pcs.forEach(([who, z, what, audio], pi) => {
+    d.pcs.forEach(([who, z, what, audio, fighter], pi) => {
       const g = new THREE.Group();
       g.position.set(d.x, 0, z);
       g.rotation.y = d.yaw;
       scene.add(g);
       const screen = new T.Screen('remote', 20 + di * 3 + pi);
       screen.setFree(false, who.toUpperCase(), what);
+      if (fighter !== undefined) screen.bot = { sim: duel, index: fighter };
       out.gamerScreens.push(screen);
       const { chair, phones, mon } = pcSetup(g, screen, who.toUpperCase(), 0.1 * (pi + 1) - 0.15, false, audio);
       (out.gamerPcs ??= []).push({ group: g, wallZ: DESK_WALL_Z, mon });

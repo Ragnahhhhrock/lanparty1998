@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'Spectator mode: K-Rad and n00bslayer play DOOM against each other all night',
+    text: 'The two at the PCs against the right-hand wall have stopped fragging nothing in particular. They boot DOOM, find each other over IPX, play to eight frags, look at the scores, load the next map and go again, and they have not stopped since. Each CRT shows what its own player sees: stand behind K-Rad and you watch his match, stand behind n00bslayer and you get the same fight from the other end, with the frag message, the red screen and the body on the floor. Three maps, medikits, ammo and one gun. Switch the lights off and both tubes light the wall in the colour of the fight. It is a lookalike for the demonstration and not the shipped game, so the walls are flat and nobody has a face.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'Voice chat, with a microphone',
     text: 'Press Y, let the browser use your microphone, and anyone else who has joined voice can hear you. They hear you from where you are standing, or sitting: loud beside you, fading as they walk away, and gone by the far wall. Y shuts the microphone and opens it again, and Shift and Y leave. Nobody is linked to anybody until they join, nothing is recorded, and a player in voice can see the network address of the others in it. A strict office firewall may stop a link from forming. Typing still works.',
   },
