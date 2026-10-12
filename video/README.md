@@ -35,6 +35,10 @@ Rebuild: `python3 scripts/capture-video.py portrait`, `... wide`, `python3 scrip
 | 0:52 | The lounge: couch, console, posters, game shelf |
 | 0:56 | lanparty1998.com, news and party reminders |
 
+## Shorts
+
+Eight portrait shorts of 30 seconds or less, one per feature (the PC builder, network games, the room, food and pizza, the console, proximity chat, the Windows 98 desktop and LANamp), with a description for each: `video/shorts/README.md`.
+
 ## Left for a second video
 
 Lesser features that did not fit in a minute: the wall phone and the pizza driver's knock, the light switch, the yellow extension lead and the trip hazards, the console TV prompt that runs N64 cartridges from your own folders, the regulars and their chat, Dazza's cheat-code page, the guestbook, Disk Defragmenter and Paint, bringing your own MP3s to LANamp, the 8-port hub and the 16-port switch, RAM from Singapore, the CD burner and coasters, Shout me a Volt Cola, and Party Reminders from the organiser's side.

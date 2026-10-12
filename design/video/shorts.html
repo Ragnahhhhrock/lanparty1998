@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Short videos</title>
+<meta name="robots" content="noindex">
+<!-- Source for the eight portrait shorts (each 30 seconds or less), one per feature:
+       ?short=builder | network | room | food | console | chat | desktop | lanamp
+     540x960 CSS px, rendered at 2x = 1080x1920 (TikTok, Reels, Shorts). Render with: python3 scripts/render-shorts.py
+     Built only from tokens.css and the component rules in STYLEGUIDE.md, in the same parts as explainer.html. The footage
+     in img/video/shorts/ is captured from the real site (scripts/capture-shorts.py); the music is LANamp's own tape,
+     rendered from js/music.js by scripts/render-music.py. -->
+<link rel="stylesheet" href="../../css/tokens.css">
+<style>
+  html, body { margin: 0; background: var(--basement); }
+  #stage { position: relative; width: 540px; height: 960px; overflow: hidden; background: var(--basement);
+    font: var(--text-ui)/var(--leading-ui) var(--font-ui); color: var(--w98-text); }
+  .scene { position: absolute; inset: 0; display: none; overflow: hidden; }
+  .bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+  .shade { position: absolute; inset: 0; background: var(--vignette); }
+  .wall { position: absolute; inset: 0; background:
+      var(--vignette),
+      repeating-linear-gradient(90deg, var(--wood-dark) 0 3px, transparent 3px 60px),
+      repeating-linear-gradient(90deg, var(--drop) 0 14px, transparent 14px 32px, var(--drop) 32px 60px),
+      var(--wood); }
+
+  /* ---- the series tag, top left, clear of the platform's own top bar ---- */
+  .series { position: absolute; left: 24px; top: 64px; display: flex; z-index: 6; box-shadow: var(--bevel-raised), var(--drop-shadow); }
+  .series span { background: var(--title-gradient); color: var(--w98-light); font-weight: bold; font-size: 14px; letter-spacing: .04em; padding: 6px 10px; }
+  .series b { background: var(--w98-face); font: 20px/1 var(--font-crt); padding: 5px 10px; }
+
+  /* ---- Win98 caption window, 150px above the bottom edge ---- */
+  .win { position: absolute; left: 24px; right: 24px; bottom: 150px; background: var(--w98-face); padding: 3px; box-sizing: border-box;
+    box-shadow: var(--bevel-raised), var(--drop-shadow); z-index: 5; }
+  .win .tt { display: flex; justify-content: space-between; align-items: center; background: var(--title-gradient);
+    color: var(--w98-light); font-weight: bold; padding: 4px 4px 4px 8px; font-size: 14px; letter-spacing: .02em; }
+  .win .tt b { background: var(--w98-face); color: var(--w98-text); width: 18px; height: 16px; line-height: 14px;
+    text-align: center; font-size: 14px; box-shadow: var(--bevel-small); }
+  .win .bd { padding: 12px 16px 14px; }
+  .win h2 { font: var(--text-crt-xl)/.95 var(--font-crt); color: var(--w98-title); margin: 0 0 8px; }
+  .win p { margin: 0; font-size: 16px; line-height: 1.3; }
+  .win .row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+  .win .row span { box-shadow: var(--bevel-sunken); padding: 4px 8px; font-size: 13px; }
+  .win .row .key { display: inline-block; min-width: 22px; text-align: center; background: var(--w98-key); box-shadow: var(--bevel-raised);
+    font: 24px/1 var(--font-crt); padding: 4px 8px 3px; color: var(--w98-text); }
+  .win .row .says { box-shadow: none; padding: 0 4px 0 0; font-size: 14px; }
+
+  /* ---- CRT, for the end card and game footage ---- */
+  .crt { position: absolute; left: 30px; top: 150px; width: 480px; height: 360px; box-sizing: border-box; padding: 22px 22px 46px;
+    background: var(--beige); box-shadow: var(--bevel-small), var(--drop-shadow); }
+  .crt::after { content: attr(data-pc); position: absolute; left: 22px; bottom: 12px; font: 22px/1 var(--font-crt); color: var(--w98-title-off); }
+  .crt i { position: absolute; right: 24px; bottom: 16px; width: 10px; height: 10px; background: var(--phosphor); }
+  .glass { position: relative; height: 100%; background: var(--crt-black); border-radius: 8px / 10px; overflow: hidden;
+    box-shadow: inset 0 0 0 3px var(--wood-dark); }
+  .glass img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+  .glass::after { content: ""; position: absolute; inset: 0; background: var(--scanlines), var(--vignette); }
+  .term { position: absolute; inset: 0; padding: 18px 20px; font: var(--text-crt-md)/1.15 var(--font-crt); color: var(--dos-grey); white-space: pre; }
+  .term .t { color: var(--amber); } .term .g { color: var(--phosphor); }
+  .cursor { display: inline-block; width: 12px; height: 4px; background: var(--phosphor); }
+
+  /* ---- bits ---- */
+  .toast { position: absolute; left: 24px; right: 24px; top: 120px; font: var(--text-crt-lg)/1.15 var(--font-crt); color: var(--toast);
+    text-shadow: var(--text-shadow-hard); background: var(--hud-bg); padding: 10px 14px; white-space: pre-wrap; z-index: 4; }
+  .panel { position: absolute; left: 24px; right: 24px; top: 120px; background: var(--w98-face); box-shadow: var(--bevel-raised), var(--drop-shadow);
+    padding: 10px 12px; display: grid; gap: 8px; z-index: 4; }
+  .meter { display: grid; grid-template-columns: 96px 1fr 60px; align-items: center; gap: 10px; font-size: 13px; font-weight: bold; letter-spacing: .04em; }
+  .bar { height: 14px; background: var(--w98-light); box-shadow: var(--bevel-sunken); padding: 3px; }
+  .bar b { display: block; height: 100%; }
+  .caf { background: repeating-linear-gradient(90deg, var(--volt) 0 8px, transparent 8px 10px); }
+  .snk { background: repeating-linear-gradient(90deg, var(--nacho) 0 8px, transparent 8px 10px); }
+  .prg { background: repeating-linear-gradient(90deg, var(--w98-title) 0 8px, transparent 8px 10px); }
+  .vol { background: repeating-linear-gradient(90deg, var(--link-led) 0 8px, transparent 8px 10px); }
+  .tag { display: inline-block; background: var(--w98-face); box-shadow: var(--bevel-raised); padding: 4px 10px; font-size: 14px; font-weight: bold; margin: 0 4px 6px 0; }
+  .stack { position: absolute; left: 24px; right: 24px; top: 120px; z-index: 4; }
+  .count { position: absolute; right: 24px; top: 64px; font: var(--text-crt-lg)/1 var(--font-crt); color: var(--toast); text-shadow: var(--text-shadow-hard); background: var(--hud-bg); padding: 4px 10px; z-index: 6; }
+  #taskbar { position: absolute; left: 0; right: 0; bottom: 0; height: var(--taskbar-h); background: var(--w98-face); box-shadow: var(--bevel-raised);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 4px; box-sizing: border-box; z-index: 20; }
+  #taskbar .start { box-shadow: var(--bevel-raised); padding: 2px 10px; font-weight: bold; font-size: 13px; }
+  #taskbar .tray { box-shadow: var(--bevel-sunken); padding: 1px 10px; font: 20px/1 var(--font-crt); }
+  #flash { position: absolute; inset: 0; background: var(--w98-light); opacity: 0; z-index: 30; pointer-events: none; }
+  .url { position: absolute; left: 0; right: 0; bottom: 64px; text-align: center; font: var(--text-crt-xl)/1 var(--font-crt); color: var(--phosphor); text-shadow: var(--text-shadow-hard); z-index: 6; }
+</style>
+</head>
+<body>
+<div id="stage"><div id="scenes"></div>
+  <div id="taskbar"><span class="start">Start</span><span class="tray" id="clock">7:30 PM</span></div>
+  <div id="flash"></div>
+</div>
+<script src="shorts-data.js"></script>
+<script>
+const Q = new URLSearchParams(location.search);
+const SHORT = window.SHORTS[Q.get('short') || 'builder'];
+const A = '../../img/video/';
+const q4 = (x) => Math.round(x * 6) / 6; // stepped easing: the era had no tweening
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const keys = (ks) => ks.map((k) => (k.startsWith('=') ? `<span class="says">${k.slice(1)}</span>` : `<span class="key">${k}</span>`)).join('');
+
+const win = (s, i, n) => {
+  const title = s.title || (s.step ? `STEP ${s.step} OF ${n}` : SHORT.exe);
+  const row = (s.keys?.length ? keys(s.keys) : '') + (s.tags || []).map((t) => `<span>${t}</span>`).join('');
+  return `<div class="win cap"><div class="tt"><span>${title}</span><b>x</b></div><div class="bd"><h2>${s.h}</h2><p>${s.p}</p>${row ? `<div class="row">${row}</div>` : ''}</div></div>`;
+};
+const rise = (el, lt, delay = 0.12) => {
+  const w = el.querySelector('.cap'); if (!w) return;
+  const s = q4(clamp((lt - delay) / 0.3));
+  w.style.transform = `translateY(${(1 - s) * 40}px)`; w.style.opacity = s ? 1 : 0;
+};
+
+// a footage scene: real stills cut on time, each with a slow push towards its focus point
+function footage(s, i, n) {
+  const list = [].concat(s.img);
+  const at = s.at || list.map((_, k) => k / list.length);         // when each still comes in, as a fraction of the scene
+  const zoom = s.zoom || [1, 1.08];
+  return {
+    html: `${list.map((im) => `<div class="bg" style="background-image:url(${A}shorts/${im}.jpg);transform-origin:${s.focus || '50% 40%'}"></div>`).join('')}
+      <div class="shade"></div>${s.extra || ''}${win(s, i, n)}`,
+    update(el, lt, d) {
+      const k = lt / d;
+      let cur = 0; at.forEach((a, j) => { if (k >= a) cur = j; });
+      const seg = [at[cur], at[cur + 1] ?? 1], kk = (k - seg[0]) / (seg[1] - seg[0]);
+      el.querySelectorAll('.bg').forEach((b, j) => {
+        b.style.display = j === cur ? 'block' : 'none';
+        b.style.transform = `translateY(${s.ty || 0}px) scale(${zoom[0] + (zoom[1] - zoom[0]) * kk})`;
+      });
+      rise(el, lt);
+      FX[s.fx]?.(el, lt, d);
+    },
+  };
+}
+
+// a game on a CRT against the wood panelling (the network short)
+function crt(s, i, n) {
+  const frames = s.frames;
+  return {
+    html: `<div class="wall"></div><div class="crt" data-pc="${s.pc}"><i></i><div class="glass">${frames.map((f, k) => `<img data-k="${k}" src="${A}${f}.jpg">`).join('')}</div></div>${s.extra || ''}${win(s, i, n)}`,
+    update(el, lt, d) {
+      const k = Math.min(frames.length - 1, Math.floor(lt / d * frames.length));
+      el.querySelectorAll('.glass img').forEach((im) => { im.style.display = Number(im.dataset.k) === k ? 'block' : 'none'; });
+      const c = el.querySelector('.crt'); const sc = q4(clamp(lt / 0.25));
+      c.style.transform = `scale(${0.9 + 0.1 * sc})`; c.style.opacity = sc ? 1 : 0;
+      rise(el, lt, 0.2);
+      FX[s.fx]?.(el, lt, d);
+    },
+  };
+}
+
+// the end card: the URL, the same on every short
+function endcard() {
+  return {
+    html: `<div class="wall"></div>
+      <div class="crt" data-pc="PC-01" style="top:150px;height:320px"><i></i><div class="glass"><div class="term" id="cta"></div></div></div>
+      <div class="win cap"><div class="tt"><span>LANPARTY.EXE</span><b>x</b></div><div class="bd"><h2>LAN Party '98</h2><p>${SHORT.cta}</p></div></div>
+      <div class="url">lanparty1998.com</div>`,
+    update(el, lt) {
+      const l = ['C:\\> LANPARTY', SHORT.exe, '', SHORT.ctaTerm, lt > 0.9 ? 'Free. No install.' : '', '', 'C:\\> '];
+      el.querySelector('#cta').innerHTML = l.map((s, i) => (i === 1 ? `<span class="t">${s}</span>` : i === 4 ? `<span class="g">${s}</span>` : s)).join('\n') + (Math.floor(lt * 2) % 2 ? '<span class="cursor"></span>' : '');
+      rise(el, lt, 0.1);
+    },
+  };
+}
+
+// little animations some scenes carry, keyed by name in shorts-data.js
+const FX = {
+  meters(el, lt) { // caffeine and snacks fill up as you eat and drink
+    const c = Math.round(20 + 70 * clamp(lt / 3)), s = Math.round(15 + 55 * clamp((lt - 0.6) / 3));
+    el.querySelector('#mc').style.width = c + '%'; el.querySelector('#ms').style.width = s + '%';
+    el.querySelector('#mcv').textContent = c + '%'; el.querySelector('#msv').textContent = s + '%';
+  },
+  falloff(el, lt) { // how loud a mate is as you walk away: full within 1.5 m, nothing at 9 m
+    const m = 0.5 + 9 * clamp(lt / 3.6), v = m <= 1.5 ? 100 : m >= 9 ? 0 : Math.round(100 * (9 - m) / 7.5);
+    el.querySelector('#fm').textContent = `${m.toFixed(1)} m`; el.querySelector('#fv').style.width = v + '%'; el.querySelector('#fvv').textContent = v + '%';
+  },
+  ipx(el, lt) {
+    el.querySelector('#ipx').textContent = 'C:\\> IPXSETUP -nodes 2\nLooking for a node' + '.'.repeat(1 + (Math.floor(lt * 3) % 3)) + (lt > 2.6 ? '\nPlayers found: 2 of 2' : '');
+  },
+  knock(el, lt) {
+    el.querySelector('#kn').textContent = lt > 0.3 ? (lt > 1.6 ? 'Three knocks on the basement door.\nThat will be the pizza.' : 'Three knocks on the basement door.') : '';
+  },
+  wait(el, lt) { // eight game minutes pass in the tray clock while you wait for the pizza
+    el.querySelector('#wt').textContent = `Pizza Shack ETA ${Math.max(0, 8 - Math.floor(lt * 2.4))} min`;
+  },
+  type(el, lt, d) { // a line typed into a prompt
+    const t = el.querySelector('[data-type]'); const s = t.dataset.type; t.textContent = s.slice(0, Math.floor(clamp((lt - 0.4) / (d * 0.5)) * s.length));
+  },
+};
+
+const n = SHORT.scenes.filter((s) => s.step).length;
+const SCENES = [];
+let t = 0;
+for (const [i, s] of SHORT.scenes.entries()) {
+  const built = s.kind === 'crt' ? crt(s, i, n) : footage(s, i, n);
+  SCENES.push({ t0: t, t1: t + s.d, ...built }); t += s.d;
+}
+SCENES.push({ t0: t, t1: t + SHORT.end, ...endcard() }); t += SHORT.end;
+
+const root = document.getElementById('scenes');
+SCENES.forEach((s) => { const d = document.createElement('div'); d.className = 'scene'; d.innerHTML = s.html; root.appendChild(d); s.el = d; });
+const tag = document.createElement('div'); tag.className = 'series'; tag.innerHTML = `<span>LAN PARTY '98</span><b>${SHORT.series}</b>`;
+document.getElementById('stage').appendChild(tag);
+
+function clockText(tt) { // the party clock runs on from where the short is set, a minute a second
+  const m = SHORT.clock + tt; const h24 = Math.floor(m / 60) % 24, mm = Math.floor(m % 60);
+  return `${((h24 + 11) % 12) + 1}:${String(mm).padStart(2, '0')} ${h24 >= 12 ? 'PM' : 'AM'}`;
+}
+window.DURATION = t;
+window.AUDIO = SHORT.audio;
+window.seek = (tt) => {
+  let cut = 0;
+  for (const s of SCENES) {
+    const on = tt >= s.t0 && tt < s.t1;
+    s.el.style.display = on ? 'block' : 'none';
+    if (on) { s.update?.(s.el, tt - s.t0, s.t1 - s.t0); cut = Math.max(cut, 1 - (tt - s.t0) / 0.12); }
+  }
+  tag.style.display = tt >= SCENES[SCENES.length - 1].t0 ? 'none' : 'flex';
+  document.getElementById('flash').style.opacity = tt < 0.1 ? 0 : clamp(cut) * 0.45;
+  document.getElementById('clock').textContent = clockText(tt);
+};
+window.preload = () => {
+  const urls = [...document.querySelectorAll('.bg')].map((e) => e.style.backgroundImage.slice(5, -2))
+    .concat([...document.querySelectorAll('.glass img')].map((i) => i.src));
+  return Promise.all(urls.map((u) => new Promise((r) => { const i = new Image(); i.onload = i.onerror = r; i.src = u; })).concat([document.fonts.ready]));
+};
+seek(0);
+</script>
+</body>
+</html>
