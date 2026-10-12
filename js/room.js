@@ -762,7 +762,11 @@ function buildLounge(scene, out, labelVolt, labelNachoz, labelCurlz) {
   out.colliders.push({ minX: COUCH.x - COUCH.d / 2, maxX: COUCH.x + COUCH.d / 2, minZ: COUCH.z - COUCH.w / 2, maxZ: COUCH.z + COUCH.w / 2 });
 
   // ---- bean bag in the back-left corner, dent toward the room
-  place(beanBag(), BEAN.x, 0, BEAN.z, Math.PI / 2 + 0.3);
+  const BEAN_YAW = Math.PI / 2 + 0.3;
+  const bean = place(beanBag(), BEAN.x, 0, BEAN.z, BEAN_YAW);
+  use(bean, 'beanbag');
+  // where you end up when you sit in the dent (it is a little toward the front of the bag): eye height, and how far you sink
+  out.bean = { seat: new THREE.Vector3(BEAN.x + Math.sin(BEAN_YAW) * 0.1, 0.92, BEAN.z + Math.cos(BEAN_YAW) * 0.1), sink: 0.1 };
   out.colliders.push({ minX: BEAN.x - BEAN.r * 0.9, maxX: BEAN.x + BEAN.r * 0.9, minZ: BEAN.z - BEAN.r * 0.9, maxZ: BEAN.z + BEAN.r * 0.9 });
 
   // ---- TV stand, TV and console: one group, front toward -x

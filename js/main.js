@@ -107,7 +107,7 @@ const driver = spawnNpc(scene, { name: 'DRIVER', color: '#b22a1e', yaw: Math.PI,
 driver.group.visible = false;
 
 /* ---------- state ---------- */
-let mode = 'intro'; // intro | walk | tween | seated | console | dialog
+let mode = 'intro'; // intro | walk | tween | seated | console | bean | dialog
 const keys = new Set();
 const stats = { caffeine: 15, snacks: 40, dust: 0, cans: 0, handfuls: 0 };
 const held = { garlic: false };                                   // the garlic bread in foil you are carrying
@@ -308,9 +308,9 @@ function updateTrayHint() {
 canvas.addEventListener('click', () => { if (mode === 'walk' && document.pointerLockElement !== canvas) lockPointer(); });
 
 document.addEventListener('mousemove', (e) => {
-  if (mode !== 'walk' || document.pointerLockElement !== canvas) return;
+  if ((mode !== 'walk' && mode !== 'bean') || document.pointerLockElement !== canvas) return;
   player.yaw -= e.movementX * 0.0022;
-  player.pitch = THREE.MathUtils.clamp(player.pitch - e.movementY * 0.0022, -1.4, 1.4);
+  player.pitch = THREE.MathUtils.clamp(player.pitch - e.movementY * 0.0022, mode === 'bean' ? -0.9 : -1.4, mode === 'bean' ? 0.6 : 1.4);
 });
 
 window.addEventListener('keydown', (e) => {
@@ -327,7 +327,8 @@ window.addEventListener('keydown', (e) => {
     else if (!ui.bsod.hidden) { e.preventDefault(); e.stopPropagation(); recoverFromCrash(); } // any key
     return; // everything else belongs to the game
   }
-  if (mode !== 'walk') return;
+  if (mode === 'bean' && (BEAN_UP_KEYS.has(e.code))) { e.preventDefault(); getUpFromBean(); return; } // any move key, E or Space
+  if (mode !== 'walk' && mode !== 'bean') return;
   if (e.code === 'KeyT') { e.preventDefault(); openChat(); return; }
   if (e.code === 'Tab' && document.pointerLockElement) { e.preventDefault(); document.exitPointerLock(); return; } // free the mouse for the desktop
   if (e.code === 'KeyI') { desktop.toggle('irc'); return; }
@@ -400,6 +401,7 @@ const PROMPTS = {
   soda: () => 'E · Pour a Citrus Zap into a red cup',
   eat: () => 'E · Grab a handful of Nachoz or Cheez Curlz',
   console: () => 'E · Play the console (it runs N64 ROMs from your own drive)',
+  beanbag: () => 'E · Sit in the bean bag',
   eject: (t) => `E · ${t.station.tower.cdrom?.open ? 'Close' : 'Open'} the CD-ROM tray`,
   burner: (t) => (party.job ? `E · CD-R: writing ${Math.floor(party.burnProgress() * 100)}%` : `E · Burn a CD (${party.burnSpeedOf(t.station.index)}x)`),
 };
@@ -415,6 +417,7 @@ function interact(t) {
     else if (who) toast(`${who.name} is on that one. Find a free PC.`);
     else sitDown(t.station);
   } else if (t.kind === 'console') playConsole();
+  else if (t.kind === 'beanbag') sitInBean();
   else if (t.kind === 'drink') drink();
   else if (t.kind === 'soda') soda();
   else if (t.kind === 'eat') eat();
@@ -1046,6 +1049,48 @@ function standUp() {
   });
 }
 
+/* ---------- the bean bag ---------- */
+// E at the bean bag: drop into the dent. The whump plays as you land; you can look around from down there.
+// Any move key, E or Space gets you out again (it takes a second).
+const BEAN_UP_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyE', 'Space']);
+const bean = { sinkT: 1 }; // 0 just landed .. 1 settled into the vinyl
+
+function sitInBean() {
+  if (mode !== 'walk' || !room.bean) return;
+  ui.prompt.hidden = true;
+  keys.clear();
+  target = null;
+  const { seat } = room.bean;
+  // face back across the room, toward the middle of the floor
+  const yaw = Math.atan2(-(0 - seat.x), -(0 - seat.z));
+  const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.12, yaw, 0, 'YXZ'));
+  startTween(seat.clone(), q, 0.6, () => {
+    player.yaw = yaw; player.pitch = -0.12;
+    bean.sinkT = 0;
+    mode = 'bean';
+    sfx.beanBag(true);
+    ui.prompt.textContent = 'E · Get up';
+    ui.prompt.hidden = false;
+  });
+}
+
+function getUpFromBean() {
+  if (mode !== 'bean') return;
+  sfx.beanBag(false);
+  ui.prompt.hidden = true;
+  const { seat } = room.bean;
+  // step out the front of the bag, toward the middle of the room (the back is two walls)
+  const out = new THREE.Vector3(-seat.x, 0, -seat.z).normalize().multiplyScalar(0.85);
+  const pos = new THREE.Vector3(seat.x + out.x, EYE, seat.z + out.z);
+  const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(player.pitch, player.yaw, 0, 'YXZ'));
+  startTween(pos, q, 0.6, () => {
+    player.pos.copy(pos);
+    mode = 'walk';
+    ui.hud.hidden = false;
+    lockPointer();
+  });
+}
+
 /* ---------- the console under the TV ---------- */
 // E at the TV: drop onto the carpet in front of it. The TV shows the console's terminal, then the game.
 function playConsole() {
@@ -1311,6 +1356,12 @@ function frame() {
     target = findTarget();
     ui.prompt.hidden = !target;
     if (target) ui.prompt.textContent = PROMPTS[target.kind](target);
+  } else if (mode === 'bean') {
+    // you sink into the vinyl for a moment after landing, then it holds you
+    bean.sinkT = Math.min(1, bean.sinkT + dt / 0.45);
+    const sink = room.bean.sink * Math.sin(bean.sinkT * Math.PI / 2);
+    camera.position.set(room.bean.seat.x, room.bean.seat.y - sink, room.bean.seat.z);
+    camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
   } else if (mode === 'tween' && tween) {
     tween.t = Math.min(1, tween.t + dt / tween.seconds);
     const k = tween.t < 0.5 ? 4 * tween.t ** 3 : 1 - (-2 * tween.t + 2) ** 3 / 2;

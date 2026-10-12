@@ -97,6 +97,28 @@ export function thud() {
   burst(t + 0.04, 0.12, 900, 1.2, 0.35);
 }
 
+// somebody dropping into a bean bag (sit) or heaving themselves out of it: a soft whump, the polystyrene beads
+// shifting, and a squeak of vinyl. Getting up is the same noise, quieter and with no thump.
+export function beanBag(sit = true) {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  if (sit) {
+    burst(t, 0.28, 110, 0.9, 0.9, 'lowpass');                       // the whump
+    burst(t + 0.03, 0.18, 500, 0.7, 0.25, 'lowpass');              // air going out of the seams
+  }
+  const n = sit ? 14 : 9;
+  for (let i = 0; i < n; i++) burst(t + 0.06 + i * 0.045 + Math.random() * 0.03, 0.06, 2600 + Math.random() * 2400, 0.7, sit ? 0.14 : 0.09, 'highpass'); // beads
+  const sq = ctx.createOscillator(); sq.type = 'triangle';          // the vinyl squeak
+  const s0 = t + (sit ? 0.22 : 0.05);
+  sq.frequency.setValueAtTime(sit ? 1500 : 1900, s0);
+  sq.frequency.exponentialRampToValueAtTime(sit ? 2100 : 1300, s0 + 0.16);
+  const sg = ctx.createGain();
+  sg.gain.setValueAtTime(0.0001, s0);
+  sg.gain.linearRampToValueAtTime(sit ? 0.07 : 0.05, s0 + 0.03);
+  sg.gain.exponentialRampToValueAtTime(0.0001, s0 + 0.2);
+  sq.connect(sg).connect(master); sq.start(s0); sq.stop(s0 + 0.22);
+}
+
 // the light switch: a click, then the tubes ticking and catching (on) or going quiet (off)
 export function lightSwitch(on) {
   if (!ctx) return;
