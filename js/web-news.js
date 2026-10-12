@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'Shout me a Volt Cola, any time',
+    text: 'The Volt Cola button used to live in the welcome window and vanished the moment you walked in. It now sits on the taskbar, between the open windows and the clock, in bold with a can on it, so you can shout the webmaster a $5 Volt Cola from anywhere in the basement. Press Tab to free the mouse and click it. The button in the welcome window is bolder too.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'The front door has been rewritten',
     text: 'The welcome window now says what the night actually has in it: a PC you build yourself, the pizza guy, the two phones, the lights, Snapster, Internet Explorer and the rest. The key list gains G for garlic bread and the other things E now does, and the window scrolls if your screen is short.',
   },

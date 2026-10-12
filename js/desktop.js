@@ -109,6 +109,8 @@ export class Desktop {
     this.startWith = []; // [{ id, arg? }] opened after IRC and LANamp when you walk in
 
     this.startBtn.querySelector('.start-icon').innerHTML = icon('crt');
+    const can = document.querySelector('#donate-btn .donate-icon');
+    if (can) can.innerHTML = icon('can');
     this.startBtn.addEventListener('click', () => (this.menu.hidden ? this.openMenu() : this.closeMenu()));
     document.addEventListener('pointerdown', (e) => {
       if (!this.menu.hidden && !this.menu.contains(e.target) && !this.startBtn.contains(e.target)) this.closeMenu();

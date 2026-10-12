@@ -48,6 +48,7 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 .share-btn { min-width: 0; padding: var(--space-1) var(--space-3); font-size: var(--text-ui-sm); text-decoration: none; text-align: center; }
 .share-btn[hidden] { display: none; }
 .share-status { font: var(--text-ui-sm)/1 var(--font-ui); min-height: 1em; }
+#support .support-btn { padding: var(--space-1h) var(--space-4); font-size: var(--text-ui); font-weight: bold; } /* the donation link is the one button on the intro that asks for something */
 #intro { position: fixed; inset: 0; display: grid; place-items: center; background: var(--scrim); z-index: var(--z-dialog); padding: var(--gutter); }
 #intro > .w98-window { max-height: 100%; overflow-y: auto; } /* the longer intro scrolls on short screens instead of clipping Walk in */
 
@@ -270,6 +271,12 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 .w98-task .task-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .w98-task[aria-pressed="true"] { background: var(--w98-key); font-weight: bold; box-shadow: var(--bevel-pressed); }
 .w98-task:focus-visible, #tray-amp:focus-visible { outline: 1px dotted var(--w98-text); outline-offset: -4px; }
+#donate-btn { display: flex; flex: none; align-items: center; gap: var(--space-1h); min-width: 0; height: 22px; padding: 0 var(--space-3); font-size: var(--text-ui); text-decoration: none; white-space: nowrap; cursor: pointer; } /* always on the taskbar, above the room, so the Volt Cola link can be clicked at any time */
+#donate-btn .donate-icon { display: flex; }
+#donate-btn .donate-short { display: none; }
+#donate-btn .donate-price { font: var(--text-crt-sm)/1 var(--font-crt); }
+#donate-btn:focus-visible { outline: 1px dotted var(--w98-text); outline-offset: -4px; }
+@media (max-width: 700px) { #donate-btn .donate-text { display: none; } #donate-btn .donate-short { display: inline; } #donate-btn { padding: 0 var(--space-2); } }
 #tray { display: flex; align-items: center; gap: var(--space-2); height: 22px; padding: 0 var(--space-2); box-shadow: var(--bevel-sunken); }
 #tray-amp { display: flex; padding: 0; border: 0; background: none; cursor: default; }
 #tray #clock { min-width: 8ch; }
