@@ -222,6 +222,8 @@
   /* ---- Overlays ---- */
   --scrim: rgba(5, 4, 2, .55);
   --hud-bg: rgba(0, 0, 0, .7);
+  --drop: rgba(0, 0, 0, .45);          /* hard offset shadow under windows in the explainer video */
+  --drop-shadow: 8px 8px 0 var(--drop);
   --bar-bg: rgba(10, 8, 6, .82);
   --scanlines: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px);
   --vignette: radial-gradient(ellipse at center, transparent 62%, rgba(0,0,0,.45) 100%);

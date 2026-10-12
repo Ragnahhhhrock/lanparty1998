@@ -25,7 +25,7 @@ GROUPS = {
     "space": ("space-", "gutter"),
     "desktop": ("taskbar-", "startmenu-", "grip"),
     "bevel": ("bevel-", "title-gradient"),
-    "overlay": ("scrim", "hud-bg", "bar-bg", "scanlines", "vignette"),
+    "overlay": ("scrim", "hud-bg", "bar-bg", "scanlines", "vignette", "drop"),
     "z": ("z-",),
     "motion": ("dur-",),
 }

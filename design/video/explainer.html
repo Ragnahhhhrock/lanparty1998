@@ -2,29 +2,32 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Explainer video template</title>
+<title>Explainer video</title>
 <meta name="robots" content="noindex">
-<!-- Source for video/lanparty1998-explainer.mp4: 60 seconds, 9:16 (540x960 CSS px, rendered at 2x = 1080x1920).
+<!-- Source for the 59 second explainer video, in two shapes:
+       ?fmt=portrait  540x960 CSS px, rendered at 2x = 1080x1920 (TikTok, Reels, Shorts)
+       ?fmt=wide      960x540 CSS px, rendered at 2x = 1920x1080 (YouTube)
      Render with: python3 scripts/render-video.py
-     Built only from tokens.css and the component rules in STYLEGUIDE.md. Stills in img/video/ are
-     captured from the real site; the music is "Volt Rush" by DJ Volt, rendered from js/music.js. -->
+     Built only from tokens.css and the component rules in STYLEGUIDE.md. The footage in img/video/ is captured
+     from the real site (scripts/capture-video.py); the music is "Volt Rush" by DJ Volt, rendered from js/music.js. -->
 <link rel="stylesheet" href="../../css/tokens.css">
 <style>
   html, body { margin: 0; background: var(--basement); }
   #stage { position: relative; width: 540px; height: 960px; overflow: hidden; background: var(--basement);
     font: var(--text-ui)/var(--leading-ui) var(--font-ui); color: var(--w98-text); }
+  .wide #stage, #stage.wide { width: 960px; height: 540px; }
   .scene { position: absolute; inset: 0; display: none; overflow: hidden; }
   .bg { position: absolute; inset: 0; background-size: cover; background-position: center; transform-origin: 50% 50%; }
   .shade { position: absolute; inset: 0; background: var(--vignette); }
-  .wall { background:
+  .wall { position: absolute; inset: 0; background:
       var(--vignette),
       repeating-linear-gradient(90deg, var(--wood-dark) 0 3px, transparent 3px 60px),
-      repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 14px, rgba(255,255,255,.03) 14px 32px, rgba(0,0,0,.1) 32px 60px),
+      repeating-linear-gradient(90deg, var(--drop) 0 14px, transparent 14px 32px, var(--drop) 32px 60px),
       var(--wood); }
 
-  /* ---- Win98 window ---- */
-  .win { position: absolute; left: 24px; right: 24px; background: var(--w98-face); padding: 3px; box-sizing: border-box;
-    box-shadow: var(--bevel-raised), 8px 8px 0 rgba(0,0,0,.45); }
+  /* ---- Win98 caption window ---- */
+  .win { position: absolute; left: 24px; right: 24px; bottom: 150px; background: var(--w98-face); padding: 3px; box-sizing: border-box;
+    box-shadow: var(--bevel-raised), var(--drop-shadow); }
   .win .tt { display: flex; justify-content: space-between; align-items: center; background: var(--title-gradient);
     color: var(--w98-light); font-weight: bold; padding: 4px 4px 4px 8px; font-size: 14px; letter-spacing: .02em; }
   .win .tt b { background: var(--w98-face); color: var(--w98-text); width: 18px; height: 16px; line-height: 14px;
@@ -32,16 +35,17 @@
   .win .bd { padding: 12px 16px 14px; }
   .win h2 { font: var(--text-crt-xl)/.95 var(--font-crt); color: var(--w98-title); margin: 0 0 8px; }
   .win p { margin: 0; font-size: 16px; line-height: 1.3; }
-  .win .row { display: flex; gap: 4px; margin-top: 10px; }
+  .win .row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
   .win .row span { box-shadow: var(--bevel-sunken); padding: 4px 8px; font-size: 13px; }
-  .win .row span:first-child { flex: 1; }
-  .cap { bottom: 150px; }
+  .wide .win { left: 32px; right: auto; width: 400px; bottom: 56px; }
+  .wide .win.mid { top: 50%; bottom: auto; margin-top: -120px; left: auto; right: 32px; }
 
   /* ---- CRT ---- */
   .crt { position: absolute; left: 30px; top: 104px; width: 480px; height: 420px; box-sizing: border-box; padding: 22px 22px 46px;
-    background: var(--beige); box-shadow: var(--bevel-small), 10px 10px 0 rgba(0,0,0,.45); }
+    background: var(--beige); box-shadow: var(--bevel-small), var(--drop-shadow); }
   .crt::after { content: attr(data-pc); position: absolute; left: 22px; bottom: 12px; font: 22px/1 var(--font-crt); color: var(--w98-title-off); }
   .crt i { position: absolute; right: 24px; bottom: 16px; width: 10px; height: 10px; background: var(--phosphor); }
+  .wide .crt { left: 36px; top: 36px; width: 540px; height: 440px; }
   .glass { position: relative; height: 100%; background: var(--crt-black); border-radius: 8px / 10px; overflow: hidden;
     box-shadow: inset 0 0 0 3px var(--wood-dark); }
   .glass img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
@@ -51,8 +55,9 @@
   .cursor { display: inline-block; width: 12px; height: 4px; background: var(--phosphor); }
 
   /* ---- bits ---- */
-  .meters { position: absolute; left: 24px; right: 24px; top: 130px; background: var(--w98-face); box-shadow: var(--bevel-raised), 8px 8px 0 rgba(0,0,0,.45);
+  .meters { position: absolute; left: 24px; right: 24px; top: 130px; background: var(--w98-face); box-shadow: var(--bevel-raised), var(--drop-shadow);
     padding: 10px 12px; display: grid; gap: 8px; }
+  .wide .meters { left: auto; right: 32px; width: 400px; top: 40px; }
   .meter { display: grid; grid-template-columns: 96px 1fr 52px; align-items: center; gap: 10px; font-size: 13px; font-weight: bold; letter-spacing: .04em; }
   .bar { height: 14px; background: var(--w98-light); box-shadow: var(--bevel-sunken); padding: 3px; }
   .bar b { display: block; height: 100%; }
@@ -60,18 +65,19 @@
   .snk { background: repeating-linear-gradient(90deg, var(--nacho) 0 8px, transparent 8px 10px); }
   .prg { background: repeating-linear-gradient(90deg, var(--w98-title) 0 8px, transparent 8px 10px); }
   .toast { position: absolute; left: 24px; right: 24px; top: 130px; font: var(--text-crt-lg)/1.15 var(--font-crt); color: var(--toast);
-    text-shadow: var(--text-shadow-hard); background: var(--hud-bg); padding: 10px 14px; }
-  .big { position: absolute; left: 0; right: 0; text-align: center; font: var(--text-crt-hero)/.9 var(--font-crt); color: var(--toast); text-shadow: var(--text-shadow-hard); }
+    text-shadow: var(--text-shadow-hard); background: var(--hud-bg); padding: 10px 14px; white-space: pre; }
+  .wide .toast { left: auto; right: 32px; width: 400px; top: 40px; box-sizing: border-box; }
   .tag { display: inline-block; background: var(--w98-face); box-shadow: var(--bevel-raised); padding: 4px 10px; font-size: 14px; font-weight: bold; margin: 0 4px 6px 0; }
   .stack { position: absolute; left: 24px; right: 24px; top: 130px; }
-  .shot { position: absolute; left: 24px; right: 24px; top: 110px; height: 500px; background-size: cover; background-position: center;
-    box-shadow: var(--bevel-raised), 8px 8px 0 rgba(0,0,0,.45); border: 3px solid var(--w98-face); box-sizing: border-box; }
-  #taskbar { position: absolute; left: 0; right: 0; bottom: 0; height: var(--taskbar-h, 28px); background: var(--w98-face); box-shadow: var(--bevel-raised);
+  .wide .stack { left: auto; right: 32px; width: 400px; top: 40px; }
+  #taskbar { position: absolute; left: 0; right: 0; bottom: 0; height: var(--taskbar-h); background: var(--w98-face); box-shadow: var(--bevel-raised);
     display: flex; align-items: center; justify-content: space-between; padding: 0 4px; box-sizing: border-box; z-index: 20; }
   #taskbar .start { box-shadow: var(--bevel-raised); padding: 2px 10px; font-weight: bold; font-size: 13px; }
   #taskbar .tray { box-shadow: var(--bevel-sunken); padding: 1px 10px; font: 20px/1 var(--font-crt); }
   #flash { position: absolute; inset: 0; background: var(--w98-light); opacity: 0; z-index: 30; pointer-events: none; }
-  .url { position: absolute; left: 0; right: 0; bottom: 56px; text-align: center; font: 40px/1 var(--font-crt); color: var(--phosphor); text-shadow: var(--text-shadow-hard); }
+  .url { position: absolute; left: 0; right: 0; bottom: 56px; text-align: center; font: var(--text-crt-xl)/1 var(--font-crt); color: var(--phosphor); text-shadow: var(--text-shadow-hard); }
+  .wide .url { left: auto; right: 32px; width: 460px; bottom: 56px; text-align: right; }
+  .count { position: absolute; right: 12px; top: 10px; font: var(--text-crt-lg)/1 var(--font-crt); color: var(--toast); text-shadow: var(--text-shadow-hard); background: var(--hud-bg); padding: 4px 10px; z-index: 5; }
 </style>
 </head>
 <body>
@@ -80,126 +86,123 @@
   <div id="flash"></div>
 </div>
 <script>
+const Q = new URLSearchParams(location.search);
+const WIDE = Q.get('fmt') === 'wide';
+const DIR = WIDE ? 'w/' : 'p/';
+document.getElementById('stage').classList.toggle('wide', WIDE);
+document.body.classList.toggle('wide', WIDE);
 const A = '../../img/video/';
-const GAME_FRAMES = Number(new URLSearchParams(location.search).get('frames') || 6);
+const GAME_FRAMES = 6;
 const q4 = (x) => Math.round(x * 6) / 6; // stepped easing: the era had no tweening
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const typed = (s, lt, cps = 30) => s.slice(0, Math.floor(lt * cps));
 
-const win = (title, h, p, extra = '', cls = 'cap') =>
-  `<div class="win ${cls}"><div class="tt"><span>${title}</span><b>×</b></div><div class="bd"><h2>${h}</h2><p>${p}</p>${extra}</div></div>`;
+const win = (title, h, p, extra = '', cls = '') =>
+  `<div class="win cap ${cls}"><div class="tt"><span>${title}</span><b>x</b></div><div class="bd"><h2>${h}</h2><p>${p}</p>${extra}</div></div>`;
+const rise = (el, lt, delay = 0.15) => {
+  const w = el.querySelector('.cap'); const s = q4(clamp((lt - delay) / 0.3));
+  w.style.transform = `translateY(${(1 - s) * 40}px)`; w.style.opacity = s ? 1 : 0;
+};
 
-// a photo scene: real footage with a slow push, and a caption window
-const photo = (bg, zoom, pan, title, h, p, extra = '', fx = null) => ({
-  html: `<div class="bg" style="background-image:url(${A}${bg})"></div><div class="shade"></div>${extra}${win(title, h, p)}`,
-  update(el, lt, d) {
-    const k = lt / d;
-    const bgEl = el.querySelector('.bg');
-    bgEl.style.transform = `scale(${zoom[0] + (zoom[1] - zoom[0]) * k}) translate(${pan[0] + (pan[1] - pan[0]) * k}px, ${pan[2] + (pan[3] - pan[2]) * k}px)`;
-    const w = el.querySelector('.cap'); const s = q4(clamp(lt / 0.3));
-    w.style.transform = `translateY(${(1 - s) * 40}px)`; w.style.opacity = s ? 1 : 0;
-    if (fx) fx(el, lt, d);
-  },
-});
+// a footage scene: real stills with a slow push, cycling through one or more pictures, and a caption window
+const photo = (imgs, zoom, title, h, p, extra = '', fx = null, cls = '') => {
+  const list = [].concat(imgs);
+  return {
+    html: `${list.map((n) => `<div class="bg" style="background-image:url(${A}${DIR}${n}.jpg)"></div>`).join('')}<div class="shade"></div>${extra}${win(title, h, p, '', cls)}`,
+    update(el, lt, d) {
+      const k = lt / d, n = Math.min(list.length - 1, Math.floor(k * list.length));
+      el.querySelectorAll('.bg').forEach((b, i) => {
+        b.style.display = i === n ? 'block' : 'none';
+        const kk = list.length > 1 ? (k * list.length) % 1 : k;
+        b.style.transform = `scale(${zoom[0] + (zoom[1] - zoom[0]) * kk})`;
+      });
+      rise(el, lt);
+      fx?.(el, lt, d);
+    },
+  };
+};
 
 const GAMES = [
-  { id: 'doom', name: 'DOOM', file: 'DOOM.EXE', pc: 'PC-01', line: '1994. The one everyone started with. IPXSETUP finds the other nodes by itself.', tags: ['DOOM 1.9', 'IPX deathmatch'] },
-  { id: 'heretic', name: 'HERETIC', file: 'HERETIC.EXE', pc: 'PC-02', line: '1995. Same engine, now with a wand and a lot of gargoyles. Up to four players.', tags: ['Heretic 1.3', 'IPX deathmatch'] },
-  { id: 'hexen', name: 'HEXEN', file: 'HEXEN.EXE', pc: 'PC-03', line: '1995. The four level demo. Pick a class, run for the portal, frag your mates.', tags: ['4 level demo', 'IPX deathmatch'] },
-  { id: 'quake', name: 'QUAKE', file: 'QUAKE.EXE', pc: 'PC-05', line: '1996. Real 3D on a Pentium. MULTIPLAYER, NEW GAME, wait for the others.', tags: ['Quake 1.06', 'Network lobby'] },
-  { id: 'descent', name: 'DESCENT', file: 'DESCENT.EXE', pc: 'PC-06', line: '1995. Six degrees of freedom, no floor. START A NETWORK GAME.', tags: ['Descent 1.0', 'Network lobby'] },
+  { id: 'doom', name: 'DOOM', file: 'DOOM.EXE', pc: 'PC-01', line: '1994. The one everyone started with. IPXSETUP finds the other nodes by itself.', tags: ['Shareware', 'IPX deathmatch'] },
+  { id: 'heretic', name: 'HERETIC', file: 'HERETIC.EXE', pc: 'PC-02', line: '1995. Same engine, a magic wand and a lot of gargoyles. Up to four players.', tags: ['Shareware', 'IPX deathmatch'] },
+  { id: 'hexen', name: 'HEXEN', file: 'HEXEN.EXE', pc: 'PC-03', line: '1995. Pick a class, find the portal, frag your mates.', tags: ['Level demo', 'IPX deathmatch'] },
+  { id: 'quake', name: 'QUAKE', file: 'QUAKE.EXE', pc: 'PC-05', line: '1996. Real 3D on a Pentium. Multiplayer, new game, wait for the others.', tags: ['Shareware', 'Network lobby'] },
+  { id: 'descent', name: 'DESCENT', file: 'DESCENT.EXE', pc: 'PC-06', line: '1995. Six degrees of freedom and no floor. Start a network game.', tags: ['Shareware', 'Network lobby'] },
+  { id: 'duke', name: 'DUKE NUKEM 3D', file: 'DUKE3D.EXE', pc: 'PC-04', line: '1996. Episode one, now playable. Pick the network game in SETUP.', tags: ['Shareware', 'Network lobby'] },
 ];
-const gameScene = (g) => ({
-  html: `<div class="wall" style="position:absolute;inset:0"></div>
+const gameScene = (g, i) => ({
+  html: `<div class="wall"></div>
+    <div class="count">${i + 1} OF ${GAMES.length}</div>
     <div class="crt" data-pc="${g.pc}"><i></i><div class="glass">${Array.from({ length: GAME_FRAMES }, (_, k) => `<img data-k="${k}" src="${A}games/${g.id}_${k}.jpg">`).join('')}</div></div>
-    ${win(g.file, g.name, g.line, `<div class="row">${g.tags.map((t) => `<span>${t}</span>`).join('')}<span>Shareware</span></div>`, 'cap')}`,
-  update(el, lt, d) {
+    ${win(g.file, g.name, g.line, `<div class="row">${g.tags.map((t) => `<span>${t}</span>`).join('')}</div>`, 'mid')}`,
+  update(el, lt) {
     const n = Math.min(GAME_FRAMES - 1, Math.floor(lt * 2.2));
     el.querySelectorAll('.glass img').forEach((im) => { im.style.display = Number(im.dataset.k) === n ? 'block' : 'none'; });
     const c = el.querySelector('.crt'); const s = q4(clamp(lt / 0.25));
     c.style.transform = `scale(${0.9 + 0.1 * s})`; c.style.opacity = s ? 1 : 0;
-    const w = el.querySelector('.cap'); w.style.transform = `translateY(${(1 - q4(clamp((lt - 0.15) / 0.3))) * 40}px)`;
+    rise(el, lt, 0.2);
   },
 });
 
+const T = [0, 4, 8, 12, 15, 33, 37, 41, 45, 49, 52.5, 56, 59]; // scene boundaries, seconds
 const SCENES = [
-  // 0 title
-  { t0: 0, t1: 4, ...(() => {
-    const p = photo('room_back.jpg', [1, 1.18], [0, -10, 0, 0], 'LANPARTY.EXE', "LAN Party '98", 'A basement, six beige boxes and a 10BASE-T hub. Play free in your browser.',
-      '', null);
-    return { html: p.html.replace('class="win cap"', 'class="win cap" style="bottom:300px"'), update: p.update };
-  })() },
-  // A1 walk
-  { t0: 4, t1: 6.5, ...photo('room_bc.jpg', [1, 1.15], [0, 0, 0, -12], 'WALK.EXE', 'Walk the basement', 'A real 3D room, shared with everyone else who is online. Six PCs, a couch and a snack table.') },
-  // A2 sit
-  { t0: 6.5, t1: 9, ...photo('room_front.jpg', [1.1, 1], [0, 0, 0, 0], 'SIT.EXE', 'Sit at any free PC', 'Press E. A DOS machine boots on the CRT, running in your browser. Press F to open the case.') },
-  // A3 deathmatch
-  { t0: 9, t1: 11.5, ...photo('room_rcorner.jpg', [1, 1.12], [0, 0, 0, 0], 'NETFRAG.EXE', 'Deathmatch with mates', 'Host or join. Up to four PCs find each other over a virtual IPX network.',
-      `<div class="toast" style="font-size:24px"><span id="tm"></span></div>`, (el, lt) => {
-        const lines = ['C:\\> IPXSETUP -nodes 4', 'Players found: ' + (lt > 1.6 ? '4 of 4' : lt > 1.1 ? '3 of 4' : '2 of 4')];
-        el.querySelector('#tm').textContent = lines[0] + '\n' + (lt > 0.6 ? lines[1] : ''); el.querySelector('#tm').style.whiteSpace = 'pre'; }) },
-  // A4 snacks
-  { t0: 11.5, t1: 14, ...photo('room_lcorner.jpg', [1.08, 1], [0, 0, 0, 0], 'SNACKS.EXE', 'Volt Cola and Nachoz', 'Crack a can, eat a handful. Caffeine and snacks have meters. Too much Volt and you will trip on a cable.',
+  // title
+  { t0: T[0], t1: T[1], ...photo('title', [1, 1.15], 'LANPARTY.EXE', "LAN Party '98", 'A basement, six beige boxes and a 10BASE-T hub. Free in your browser.') },
+  // build your own PC
+  { t0: T[1], t1: T[2], ...photo('wizard', [1, 1.06], 'BUILDPC.EXE', 'Build your own PC', 'Start at the computer shop with $1500: monitor, Pentium, RAM, drives, sound card, the lot.',
+      '', (el, lt) => {}) },
+  // walk
+  { t0: T[2], t1: T[3], ...photo('walk', [1, 1.15], 'WALK.EXE', 'Walk the basement', 'A real 3D room, shared live with everyone else who is online. Add ?room= for a private one.') },
+  // sit
+  { t0: T[3], t1: T[4], ...photo('sit', [1.1, 1], 'SIT.EXE', 'Sit at any free PC', 'Press E. A DOS machine boots in your browser, and everyone else can watch your game on the glass at your desk.') },
+  // games
+  ...GAMES.map((g, i) => ({ t0: T[4] + i * 3, t1: T[4] + (i + 1) * 3, ...gameScene(g, i) })),
+  // deathmatch
+  { t0: T[5], t1: T[6], ...photo('dm', [1, 1.12], 'NETFRAG.EXE', 'Deathmatch with mates', 'Host or join. Up to four PCs find each other over a virtual IPX network.',
+      `<div class="toast"><span id="tm"></span></div>`, (el, lt) => {
+        const lines = ['C:\\> IPXSETUP -nodes 4', 'Players found: ' + (lt > 2.4 ? '4 of 4' : lt > 1.6 ? '3 of 4' : '2 of 4')];
+        el.querySelector('#tm').textContent = lines[0] + '\n' + (lt > 0.8 ? lines[1] : ''); }) },
+  // bench
+  { t0: T[6], t1: T[7], ...photo('bench', [1, 1.12], 'BENCH.EXE', 'Then build it for real', 'Carry the parts to the back table, plug in every lead from behind, press the button and watch it POST.',
+      `<div class="stack"><span class="tag">PC-07 / PC-08</span><span class="tag">Power + network leads</span><span class="tag">POST</span></div>`) },
+  // logistics
+  { t0: T[7], t1: T[8], ...photo('power', [1.1, 1], 'NETWORK.EXE', 'Keep the night running', 'Coax drops out, so buy a hub. RAM from Singapore, overclocks, a pedestal fan, CD-ROM trays and a yellow extension lead to trip on.',
+      `<div class="stack"><span class="tag">10BASE2 coax</span><span class="tag">$45 hub</span><span class="tag" id="ram">RAM 16MB</span><span class="tag" id="mhz">BUS 100MHz</span></div>`, (el, lt) => {
+        el.querySelector('#ram').textContent = 'RAM ' + (lt > 2.6 ? '64MB' : lt > 1.3 ? '32MB' : '16MB');
+        el.querySelector('#mhz').textContent = 'BUS ' + (lt > 3 ? '112MHz' : '100MHz'); }) },
+  // desktop
+  { t0: T[8], t1: T[9], ...photo(['desk1', 'desk2', 'desk3'], [1, 1.06], 'DESKTOP.EXE', 'A whole 98 desktop', 'Internet Explorer on the party site, #lanparty98 chat, LANamp, Snapster, Minesweeper, Solitaire and Downhill.') },
+  // food + phone
+  { t0: T[9], t1: T[10], ...photo(['food', 'phone'], [1, 1.1], 'SNACKS.EXE', 'Pizza Shack, Volt Cola, a Nokka 51', 'Ring Pizza Shack and the driver knocks. Snacks have meters. The mobile has Snake.',
       `<div class="meters"><div class="meter"><span>CAFFEINE</span><div class="bar"><b class="caf" id="mc"></b></div><span id="mcv"></span></div>
-        <div class="meter"><span>SNACKS</span><div class="bar"><b class="snk" id="ms"></b></div><span id="msv"></span></div></div>`, (el, lt, d) => {
-        const c = Math.round(10 + 80 * clamp(lt / 2)), s = Math.round(10 + 62 * clamp(lt / 2.2));
+        <div class="meter"><span>SNACKS</span><div class="bar"><b class="snk" id="ms"></b></div><span id="msv"></span></div></div>`, (el, lt) => {
+        const c = Math.round(10 + 80 * clamp(lt / 3)), s = Math.round(10 + 62 * clamp(lt / 3.2));
         el.querySelector('#mc').style.width = c + '%'; el.querySelector('#ms').style.width = s + '%';
         el.querySelector('#mcv').textContent = c + '%'; el.querySelector('#msv').textContent = s + '%'; }) },
-  // games
-  ...GAMES.map((g, i) => ({ t0: 14 + i * 4, t1: 18 + i * 4, ...gameScene(g) })),
-  // midnight
-  { t0: 34, t1: 38, html: `<div class="wall" style="position:absolute;inset:0"></div>
-    <div class="crt" data-pc="PC-04"><i></i><div class="glass"><div class="term" id="sc"></div></div></div>
-    ${win('MIDNIGHT.EXE', 'Midnight: StarCraft', 'At 12:00 AM somebody puts StarCraft on and every PC with 32MB shows it running. The 16MB boxes do not.', '')}`,
-    update(el, lt) {
-      const out = ['C:\\> STARCRAFT', '', 'Memory check: 32MB', typed('Starting game...', Math.max(0, lt - 0.6), 18), '', lt > 2 ? 'Memory check: 16MB' : '', lt > 2.4 ? 'Not enough memory.' : ''].join('\n');
-      el.querySelector('#sc').innerHTML = out.replace('Not enough memory.', '<span class="t">Not enough memory.</span>').replace('Starting game...', '<span class="g">Starting game...</span>');
-      const c = el.querySelector('.crt'); const s = q4(clamp(lt / 0.25)); c.style.transform = `scale(${0.9 + 0.1 * s})`;
-      const w = el.querySelector('.cap'); w.style.transform = `translateY(${(1 - q4(clamp((lt - 0.15) / 0.3))) * 40}px)`;
-    } },
-  // B1 network
-  { t0: 38, t1: 40.3, ...photo('room_br.jpg', [1, 1.12], [0, 0, 0, 0], 'NETWORK.EXE', 'Fix the network', 'Coax drops out. Re-seat the T-connector, buy an 8-port hub, then ring Dazza for his dad\'s 16-port switch.',
-      `<div class="stack"><span class="tag">10BASE2 coax</span><span class="tag">$45 hub</span><span class="tag">16-port switch</span></div>`) },
-  // B2 ram & oc
-  { t0: 40.3, t1: 42.6, ...photo('room_left.jpg', [1.1, 1], [0, 0, 0, 0], 'UPGRADE.EXE', 'RAM, jumpers and a fan', 'Macca flies to Singapore for cheap SIMMs. Overclock to 112MHz, keep the pedestal fan running, or blue screen.',
-      `<div class="stack"><span class="tag" id="ram">RAM 16MB</span><span class="tag" id="mhz">BUS 100MHz</span></div>`, (el, lt) => {
-        el.querySelector('#ram').textContent = 'RAM ' + (lt > 1.2 ? '64MB' : lt > 0.6 ? '32MB' : '16MB');
-        el.querySelector('#mhz').textContent = 'BUS ' + (lt > 1.5 ? '112MHz' : '100MHz'); }) },
-  // B3 burner
-  { t0: 42.6, t1: 44.9, ...photo('room_front.jpg', [1, 1.1], [0, 0, 0, 0], 'BURN.EXE', 'One CD burner', 'PC-04 writes at 2x. Burn a MIX CD for $10 a head. Play on it while it writes and you make a coaster.',
-      `<div class="meters"><div class="meter"><span>WRITING</span><div class="bar"><b class="prg" id="bp"></b></div><span id="bv"></span></div></div>`, (el, lt) => {
-        const p = Math.round(100 * clamp(lt / 2.1)); el.querySelector('#bp').style.width = p + '%'; el.querySelector('#bv').textContent = p + '%'; }) },
-  // B4 desktop
-  { t0: 44.9, t1: 47.2, ...photo('desk.jpg', [1, 1.08], [0, 0, 0, 0], 'DESKTOP.EXE', 'A whole desktop', 'IRC with the regulars, LANamp, Internet Explorer on the party site and Snapster for MP3s.') },
-  // B5 mini games
-  { t0: 47.2, t1: 49.5, html: `<div class="wall" style="position:absolute;inset:0"></div><div class="shot" id="mg"></div>
-    ${win('GAMES.EXE', 'Games inside the games', 'Minesweeper, Solitaire and Downhill run on the Start menu. The lounge TV loops a four-player brawl.', '')}`,
-    update(el, lt) {
-      const names = ['mines.jpg', 'sol.jpg', 'ski.jpg']; const i = Math.min(2, Math.floor(lt / 0.75));
-      el.querySelector('#mg').style.backgroundImage = `url(${A}${names[i]})`;
-      const w = el.querySelector('.cap'); w.style.transform = `translateY(${(1 - q4(clamp(lt / 0.3))) * 40}px)`; } },
-  // B6 regulars + pizza
-  { t0: 49.5, t1: 51.8, ...photo('room_rcorner.jpg', [1.12, 1], [0, 0, 0, 0], 'REGULARS.EXE', 'Pizza and the regulars', 'Order a large pepperoni from the wall phone. Press E on a box for a slice. The regulars burp, trash talk and wear headphones.') },
-  // B7 lounge
-  { t0: 51.8, t1: 54, ...photo('room_lcorner.jpg', [1, 1.12], [0, 0, 0, 0], 'LOUNGE.EXE', 'Posters, couch, game shelf', 'Plaid couch, a beanbag, floppies everywhere and a man duct taped to the ceiling.') },
+  // lounge
+  { t0: T[10], t1: T[11], ...photo(['lounge', 'shelf'], [1, 1.1], 'LOUNGE.EXE', 'Couch, console, game shelf', 'A plaid couch, a four-player console, posters, a box for every game and a man taped to the ceiling.') },
   // CTA
-  { t0: 54, t1: 60, html: `<div class="wall" style="position:absolute;inset:0"></div>
-    <div class="crt" data-pc="PC-01" style="top:90px;height:330px"><i></i><div class="glass"><div class="term" id="cta"></div></div></div>
-    ${win('LANPARTY.EXE', "LAN Party '98", 'Six beige boxes, one hub and a crate of Volt Cola. Sit down and frag.', '<div class="row"><span>Play free in your browser</span><span>IPX ready</span></div>')}
+  { t0: T[11], t1: T[12], html: `<div class="wall"></div>
+    <div class="crt" data-pc="PC-01" style="${WIDE ? '' : 'top:90px;height:330px'}"><i></i><div class="glass"><div class="term" id="cta"></div></div></div>
+    ${win('LANPARTY.EXE', "LAN Party '98", 'Free in your browser. News, games and how to play at lanparty1998.com/news. Sign up for a party reminder.', '', WIDE ? 'mid' : '')}
     <div class="url">lanparty1998.com</div>`,
     update(el, lt) {
-      const l = ['C:\\> NETFRAG', 'IPX NETWORK GAME', '', 'Players found: 5 of 6', lt > 1.5 ? 'Waiting for PC-04...' : '', '', 'C:\\> '];
+      const l = ['C:\\> NETFRAG', 'IPX NETWORK GAME', '', 'Players found: 5 of 6', lt > 1.2 ? 'Waiting for PC-04...' : '', '', 'C:\\> '];
       el.querySelector('#cta').innerHTML = l.map((s, i) => (i === 1 ? `<span class="t">${s}</span>` : i === 4 ? `<span class="g">${s}</span>` : s)).join('\n') + (Math.floor(lt * 2) % 2 ? '<span class="cursor"></span>' : '');
-      const w = el.querySelector('.cap'); w.style.transform = `translateY(${(1 - q4(clamp(lt / 0.3))) * 40}px)`; w.style.bottom = '150px'; } },
+      rise(el, lt, 0.1);
+      if (!WIDE) el.querySelector('.cap').style.bottom = '150px';
+      else el.querySelector('.cap').style.bottom = '';
+    } },
 ];
 
 const root = document.getElementById('scenes');
 SCENES.forEach((s) => { const d = document.createElement('div'); d.className = 'scene'; d.innerHTML = s.html; root.appendChild(d); s.el = d; });
 
-function clockText(t) { // 7:30 PM at 0s, midnight at 34s (StarCraft)
-  const m = 19 * 60 + 30 + (t / 34) * 270; const h24 = Math.floor(m / 60) % 24, mm = Math.floor(m % 60);
+function clockText(t) { // 7:30 PM at 0s, midnight at the end of the games
+  const m = 19 * 60 + 30 + (clamp(t / 59)) * 270; const h24 = Math.floor(m / 60) % 24, mm = Math.floor(m % 60);
   return `${((h24 + 11) % 12) + 1}:${String(mm).padStart(2, '0')} ${h24 >= 12 ? 'PM' : 'AM'}`;
 }
+window.DURATION = T[T.length - 1];
 window.seek = (t) => {
   let cut = 0;
   for (const s of SCENES) {
@@ -210,8 +213,11 @@ window.seek = (t) => {
   document.getElementById('flash').style.opacity = t < 0.1 ? 0 : clamp(cut) * 0.55;
   document.getElementById('clock').textContent = clockText(t);
 };
-window.preload = () => Promise.all([...document.querySelectorAll('.bg')].map((e) => new Promise((r) => { const u = e.style.backgroundImage.slice(5, -2); const i = new Image(); i.onload = i.onerror = r; i.src = u; }))
-  .concat(SCENES.length ? [document.fonts.ready] : []));
+window.preload = () => {
+  const urls = [...document.querySelectorAll('.bg')].map((e) => e.style.backgroundImage.slice(5, -2))
+    .concat([...document.querySelectorAll('.glass img')].map((i) => i.src));
+  return Promise.all(urls.map((u) => new Promise((r) => { const i = new Image(); i.onload = i.onerror = r; i.src = u; })).concat([document.fonts.ready]));
+};
 seek(0);
 </script>
 </body>
