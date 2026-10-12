@@ -1,5 +1,6 @@
 // Procedural canvas textures: everything in the room is drawn here, no image files.
 import * as THREE from 'three';
+import { feedFresh, feedGlow } from './feed.js';
 
 const CRT_FONT = '"VT323", "Lucida Console", monospace';
 
@@ -918,14 +919,47 @@ export class Screen {
     this.lastUsed = performance.now() / 1000; // the screen saver counts from here
     this.t0 = seed * 3.7;
     this.message = '';
+    this.feed = null;    // the picture of the player's game sent from their PC: { bitmap, at, glow } (see pushFeed)
+    this.feedSeq = 0;
     this.draw(0);
   }
+
+  // A picture of what the person sitting here is playing arrived (js/feed.js): decode it and keep it until it is
+  // replaced or goes stale. Late arrivals, out of order, are dropped.
+  async pushFeed(jpeg) {
+    const seq = ++this.feedSeq;
+    let bitmap;
+    try { bitmap = await createImageBitmap(new Blob([jpeg], { type: 'image/jpeg' })); } catch { return; }
+    if (seq !== this.feedSeq || this.free) { bitmap.close?.(); return; }
+    // the glow: this picture's average colour, blended with the last so a flashing game does not strobe the room
+    this.probe ??= canvas(1, 1);
+    const [, pg] = this.probe;
+    pg.drawImage(bitmap, 0, 0, 1, 1);
+    const [r, g, b] = pg.getImageData(0, 0, 1, 1).data;
+    const [hex, gain] = feedGlow(r, g, b);
+    const last = this.feed?.glow;
+    const mix = (a, c) => Math.round(a * 0.6 + c * 0.4);
+    const glow = last
+      ? [(mix(last[0] >> 16 & 255, hex >> 16 & 255) << 16) | (mix(last[0] >> 8 & 255, hex >> 8 & 255) << 8) | mix(last[0] & 255, hex & 255), last[1] * 0.6 + gain * 0.4]
+      : [hex, gain];
+    this.feed?.bitmap.close?.();
+    this.feed = { bitmap, at: performance.now() / 1000, glow };
+  }
+
+  // is somebody's game showing on this glass right now?
+  live() {
+    return !this.free && this.mode === 'remote' && !this.crashed && !!this.feed && feedFresh(this.feed.at, performance.now() / 1000);
+  }
+
+  // what the CRT throws into a dark room while it shows a live game: [colour, gain], or null for the usual by-screen colours
+  liveGlow() { return this.live() ? this.feed.glow : null; }
 
   setMode(mode, message = '') { this.mode = mode; this.message = message; this.draw(performance.now() / 1000); }
 
   // free: the attract screen plus a sign saying so; taken: someone else's game
   setFree(free, who = '', what = '') {
     this.free = free; this.who = who; this.what = what;
+    if (free && this.feed) { this.feed.bitmap.close?.(); this.feed = null; }   // they stood up: the glass forgets their game
     if (this.mode !== 'mine') this.mode = free ? this.idle : 'remote';
   }
 
@@ -936,7 +970,7 @@ export class Screen {
     if (!this.free || this.mode === 'mine') this.lastUsed = time;
     const asleep = this.free && this.mode === this.idle && time - this.lastUsed > SAVER_AFTER;
     // the burner PC shows its write progress while nobody is sitting at it
-    this[this.crashed ? 'bsod' : this.burn && this.free ? 'burning' : this.rts && this.free ? this.rts : this.rebooting ? 'bios' : asleep ? 'saver' : this.mode]?.(g, t);
+    this[this.crashed ? 'bsod' : this.burn && this.free ? 'burning' : this.rts && this.free ? this.rts : this.rebooting ? 'bios' : asleep ? 'saver' : this.live() ? 'game' : this.mode]?.(g, t);
     if (this.linkDown) { // the Win98 tray balloon, big enough to read from across the room
       g.fillStyle = '#ffcc00'; g.fillRect(0, 0, W, 26);                      // --amber
       this.text(g, 'NETWORK CABLE DISCONNECTED', 8, 20, '#000000', 20);
@@ -1192,6 +1226,18 @@ export class Screen {
     g.fillStyle = '#24150b'; g.fillRect(0, 190, W, 50);     // --wood-dark
     this.text(g, this.who || 'SOMEONE', 10, 214, '#ffcc00', 22);
     this.text(g, this.what || 'FRAGGING', 10, 234, '#aaaaaa', 18);
+  }
+
+  // somebody else's game, as they see it: the last picture their PC sent, with the scanlines and the dim corners of a tube
+  game(g) {
+    g.fillStyle = '#000000'; g.fillRect(0, 0, W, H);                                   // --crt-black
+    g.imageSmoothingEnabled = true;
+    g.drawImage(this.feed.bitmap, 0, 0, W, H);
+    g.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    for (let y = 1; y < H; y += 3) g.fillRect(0, y, W, 1);                             // scanlines
+    const v = g.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, H * 0.9);
+    v.addColorStop(0, 'rgba(0, 0, 0, 0)'); v.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
+    g.fillStyle = v; g.fillRect(0, 0, W, H);
   }
 
   burning(g, t) {

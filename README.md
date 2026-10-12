@@ -13,6 +13,7 @@ A 3D basement LAN party in the browser. Walk around with everyone else who's onl
 2. Walk up to any free PC (its screen says **FREE**) and press **E**. DOOM boots solo. The **Game** button on the seated bar reboots the PC into the next game.
 3. To deathmatch: one seated player clicks **Host a deathmatch**, others sitting at PCs click **Join deathmatch** (up to 4), and the host clicks **Start**. Every PC in the match reboots into DOOM's `IPXSETUP` and finds the others over a virtual IPX network.
 4. Standing up (backtick) leaves the deathmatch.
+5. Everyone else sees your game on the CRT at your desk: walk up behind a player and watch.
 
 | Key | Action |
 | --- | --- |
@@ -36,6 +37,7 @@ A 3D basement LAN party in the browser. Walk around with everyone else who's onl
 - `js/avatars.js` draws the other players and moves them to wherever the server says they are. `js/headphones.js` is the one pair of headphones, on a head or on a tower, and `js/gaming.js` decides when the speaker PCs make a noise.
 - `js/net.js` talks to the room server over a WebSocket. If it can't connect, the game runs solo.
 - `js/emulator.js` wraps js-dos. When you sit, the DOS canvas is laid exactly over your CRT's glass; standing pauses it.
+- `js/feed.js` is how spectators watch: while you are seated at a running game and somebody else is in the room, `FeedSender` copies your DOS canvas about five times a second (192x144, JPEG) and sends it to the room server as a binary WebSocket message. The server (`server/src/feed-logic.js`, `Room.frame` in `server/src/index.js`) checks it is a small JPEG from a seated player, rate-limits it, stamps it with your PC's number and passes it to everyone else. Each client draws it on that PC's CRT texture (`Screen.pushFeed` and `Screen.game` in `js/textures.js`) and tints the CRT's dark-room glow by its average colour (`js/power.js`). If pictures stop for 2.5 seconds the glass falls back to the stand-in "someone else's game". Needs a `wrangler deploy` of `server/` to work for other players. `node tools/feed.test.mjs` checks the wire format and limits.
 - `js/desktop.js` is the desktop around the room: the taskbar, the Start menu and draggable windows. `js/apps.js` holds the programs that run in them, `js/icons.js` the 16x16 pixel icons.
 - `js/app-browser.js` is Internet Explorer: a Win98-era web browser window with a menu bar, Back, Forward, Stop, Refresh, Home, an Address bar, a Links bar, an Explorer bar (Search, Favorites, History) and a status bar. `js/web-pages.js` is the site it shows, http://lanparty1998.com/ as a 1998 homepage (home, news, games, how to play, guestbook, links, Dazza's page, and the 404 and "page cannot be displayed" pages), and `js/web-news.js` is its news. Neither has DOM code in it; `node tools/web.test.mjs` checks the addresses, every page and link, the news and the search.
 - `js/snapster.js` is Snapster's made-up network (bands, titles, users, search, transfers, library) with no DOM; `js/app-snapster.js` is its window. `tools/snapster.test.mjs` checks it.

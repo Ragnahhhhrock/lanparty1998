@@ -241,6 +241,8 @@ export function buildPower(scene, out, env) {
   const halo = T.glowHalo();
   const glows = [];
   const glowFor = (screen) => {
+    const live = screen.liveGlow?.();                  // a game being played on it: the colour of the picture
+    if (live) return live;
     const key = screen.crashed ? 'dos' : screen.mode;
     return P.GLOW_BY_IDLE[key] ?? P.GLOW_DEFAULT;
   };

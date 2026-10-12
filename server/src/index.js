@@ -4,6 +4,7 @@
 // peer to peer over WebRTC); this only coordinates.
 
 import { handleReminders, runDue } from './reminders.js';
+import { acceptFrame, relayFrame, tooSoon } from './feed-logic.js';
 
 const MAX_PLAYERS = 16;
 const PCS = 8;           // six club PCs, then the two BYOC benches (seats 6 and 7)
@@ -57,6 +58,7 @@ export class Room {
   constructor(ctx) {
     this.ctx = ctx;
     this.match = null;
+    this.lastFrame = new WeakMap();   // socket -> when its last picture went out (lost if the room hibernates, which only lets one more through)
     // the room can hibernate between messages, so the match is kept in storage
     ctx.blockConcurrencyWhile(async () => {
       this.match = (await ctx.storage.get('match')) ?? null;
@@ -114,8 +116,25 @@ export class Room {
     this.setMatch(null);
   }
 
+  // A picture of what a seated player's PC is showing: pass it to everyone else, stamped with the PC it came from.
+  frame(ws, raw) {
+    const p = this.info(ws);
+    if (!p?.name || p.pc === null) return;               // only somebody sitting at a PC has a screen to show
+    const jpeg = acceptFrame(raw);
+    if (!jpeg) return;
+    const now = Date.now();
+    if (tooSoon(this.lastFrame.get(ws) ?? 0, now)) return;
+    this.lastFrame.set(ws, now);
+    const out = relayFrame(p.pc, jpeg);
+    for (const other of this.ctx.getWebSockets()) {
+      if (other === ws || !this.info(other)?.name) continue;
+      try { other.send(out); } catch { /* closing */ }
+    }
+  }
+
   async webSocketMessage(ws, raw) {
-    if (typeof raw !== 'string' || raw.length > 2000) return;
+    if (typeof raw !== 'string') return this.frame(ws, raw);
+    if (raw.length > 2000) return;
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
     const p = this.info(ws);

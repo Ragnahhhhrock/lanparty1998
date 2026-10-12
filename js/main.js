@@ -6,6 +6,7 @@ import { DosPC } from './emulator.js';
 import { N64Console } from './n64.js';
 import { GAMES, DEFAULT_GAME, MAX_PLAYERS, gameOf, nextGame, netHint, pilotName } from './games.js';
 import { RoomLink, ROOM_NAME } from './net.js';
+import { FeedSender } from './feed.js';
 import { Crowd, spawnNpc, spawnTaped, seatFor, setEye } from './avatars.js';
 import * as sfx from './sfx.js';
 import * as voices from './voices.js';
@@ -64,6 +65,12 @@ const room = buildRoom(scene);
 const pc = new DosPC(ui.dos);
 const n64 = new N64Console(); // the console under the TV: a terminal that runs N64 ROMs from the player's own drive
 const link = new RoomLink();
+// What I am playing goes to everyone else's copy of my PC's CRT (js/feed.js), but only while there is somebody to show it to.
+const feed = new FeedSender({
+  host: ui.dos,
+  shouldSend: () => mode === 'seated' && !!seatedAt && pc.running && ui.bsod.hidden && !ui.monitor.hidden && link.online && link.players.size > 0,
+  send: (buf) => link.sendFrame(buf),
+});
 const crowd = new Crowd(scene, room.stations);
 setEye(camera.position); // speech bubbles grow with distance so they stay readable
 const GAME_START = NIGHT.doors; // 7:30 PM
@@ -1636,6 +1643,10 @@ link.addEventListener('leave', (e) => {
 link.addEventListener('seat', (e) => {
   if (e.detail.id !== link.me?.id) crowd.seat(e.detail);
   refreshStations();
+});
+link.addEventListener('frame', (e) => {   // somebody else's game, as they see it, for the CRT on their desk
+  const st = room.stations[e.detail.pc];
+  if (st && st !== seatedAt) st.screen.pushFeed(e.detail.jpeg);
 });
 link.addEventListener('denied', (e) => {
   if (seatedAt?.index !== e.detail.pc) return;

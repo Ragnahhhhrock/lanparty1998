@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'The CRTs show the game being played',
+    text: 'Sit down at a PC and start DOOM, or any of the others, and everybody else in the basement now sees your game on the glass at your desk instead of the stand-in picture. Walk up behind someone and watch the run. With the lights off the tube lights the room in the colour of the level. It is a small, soft copy sent about five times a second, so it is good for watching and bad for reading the status bar. Stand up, or hit a blue screen, and the glass goes back to the stand-in after a couple of seconds. The picture is only sent while somebody else is in the room.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'The CD-ROM drives have a working eject button',
     text: 'Every PC in the basement has a CD-ROM drive in the front of the case, and the button on it works. Press E at the button to push the tray out or pull it back in. Three of the machines were left with the tray out and a disc sitting in it; those now close like the rest. The CD-R burner in PC-04 is the drive above, and it still only wants to burn.',
   },

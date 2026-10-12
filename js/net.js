@@ -1,6 +1,8 @@
 // Connection to the room server: who's here, where they are, who sits where, the deathmatch.
 // If the server can't be reached the game still works solo; this just stays quiet.
 
+import { unpackFrame } from './feed.js';
+
 const params = new URLSearchParams(location.search);
 const LOCAL = ['localhost', '127.0.0.1'].includes(location.hostname);
 const SERVER = params.get('server') || (LOCAL ? 'ws://127.0.0.1:8787' : 'wss://room.lanparty1998.com');
@@ -30,8 +32,14 @@ export class RoomLink extends EventTarget {
     let ws;
     try { ws = new WebSocket(`${SERVER}/room/${ROOM_NAME}`); } catch { return this.later(); }
     this.ws = ws;
+    ws.binaryType = 'arraybuffer';   // the only binary messages are pictures of other players' PCs (js/feed.js)
     ws.onopen = () => { this.retry = 1000; ws.send(JSON.stringify({ t: 'hello', name: this.name })); };
-    ws.onmessage = (e) => { try { this.handle(JSON.parse(e.data)); } catch (err) { console.error(err); } };
+    ws.onmessage = (e) => {
+      try {
+        if (typeof e.data !== 'string') { const f = unpackFrame(e.data); if (f) this.emit('frame', f); return; }
+        this.handle(JSON.parse(e.data));
+      } catch (err) { console.error(err); }
+    };
     ws.onclose = () => {
       if (this.ws !== ws) return;
       const was = this.online;
@@ -52,6 +60,11 @@ export class RoomLink extends EventTarget {
 
   send(msg) {
     if (this.online && this.ws?.readyState === 1) this.ws.send(JSON.stringify(msg));
+  }
+
+  // a packed picture of my PC's screen (js/feed.js). Dropped, not queued, if the socket is behind.
+  sendFrame(buf) {
+    if (this.online && this.ws?.readyState === 1 && this.ws.bufferedAmount < 64 * 1024) this.ws.send(buf);
   }
 
   handle(m) {
