@@ -18,7 +18,7 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 /* ------------------------------------------------------------------ addresses */
 
-const ALIASES = {
+export const ALIASES = {
   '/index.htm': '/', '/index.html': '/', '/default.htm': '/',
   '/news': '/news.htm', '/news.html': '/news.htm', '/whatsnew.htm': '/news.htm',
   '/games': '/games.htm', '/games.html': '/games.htm',

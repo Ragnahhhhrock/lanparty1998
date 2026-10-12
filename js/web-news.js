@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'This site has a front door',
+    text: 'Everything in this browser can now be read outside the basement as well. What\'s New, Games, How to Play, the Guestbook, Links and Dazza\'s page each have an address of their own, such as lanparty1998.com/news, and they open in any browser without walking down the stairs. The news can be filtered the same way, at /news/new and /news/fix. The old .htm addresses still work.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'The CRTs show the game being played',
     text: 'Sit down at a PC and start DOOM, or any of the others, and everybody else in the basement now sees your game on the glass at your desk instead of the stand-in picture. Walk up behind someone and watch the run. With the lights off the tube lights the room in the colour of the level. It is a small, soft copy sent about five times a second, so it is good for watching and bad for reading the status bar. Stand up, or hit a blue screen, and the glass goes back to the stand-in after a couple of seconds. The picture is only sent while somebody else is in the room.',
   },
