@@ -315,7 +315,7 @@ export function buildPower(scene, out, env) {
         glow.light.intensity = live * (0.08 + 0.9 * dark) * gain * (1 + 0.03 * Math.sin(clock * 55));
       }
     };
-    out.stations.forEach((st, i) => rigs[i] && apply(rigs[i].glow, st.screen));
+    out.stations.forEach((st, i) => rigs[i]?.glow && apply(rigs[i].glow, st.screen));   // the benches (6, 7) have no rig here
     (out.gamerPcs ?? []).forEach((gp) => gp.screen && apply(gp.glow, gp.screen));
     (out.benchGlows ?? []).forEach((b) => apply(b.glow, b.screen));
   };

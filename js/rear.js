@@ -64,6 +64,9 @@ export class RearPanel {
     const focus = document.activeElement?.dataset?.cable;
     this.body.replaceChildren();
     const cables = s.cables();
+    // each power lead that is still loose starts on its own free socket, so plugging them in one after another just works
+    const free = [0, 1, 2, 3].filter((k) => !b.socketUser(k));
+    this.defaults = new Map(cables.filter((c) => c.id.startsWith('pw-') && !s.plugged.has(c.id)).map((c, n) => [c.id, free[n % Math.max(1, free.length)] ?? 0]));
     for (const [group, title] of GROUPS) {
       const list = cables.filter((c) => c.group === group);
       if (group === 'net' && !list.length) {
@@ -120,7 +123,7 @@ export class RearPanel {
           socket.append(o);
         }
         const keep = this.keep.get(c.id);
-        socket.value = String(free.includes(keep) ? keep : free[0] ?? 0);
+        socket.value = String(free.includes(keep) ? keep : this.defaults.get(c.id) ?? free[0] ?? 0);
         socket.addEventListener('change', () => this.keep.set(c.id, Number(socket.value)));
         act.append(socket);
       }
@@ -128,7 +131,11 @@ export class RearPanel {
       inn.type = 'button'; inn.dataset.cable = c.id;
       inn.disabled = !can.ok;
       if (!can.ok) inn.title = can.why;
-      inn.addEventListener('click', () => b.plug(c.id, socket ? Number(socket.value) : null));
+      inn.addEventListener('click', () => {
+        this.keep.delete(c.id);
+        const r = b.plug(c.id, socket ? Number(socket.value) : null);
+        if (!r.ok) this.refresh();
+      });
       act.append(inn);
       if (!can.ok) main.append(el('span', 'rear-why', can.why));
     }

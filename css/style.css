@@ -579,13 +579,13 @@ button.snap-th:focus-visible { outline: 1px dotted var(--w98-text); outline-offs
 }
 
 /* ---- Setting up the PC you built: the checklist (SETUP.EXE) and the back of the tower ---- */
-#setup { position: fixed; top: var(--space-4); left: var(--space-4); width: 280px; z-index: var(--z-hud); pointer-events: none; }
+#setup { position: fixed; top: var(--space-4); left: var(--space-4); width: 250px; z-index: var(--z-hud); pointer-events: none; }
 #setup[hidden] { display: none; }
 .setup-body { padding: var(--space-2) var(--space-3) var(--space-3); display: grid; gap: var(--space-2); }
-#setup-where { margin: 0; font-size: var(--text-ui-sm); }
+#setup-where { margin: 0; font-size: var(--text-ui-xs); }
 #setup-bar { background: repeating-linear-gradient(90deg, var(--w98-title) 0 7px, transparent 7px 9px); }
-#setup-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-0); font-size: var(--text-ui-sm); }
-#setup-list li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: var(--space-1); }
+#setup-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-0); font-size: var(--text-ui-xs); }
+#setup-list li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-1); }
 #setup-list li::before { content: '[ ]'; font: var(--text-crt-sm)/1 var(--font-crt); }
 #setup-list li.done::before { content: '[x]'; }
 #setup-list li.done { color: var(--w98-title-off); }

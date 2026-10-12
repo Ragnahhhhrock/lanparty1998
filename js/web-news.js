@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-06', kind: 'new', title: 'Build your own PC, then set it up',
+    text: 'Walking in now starts at the computer shop. You have $1500 to spend on a monitor from 14 to 19 inches, a Pentium, memory, up to three hard disks, floppies, a CD-ROM and a CD burner, a network card, speakers or headphones, a keyboard, a mouse and a mat. Then you carry it to the back table, between PC-01 and PC-02, and unpack it from the outline. Press E at the back of the tower to plug in the video, keyboard, mouse, power board and network, then press the button. It runs its memory test, starts Windows and joins the LAN. A BNC-only card will not talk to the hub when it arrives, and nobody warned you.',
+  },
+  {
     date: '1998-02-06', kind: 'new', title: 'The lights have a switch',
     text: 'There is a light switch on the back wall by the stairs door. Turn the ceiling tubes off and the room is nearly dark, and the monitors become the light: each one glows on the keyboard, the table and your face, in the colour of whatever is on it. Teal for Windows, green for Solitaire, grey for DOS. The switch has a small orange dot so you can find it.',
   },

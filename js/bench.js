@@ -378,8 +378,9 @@ export class Bench extends EventTarget {
     const mains = (from, n) => { // down over the table's edge and along the floor to socket n
       const end = socketTop(n);
       const fx = from.x - this.bx;
+      const ex = end.x - this.bx;
       add(cord([from, from.clone().add(V(0, -0.04, -0.07)), wp(fx, TY - 0.14, -0.43),
-        wp((fx + (end.x - this.bx)) / 2, 0.22, (-0.43 + bz) / 2), wp((end.x - this.bx) + (fx - (end.x - this.bx)) * 0.1, 0.09, bz - 0.03), end]), 0x151515), socketPlug(n));
+        wp((fx + ex) / 2, 0.22, (-0.43 + bz) / 2), wp(ex + (fx - ex) * 0.1, 0.09, bz - 0.03), end], 0x151515), socketPlug(n));
     };
     switch (id) {
       case 'vga': {
