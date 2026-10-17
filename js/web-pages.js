@@ -116,7 +116,8 @@ ${body}
 </td></tr>
 <tr><td colspan="2" class="w-foot">
 Last updated ${UPDATED}. Webmaster: <a href="mailto:${CONTACT}">${CONTACT}</a><br>
-Best viewed with Internet Explorer 4.0 at 800x600. Made on a beige box. <a href="#top">Back to the top</a>
+Best viewed with Internet Explorer 4.0 at 800x600. Made on a beige box. <a href="#top">Back to the top</a><br>
+Another <a href="https://malgordon.com/">Mal Gordon</a> creation
 </td></tr>
 </table>`;
 

@@ -85,10 +85,10 @@ const sources = () => [
 ];
 
 // Links in the basement point at the virtual site; on the real one they point at real files.
-// A link to somewhere that is not on this site (the regulars' own pages, which are not built yet) is shown as plain text.
+// A link to somewhere that is not on this site (the regulars' own pages, which are not built yet) is shown as plain text (the maker's credit link is the one real external link).
 function rewriteLinks(html, pageUrl) {
   return html.replace(/<a\b([^>]*?)\bhref="([^"]*)"([^>]*)>([\s\S]*?)<\/a>/g, (all, before, href, after, inner) => {
-    if (href.startsWith('#') || href.startsWith('mailto:')) return all;
+    if (href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('https://malgordon.com/')) return all;
     const target = realUrl(joinUrl(pageUrl, href));
     if (!target) return `<span class="w-dead">${inner}</span>`;
     return `<a${before}href="${target}"${after}>${inner}</a>`;

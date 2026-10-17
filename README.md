@@ -131,6 +131,8 @@ python3 scripts/render-social.py   # og-image, twitter-card and icons from their
 
 contact@lanparty1998.com
 
+Another [Mal Gordon](https://malgordon.com/) creation
+
 ## Licences
 
 Three.js is MIT (`vendor/three/LICENSE`). js-dos is GPL-2.0. DOOM shareware © id Software, distributed under its shareware terms. VT323 is SIL OFL 1.1 (`fonts/VT323-OFL.txt`). "Volt Cola", "Nachoz", "Cheez Curlz", "Citrus Zap", "Nokka" and "Pizza Shack" are parody brands.

@@ -55,7 +55,7 @@ ok('every page is a whole document with the metadata STYLEGUIDE.md asks for', ()
     assert.match(h, /class="w-page"/);
     assert.ok(!/undefined|\[object/.test(h), `${p.path} has a hole in it`);
     assert.ok(!/href="[^"]*\.htm[#"?]/.test(h), `${p.path} still links to a .htm page`);
-    assert.ok(!/href="https?:\/\/(?!lanparty1998\.com)/.test(h), `${p.path} links off the site`);
+    assert.ok(!/href="https?:\/\/(?!lanparty1998\.com|malgordon\.com\/)/.test(h), `${p.path} links off the site`);
   }
   assert.equal(byPath['/news/fix'].canonical, '/news');
   assert.equal(byPath['/news'].canonical, '/news');
@@ -64,7 +64,7 @@ ok('every page is a whole document with the metadata STYLEGUIDE.md asks for', ()
 ok('every link on every page goes to a page that is built', () => {
   for (const p of pages) {
     for (const [, href] of p.html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)) {
-      if (href.startsWith('#') || href.startsWith('mailto:')) continue;
+      if (href.startsWith('#') || href.startsWith('mailto:') || href === 'https://malgordon.com/') continue;
       assert.ok(href.startsWith('/'), `${p.path}: ${href} is not rooted`);
       const path = href.replace(/#.*$/, '');
       assert.ok(path === '/' || byPath[path], `${p.path} links to ${href}, which is not a page`);

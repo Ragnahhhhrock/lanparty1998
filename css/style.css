@@ -35,6 +35,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--baseme
 .w98-btn.default { outline: 1px solid var(--w98-text); }
 .w98-actions { flex-wrap: wrap; display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 14px; }
 .w98-link { margin-right: auto; font-size: var(--text-ui-sm); color: var(--w98-title); }
+.w98-credit { margin: var(--space-2) 0 0; font-size: var(--text-ui-xs); text-align: right; }
+.w98-credit a { color: var(--w98-title); }
 .w98-link:focus-visible { outline: 1px dotted var(--w98-text); outline-offset: 2px; }
 kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); background: var(--w98-key); padding: 2px 5px; margin-right: 2px;
   box-shadow: var(--bevel-key); color: var(--w98-text); }
