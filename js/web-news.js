@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'The shop is now optional',
+    text: 'Walk in goes straight down the basement stairs and you sit at any free club PC. If you would rather build your own, there is a button for that on the first screen: the shop, then the back table, same as before. Nobody is made to carry a tower down the stairs against their will.',
+  },
+  {
     date: '1998-02-07', kind: 'fix', title: 'The pizza guy knocks as you hang up',
     text: 'Order a large pepperoni and the knock on the basement door now comes the moment the receiver goes down, not half a minute later. Nobody knows how. Pizza Shack has stopped answering questions about it.',
   },

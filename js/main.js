@@ -32,7 +32,7 @@ import { SEAT_BASE, benchOfSeat } from './bench-plan.js';
 const $ = (id) => document.getElementById(id);
 initShare();
 const ui = {
-  intro: $('intro'), enter: $('enter-btn'), hud: $('hud'), prompt: $('prompt'), toast: $('toast'),
+  intro: $('intro'), enter: $('enter-btn'), build: $('build-btn'), hud: $('hud'), prompt: $('prompt'), toast: $('toast'),
   caffeine: $('m-caffeine'), snacks: $('m-snacks'), cash: $('m-cash'), shares: $('m-shares'), clock: $('clock'), schedule: $('schedule'),
   monitor: $('monitor'), dos: $('dos'), dust: $('dust'), bsod: $('bsod'),
   consoleBar: $('console-bar'), consoleStatus: $('console-status'),
@@ -128,17 +128,31 @@ const wizard = new Wizard($('wizard'));
 const savedBuild = () => { try { return JSON.parse(localStorage.getItem('lan98-build')); } catch { return null; } };
 let myBuild = BUILD.sanitize(savedBuild());
 
-ui.enter.addEventListener('click', () => {
+// Building a PC is optional. "Walk in" goes straight to the basement and you sit at a club PC; "Build a PC first" runs
+// BUILDPC.EXE and then gives you a bench on the back table (wantsBench).
+let wantsBench = false;
+
+function startParty() {
   const name = ui.handle.value.trim().toUpperCase().slice(0, 12) || `PLAYER${Math.floor(Math.random() * 90 + 10)}`;
   try { localStorage.setItem('lan98-handle', name); } catch { /* private mode */ }
   myName = name;
   ircMe(name);
   ui.intro.hidden = true;
+}
+
+ui.enter.addEventListener('click', () => {
+  startParty();
+  walkIn();
+});
+
+ui.build.addEventListener('click', () => {
+  startParty();
   wizard.open({
     build: savedBuild(),
     net: party.net,
     onDone: (build) => {
       myBuild = build;
+      wantsBench = true;
       try { localStorage.setItem('lan98-build', JSON.stringify(build)); } catch { /* private mode */ }
       walkIn();
     },
@@ -174,6 +188,7 @@ const benchPartName = (t) => lcFirst(room.benches[t.bench].setup.parts().find((p
 
 function startBench() {
   clearTimeout(benchFallback);
+  if (!wantsBench) return;   // no PC built: you sit at a club PC, and both benches stay free for others
   if (link.online) link.send({ t: 'bench', build: myBuild, up: !!myBench?.ready });
   // no room server (or an old one that has never heard of benches): the first bench is yours
   benchFallback = setTimeout(() => { if (!myBench) takeBench(0); }, 2500);
