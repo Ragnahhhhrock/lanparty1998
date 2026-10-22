@@ -12,6 +12,8 @@ Every game here is a shareware release that its publisher said could be copied f
 
 | `duke-shareware.zip` | Duke Nukem 3D 1.3D shareware (episode one): the installed game files plus `DUKE3D.CFG`, a SETUP-written config that came in that bundle | archive.org item `3dduke13SW`, `emulator.zip` (the installed form of `3dduke13SW.zip`, md5 `04e4ca70b8a2d59ed56c451c5c1d5d39`). Its `LICENSE.TXT` lets free WWW sites offer it for download and is kept in the zip |
 
+`lanparty-amiga.adf` is the Amiga 500's floppy: ours, built by `tools/make-amiga-disk.py` from `tools/amiga/Startup-Sequence`. It holds a script and nothing else, and needs no ROM.
+
 `descent-pilot.plr` is a blank pilot file the game writes itself; `js/emulator.js` renames it per player.
 
 Not here on purpose: Rise of the Triad, StarCraft (no redistributable release exists) and anything commercial. Duke Nukem 3D's engine source is open (GPL) but its game data is not; only the shareware episode above is bundled.

@@ -1,0 +1,18 @@
+; LANPARTY: the script the Amiga runs when it boots. AROS's built-in shell reads it.
+; Only the shell's own commands exist here (Echo, Alias, Prompt, Ask, If...). *E is an escape, *N a new line.
+; Build the disk with: python3 tools/make-amiga-disk.py
+Prompt "A500> "
+Echo "*E[7m LAN PARTY '98 *E[0m  the Amiga corner"
+Echo ""
+Echo "Amiga 500, one floppy drive, a mouse, a joystick port with nothing in it."
+Echo "Kickstart is AROS, which is open source. The emulator is PUAE."
+Echo "This disk holds a Startup-Sequence and nothing else."
+Echo "Workbench is on the other disk. Dazza has it. Dazza is not here."
+Echo ""
+Echo "Type *E[7mHELP*E[0m."
+Echo ""
+Alias help Echo "HELP  DAZZA  VOLT  GURU  BOING  ENDCLI*NThat is everything this disk knows."
+Alias dazza Echo "Dazza says Workbench is at his place. He will bring it round after the footy."
+Alias volt Echo "No Volt Cola in the disk drive. Cans do not fit. Mum asked."
+Alias guru Echo "Software Failure.   Press left mouse button to continue.*NGuru Meditation #00000004.0000AAC0"
+Alias boing Echo "Boing."

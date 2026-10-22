@@ -184,6 +184,13 @@ Press any key to continue _</div>
     <span id="console-status" role="status" aria-live="polite"></span>
   </div>
 
+  <!-- At the Amiga 500 (front-left desk): keys go to the emulator (js/amiga.js) -->
+  <div id="amiga-bar" hidden>
+    <button id="ami-stand" class="w98-btn" type="button">Stand up <kbd>`</kbd></button>
+    <button id="ami-reset" class="w98-btn" type="button">Reset</button>
+    <span id="amiga-status" role="status" aria-live="polite">Type HELP</span>
+  </div>
+
   <!-- Errands: one message box, filled in by whatever you're fiddling with -->
   <div id="dialog" hidden>
     <div class="w98-window" role="dialog" aria-labelledby="dialog-title">

@@ -36,6 +36,7 @@ const ui = {
   caffeine: $('m-caffeine'), snacks: $('m-snacks'), cash: $('m-cash'), shares: $('m-shares'), clock: $('clock'), schedule: $('schedule'),
   monitor: $('monitor'), dos: $('dos'), dust: $('dust'), bsod: $('bsod'),
   consoleBar: $('console-bar'), consoleStatus: $('console-status'),
+  amigaBar: $('amiga-bar'), amigaStatus: $('amiga-status'),
   seatedBar: $('seated-bar'), stand: $('stand-btn'), drink: $('drink-btn'), eat: $('eat-btn'), gameBtn: $('game-btn'), seatedStatus: $('seated-status'),
   handle: $('handle'), netstatus: $('netstatus'), voiceStatus: $('voice-status'), mic: $('mic-btn'),
   chat: $('chat'), chatLog: $('chat-log'), chatForm: $('chat-form'), chatInput: $('chat-input'),
@@ -107,7 +108,7 @@ const driver = spawnNpc(scene, { name: 'DRIVER', color: '#b22a1e', yaw: Math.PI,
 driver.group.visible = false;
 
 /* ---------- state ---------- */
-let mode = 'intro'; // intro | walk | tween | seated | console | bean | dialog
+let mode = 'intro'; // intro | walk | tween | seated | console | amiga | bean | dialog
 const keys = new Set();
 const stats = { caffeine: 15, snacks: 40, dust: 0, cans: 0, handfuls: 0 };
 const held = { garlic: false };                                   // the garlic bread in foil you are carrying
@@ -337,6 +338,11 @@ window.addEventListener('keydown', (e) => {
     else if (n64.key(e)) e.stopPropagation();
     return;
   }
+  if (mode === 'amiga') { // leaning in at the Amiga: every key goes to it; backtick stands up
+    if (e.code === 'Backquote') { e.preventDefault(); e.stopPropagation(); leaveAmiga(); }
+    else if (room.amiga.key(e)) e.stopPropagation();
+    return;
+  }
   if (mode === 'seated') {
     if (e.code === 'Backquote') { e.preventDefault(); e.stopPropagation(); standUp(); }
     else if (!ui.bsod.hidden) { e.preventDefault(); e.stopPropagation(); recoverFromCrash(); } // any key
@@ -364,6 +370,7 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => {
   keys.delete(e.code);
   if (mode === 'console' && n64.key(e)) e.stopPropagation();
+  if (mode === 'amiga' && room.amiga.key(e)) e.stopPropagation();
 }, true);
 window.addEventListener('blur', () => keys.clear());
 
@@ -415,6 +422,7 @@ const PROMPTS = {
   drink: () => 'E · Crack a Volt Cola',
   soda: () => 'E · Pour a Citrus Zap into a red cup',
   eat: () => 'E · Grab a handful of Nachoz or Cheez Curlz',
+  amiga: () => 'E · Use the Amiga 500',
   console: () => 'E · Play the console (it runs N64 ROMs from your own drive)',
   beanbag: () => 'E · Sit in the bean bag',
   eject: (t) => `E · ${t.station.tower.cdrom?.open ? 'Close' : 'Open'} the CD-ROM tray`,
@@ -432,6 +440,7 @@ function interact(t) {
     else if (who) toast(`${who.name} is on that one. Find a free PC.`);
     else sitDown(t.station);
   } else if (t.kind === 'console') playConsole();
+  else if (t.kind === 'amiga') useAmiga();
   else if (t.kind === 'beanbag') sitInBean();
   else if (t.kind === 'drink') drink();
   else if (t.kind === 'soda') soda();
@@ -1140,6 +1149,42 @@ function leaveConsole() {
     lockPointer();
   });
 }
+/* ---------- the Amiga 500 ---------- */
+// E at the Amiga (front-left desk): xX_Ghoul_Xx scoots off his chair and you lean in. Keys go to the emulator (js/amiga.js).
+let amigaTaken = false; // you are in xX_Ghoul_Xx's chair (or on the way)
+function useAmiga() {
+  const desk = room.amigaDesk;
+  amigaTaken = true;
+  if (document.pointerLockElement) document.exitPointerLock();
+  ui.prompt.hidden = true;
+  keys.clear();
+  startTween(desk.view.clone(), cameraPoseLookingAt(desk.view, desk.look), 0.9, () => {
+    mode = 'amiga';
+    ui.hud.hidden = true;
+    ui.amigaBar.hidden = false;
+    room.amiga.enter();
+  });
+}
+
+function leaveAmiga() {
+  if (mode !== 'amiga') return;
+  room.amiga.leave();
+  ui.amigaBar.hidden = true;
+  const { look } = room.amigaDesk;
+  const pos = new THREE.Vector3(look.x + 1.3, EYE, look.z);
+  const q = cameraPoseLookingAt(pos, look);
+  startTween(pos, q, 0.7, () => {
+    const e = new THREE.Euler().setFromQuaternion(q, 'YXZ');
+    player.pos.copy(pos); player.yaw = e.y; player.pitch = e.x;
+    amigaTaken = false;
+    mode = 'walk';
+    ui.hud.hidden = false;
+    lockPointer();
+  });
+}
+$('ami-stand').addEventListener('click', leaveAmiga);
+$('ami-reset').addEventListener('click', () => { room.amiga.reset(); $('ami-reset').blur(); });
+
 n64.onstand = leaveConsole;
 n64.onplay = () => analytics.consoleStart();
 
@@ -1345,6 +1390,10 @@ function frame() {
   room.updatePower(dt);
   room.spectator.update(dt, Math.hypot(player.pos.x - room.spectatorDesk.x, player.pos.z - room.spectatorDesk.z),
     mode === 'intro' || document.hidden || (mode === 'seated' && pc.running));
+  room.amiga.update(dt, Math.hypot(player.pos.x - room.amigaDesk.x, player.pos.z - room.amigaDesk.z),
+    mode === 'intro' || document.hidden || (mode === 'seated' && pc.running));
+  regulars[0].group.visible = !amigaTaken;   // Ghoul is out of the chair while you are in it
+  ui.amigaStatus.textContent = room.amiga.status;
   room.updatePizza(dt);
   room.updateTrays(dt);
   room.updateBenches();

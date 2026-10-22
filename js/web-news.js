@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'An Amiga 500, in place of a PC',
+    text: 'The front-left corner no longer has a PC in it. xX_Ghoul_Xx has been given an Amiga 500, which he says is the only computer that has ever understood him, and it is running for real. E at the desk, he steps aside and you can type at it: the shell is open source and so is the emulator, so no ROM came down the stairs with it. Type HELP. Workbench is on the other disk. Dazza has it.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'The shop is now optional',
     text: 'Walk in goes straight down the basement stairs and you sit at any free club PC. If you would rather build your own, there is a button for that on the first screen: the shop, then the back table, same as before. Nobody is made to carry a tower down the stairs against their will.',
   },

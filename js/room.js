@@ -7,6 +7,7 @@ import { BURNER } from './party.js';
 import { headphones } from './headphones.js';
 import { GAME_IDS } from './games.js';
 import { Spectator } from './spectator.js';
+import { AmigaMachine } from './amiga.js';
 
 export const ROOM = { minX: -6, maxX: 6, minZ: -5, maxZ: 5, height: 2.8 };
 const TABLE_Y = 0.74;
@@ -120,11 +121,11 @@ function foldingChair() {
   return g;
 }
 
-function crt(screenTexture) {
+function crt(screenTexture, shell = beige, shellDark = beigeDark) {
   const g = new THREE.Group();
-  g.add(box(0.26, 0.03, 0.24, beigeDark, 0, 0.015, -0.02)); // swivel base
-  g.add(box(0.42, 0.37, 0.3, beige, 0, 0.215, 0));          // front shell
-  g.add(box(0.32, 0.29, 0.2, beige, 0, 0.215, -0.24));      // tube bulge
+  g.add(box(0.26, 0.03, 0.24, shellDark, 0, 0.015, -0.02)); // swivel base
+  g.add(box(0.42, 0.37, 0.3, shell, 0, 0.215, 0));          // front shell
+  g.add(box(0.32, 0.29, 0.2, shell, 0, 0.215, -0.24));      // tube bulge
   g.add(box(0.36, 0.28, 0.01, black, 0, 0.225, 0.151));     // bezel recess
   const screen = new THREE.Mesh(
     new THREE.PlaneGeometry(0.32, 0.24),
@@ -331,6 +332,58 @@ function pcSetup(g, screen, tagText, chairYaw, burner = false, audio = 'speakers
   chair.rotation.y = chairYaw;
   g.add(chair);
   return { mon, tw, tagTex, chair, phones };
+}
+
+// The Amiga 500 desk: a charcoal monitor, the computer (keyboard and all in one wedge of beige) with its floppy drive
+// down the right-hand side, a mouse on a mat, a couple of floppies and a Volt can. Same layout as pcSetup (the monitor
+// faces -z, the chair is at +z) so the power and glow code treat it like any other PC. Colours are tokens: --beige,
+// --beige-light, --console-dark, --disk-case (charcoal), --floppy-black, --disk-metal, --volt, --mat-cloth.
+const amigaShell = new THREE.MeshStandardMaterial({ color: 0x44474b, roughness: 0.6 });      // --console-dark
+const amigaShellDark = new THREE.MeshStandardMaterial({ color: 0x26262b, roughness: 0.65 }); // --disk-case
+function amigaSetup(g, machine, tagText, chairYaw) {
+  const mon = crt(machine.texture, amigaShell, amigaShellDark);
+  mon.group.position.set(0, TABLE_Y, -0.12);
+  g.add(mon.group);
+
+  // the computer: a low wedge, the keyboard on top of it
+  const a500 = new THREE.Group();
+  const keys = new THREE.MeshStandardMaterial({ map: T.keyboardTop(), roughness: 0.7 });
+  a500.add(box(0.46, 0.045, 0.34, beige, 0, 0.0225, 0));                  // the case
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.012, 0.2), [beige, beige, keys, beige, beige, beige]);
+  deck.position.set(0, 0.051, 0.06);
+  deck.rotation.x = 0.06;
+  a500.add(deck);
+  a500.add(box(0.46, 0.02, 0.1, beige, 0, 0.055, -0.12));                // the raised back
+  a500.add(box(0.008, 0.012, 0.09, new THREE.MeshBasicMaterial({ color: 0x0a0a0a }), 0.231, 0.03, 0.04)); // floppy slot, right side (--w98-dark)
+  a500.add(box(0.01, 0.006, 0.006, new THREE.MeshBasicMaterial({ color: 0x3cff5a }), 0.232, 0.014, 0.1));  // drive light
+  const power = box(0.012, 0.006, 0.004, new THREE.MeshBasicMaterial({ color: 0xe2231a }), -0.19, 0.04, 0.172); // power light (--volt)
+  a500.add(power);
+  a500.position.set(-0.02, TABLE_Y, 0.2);
+  g.add(a500);
+
+  g.add(box(0.06, 0.03, 0.1, beige, 0.33, TABLE_Y + 0.015, 0.26));        // mouse
+  g.add(box(0.2, 0.004, 0.18, new THREE.MeshStandardMaterial({ color: 0x1c3b6e }), 0.34, TABLE_Y + 0.002, 0.25)); // mousepad, --mat-cloth
+  for (const [x, z, r] of [[0.5, 0.18, 0.3], [0.46, 0.05, -0.2]]) {        // floppies, left lying about
+    const f = new THREE.Group();
+    f.add(box(0.09, 0.004, 0.09, new THREE.MeshStandardMaterial({ color: 0x1c1c1f, roughness: 0.6 }), 0, 0, 0));   // --floppy-black
+    f.add(box(0.03, 0.0045, 0.03, new THREE.MeshStandardMaterial({ color: 0xb9bdc2, metalness: 0.4, roughness: 0.4 }), 0, 0, -0.026)); // --disk-metal
+    f.position.set(x, TABLE_Y + 0.003, z);
+    f.rotation.y = r;
+    g.add(f);
+  }
+
+  g.add(speakerPair());
+
+  const tagTex = T.nameTag(tagText);
+  const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.04), new THREE.MeshBasicMaterial({ map: tagTex }));
+  tag.position.set(0, 0.39, 0.152);
+  mon.group.add(tag);
+
+  const chair = foldingChair();
+  chair.position.set(0, 0, 0.82);
+  chair.rotation.y = chairYaw;
+  g.add(chair);
+  return { mon, tw: null, tagTex, chair, phones: null };
 }
 
 // Six PCs. Nobody owns one any more: whoever sits down first gets it. The idle screens are
@@ -966,7 +1019,7 @@ const GAMER_DESKS = [
   // The pair on this wall are bots playing each other in the real DOOM: spectator mode (js/spectator.js). The fifth entry is which fighter.
   { x: 5.45, z: 2.0, segments: 2, yaw: -Math.PI / 2, pcs: [['K-Rad', 1.25, 'DEATHMATCH', 'speakers', 0], ['n00bslayer', 2.75, 'DEATHMATCH', 'speakers', 1]] },
   // front-left corner, where the snack table leaves off. Players face -x.
-  { x: -5.45, z: 1.838 + TABLE_LEN / 2, segments: 1, yaw: Math.PI / 2, pcs: [['xX_Ghoul_Xx', 1.838 + TABLE_LEN / 2, 'DEATHMATCH', 'headphones']] },
+  { x: -5.45, z: 1.838 + TABLE_LEN / 2, segments: 1, yaw: Math.PI / 2, pcs: [['xX_Ghoul_Xx', 1.838 + TABLE_LEN / 2, 'AMIGA', 'speakers', 'amiga']] },
 ];
 const COUCH_SEATS = [['MACCA', 0], ['PhatBass', 2]]; // [who, cushion]: 0 is the near end, 1 the middle, 2 the far end
 
@@ -989,17 +1042,34 @@ function buildGamers(scene, out, labelVolt) {
       g.position.set(d.x, 0, z);
       g.rotation.y = d.yaw;
       scene.add(g);
-      const screen = new T.Screen('remote', 20 + di * 3 + pi);
-      screen.setFree(false, who.toUpperCase(), what);
-      if (fighter !== undefined) screen.bot = { sim: spectator, index: fighter };
+      const isAmiga = fighter === 'amiga';
+      let screen, built;
+      if (isAmiga) {                                  // the Amiga 500: the real thing, running (js/amiga.js)
+        screen = out.amiga = new AmigaMachine();
+        built = amigaSetup(g, screen, who.toUpperCase(), 0.1 * (pi + 1) - 0.15);
+      } else {
+        screen = new T.Screen('remote', 20 + di * 3 + pi);
+        screen.setFree(false, who.toUpperCase(), what);
+        if (fighter !== undefined) screen.bot = { sim: spectator, index: fighter };
+        built = pcSetup(g, screen, who.toUpperCase(), 0.1 * (pi + 1) - 0.15, false, audio);
+      }
       out.gamerScreens.push(screen);
-      const { chair, phones, mon } = pcSetup(g, screen, who.toUpperCase(), 0.1 * (pi + 1) - 0.15, false, audio);
+      const { chair, phones, mon } = built;
       (out.gamerPcs ??= []).push({ group: g, wallZ: DESK_WALL_Z, mon });
-      if (phones) phones.visible = false; // they're wearing them
+      if (phones && !isAmiga) phones.visible = false; // they're wearing them
       const can = voltCan(labelVolt);
       can.position.set(-0.36, TABLE_Y, 0.12);
       g.add(can);
       g.updateMatrixWorld(true);
+      if (isAmiga) {
+        // E at the monitor or the computer: lean in and type. view is where the camera goes, look is the glass.
+        const hit = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.75), new THREE.MeshBasicMaterial({ visible: false }));
+        hit.position.set(0, TABLE_Y + 0.25, 0.05);
+        hit.userData.interact = { kind: 'amiga' };
+        g.add(hit);
+        out.interactables.push(hit);
+        out.amigaDesk = { x: d.x, z, who, view: g.localToWorld(new THREE.Vector3(0, TABLE_Y + 0.42, 0.78)), look: g.localToWorld(new THREE.Vector3(0, TABLE_Y + 0.22, 0.04)) };
+      }
       out.seats[who] = { chair, group: g, audio };
       const at = chair.getWorldPosition(new THREE.Vector3());
       out.colliders.push({ minX: at.x - 0.25, maxX: at.x + 0.25, minZ: at.z - 0.25, maxZ: at.z + 0.25 });
