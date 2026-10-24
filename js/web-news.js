@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'A sign over the Amiga',
+    text: 'Somebody has put a sign on the wall above the Amiga that says COMMODORE AMIGA in letters big enough to read from the stairs. It is only a sign. It has been there longer than the party has.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'The Amiga now comes with a disk box',
     text: 'Press Setup & disks at the Amiga. It can be a 500, a 1200 or a 2000, with a second and third floppy drive, a hard disk or a CD-ROM fitted. Point it at a folder and it finds every .adf, .hdf and .iso in it, and each one becomes a disk in the box next to the machine. Drag a disk onto a drive. The machine is switched off and on again each time, as it would be. Your files are read here in the room and go nowhere. Dazza\'s disk is in the box already.',
   },

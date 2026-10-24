@@ -84,7 +84,7 @@ const party = new Party({ startMinutes: GAME_START });
 
 // The regulars from #lanparty98 sit and play: at their own PCs on the tables, or on the couch with the console.
 // Where each one sits is in buildGamers (js/room.js). Nobody else can use those PCs.
-const sit = (name) => seatFor(room.seats[name]);
+const sit = (name) => (room.seats[name] ? seatFor(room.seats[name]) : undefined);   // Ghoul has no seat of his own: he is given PC-04's below
 // Macca: off to Singapore for work, and happy to bring RAM back if you give him cash first
 const macca = spawnNpc(scene, { name: 'MACCA', color: '#20b2aa', yaw: -Math.PI / 2, arch: 'surfer', seat: sit('MACCA'), look: { headphones: false } }); // --shirt-7
 const maccaHit = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.5, 0.7), new THREE.MeshBasicMaterial({ visible: false }));

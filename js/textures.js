@@ -466,6 +466,18 @@ export function shackShirt() {
   return tex(c);
 }
 
+// A wall sign over the Amiga's desk: the machine's name in plain text, big enough to read from the far wall. No logo.
+export function amigaSign() {
+  const [c, g] = canvas(1024, 192);
+  g.fillStyle = '#000000'; g.fillRect(0, 0, 1024, 192);                 // --crt-black
+  g.strokeStyle = '#d6cdb4'; g.lineWidth = 10; g.strokeRect(5, 5, 1014, 182);   // --beige
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `bold 118px ${CRT_FONT}`;
+  g.fillStyle = '#e2231a'; g.fillText('COMMODORE AMIGA', 518, 100);      // --volt (the shadow)
+  g.fillStyle = '#e8e1cc'; g.fillText('COMMODORE AMIGA', 512, 94);       // --paper
+  return tex(c);
+}
+
 export function poster(title, sub, hue) {
   const [c, g] = canvas(256, 360);
   g.fillStyle = `hsl(${hue} 70% 12%)`; g.fillRect(0, 0, 256, 360);

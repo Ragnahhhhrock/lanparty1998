@@ -1852,6 +1852,9 @@ export function buildRoom(scene) {
   p2.position.set(maxX - 0.01, 1.6, 1.2); p2.rotation.y = -Math.PI / 2; scene.add(p2);
   const p3 = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.98), posterMat(T.poster('VOLT\nCOLA', 'NOW WITH\nEVEN MORE VOLTS', 5)));
   p3.position.set(minX + 0.01, 1.7, -2.2); p3.rotation.y = Math.PI / 2; scene.add(p3);
+  // the Amiga's name over its desk, in plain text, large enough to read from across the room
+  const amigaSign = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.6), new THREE.MeshBasicMaterial({ map: T.amigaSign() }));
+  amigaSign.position.set(minX + 0.01, 2.49, 1.838 + TABLE_LEN / 2); amigaSign.rotation.y = Math.PI / 2; scene.add(amigaSign);
   // 90s nostalgia. Games are named in text only, never with their art or characters.
   const nostalgia = [
     [-4.6, minZ + 0.01, 0, T.poster('DUKE\nNUKEM 3D', 'SHOOTERS FIRST\nFRAG LIMIT 20', 40)],
