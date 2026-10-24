@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'fix', title: 'The basement door sticks no more',
+    text: 'Some people pressed Walk in and got a dark room and nobody home. A stale copy of the game on their machine was not speaking to the new one. Every part of the game now carries a version tag, so the two agree on who is who.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'A sign over the Amiga',
     text: 'Somebody has put a sign on the wall above the Amiga that says COMMODORE AMIGA in letters big enough to read from the stairs. It is only a sign. It has been there longer than the party has.',
   },
