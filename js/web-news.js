@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'The Amiga has nobody on it',
+    text: 'xX_Ghoul_Xx has gone to PC-04 with his headphones and a copy of Descent, and the Amiga in the front-left corner is free for anyone. E at the desk and type at it. He will get up if you want PC-04. He says that is not the same thing as giving it to you.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'An Amiga 500, in place of a PC',
     text: 'The front-left corner no longer has a PC in it. xX_Ghoul_Xx has been given an Amiga 500, which he says is the only computer that has ever understood him, and it is running for real. E at the desk, he steps aside and you can type at it: the shell is open source and so is the emulator, so no ROM came down the stairs with it. Type HELP. Workbench is on the other disk. Dazza has it.',
   },

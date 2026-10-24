@@ -92,13 +92,16 @@ maccaHit.userData.interact = { kind: 'buddy' };
 scene.add(maccaHit);
 room.interactables.push(maccaHit);
 
+// xX_Ghoul_Xx plays Descent at PC-04 (front left, headphones) until somebody else sits down at it; the Amiga is free for everyone
+const GHOUL_PC = 3;
+const ghoulAtPc = () => seatedAt !== room.stations[GHOUL_PC] && !link.occupant(GHOUL_PC);
 const regulars = [
-  // headphones: the PCs with speakers (K-Rad, n00bslayer) are the ones the room can hear; Ghoul's has headphones, so he wears them
-  { name: 'xX_Ghoul_Xx', color: '#9b4dca', arch: 'goth', look: { headphones: true } },      // --shirt-5
+  // headphones: the PCs with speakers (K-Rad, n00bslayer) are the ones the room can hear; PC-04 has headphones, so Ghoul wears them
+  { name: 'xX_Ghoul_Xx', color: '#9b4dca', arch: 'goth', look: { headphones: true }, seat: seatFor(room.stations[GHOUL_PC]) },      // --shirt-5
   { name: 'PhatBass', color: '#d94f8a', arch: 'raver', look: { headphones: false } },       // --shirt-8
   { name: 'K-Rad', color: '#2b6fd6', arch: 'hiphop', look: { headphones: false } },         // --shirt-2
   { name: 'n00bslayer', color: '#3aa35a', arch: 'nerd', look: { headphones: false } },      // --shirt-4
-].map((r) => spawnNpc(scene, { ...r, seat: sit(r.name) }));
+].map((r) => spawnNpc(scene, { seat: sit(r.name), ...r }));
 // who is sitting where, by IRC nick, so what they say in the channel comes out of their mouths
 const speakers = new Map([macca, ...regulars].map((a) => [a.name.toLowerCase(), a]));
 
@@ -1150,11 +1153,9 @@ function leaveConsole() {
   });
 }
 /* ---------- the Amiga 500 ---------- */
-// E at the Amiga (front-left desk): xX_Ghoul_Xx scoots off his chair and you lean in. Keys go to the emulator (js/amiga.js).
-let amigaTaken = false; // you are in xX_Ghoul_Xx's chair (or on the way)
+// E at the Amiga (front-left desk): nobody owns it, so you lean in. Keys go to the emulator (js/amiga.js).
 function useAmiga() {
   const desk = room.amigaDesk;
-  amigaTaken = true;
   if (document.pointerLockElement) document.exitPointerLock();
   ui.prompt.hidden = true;
   keys.clear();
@@ -1176,7 +1177,6 @@ function leaveAmiga() {
   startTween(pos, q, 0.7, () => {
     const e = new THREE.Euler().setFromQuaternion(q, 'YXZ');
     player.pos.copy(pos); player.yaw = e.y; player.pitch = e.x;
-    amigaTaken = false;
     mode = 'walk';
     ui.hud.hidden = false;
     lockPointer();
@@ -1392,7 +1392,7 @@ function frame() {
     mode === 'intro' || document.hidden || (mode === 'seated' && pc.running));
   room.amiga.update(dt, Math.hypot(player.pos.x - room.amigaDesk.x, player.pos.z - room.amigaDesk.z),
     mode === 'intro' || document.hidden || (mode === 'seated' && pc.running));
-  regulars[0].group.visible = !amigaTaken;   // Ghoul is out of the chair while you are in it
+  regulars[0].group.visible = ghoulAtPc();   // Ghoul gets up when somebody else wants PC-04
   ui.amigaStatus.textContent = room.amiga.status;
   room.updatePizza(dt);
   room.updateTrays(dt);
@@ -1669,19 +1669,22 @@ function refreshStations() {
     if (st.bench && !st.bench.ready) continue;   // an empty or half-built bench: bench.js keeps its screen
     const mine = seatedAt === st;
     const who = mine ? null : link.occupant(st.index);
-    if (st.deskPhones) st.deskPhones.visible = !mine && !who; // somebody sitting there has them on
+    const ghoul = st.index === GHOUL_PC && !mine && !who;   // xX_Ghoul_Xx is on it
+    if (st.deskPhones) st.deskPhones.visible = !mine && !who && !ghoul; // somebody sitting there has them on
     if (mine) {
       st.setTag(myName);
       st.screen.free = false;
       st.screen.setMode('mine', `${myName} · ${pc.kind === 'solo' || !pc.kind ? gameOf(pc.game ?? myGame).name : 'DEATHMATCH'}`);
     } else {
       if (st.screen.mode === 'mine') st.screen.mode = st.screen.idle;
-      st.setTag(who ? who.name : st.name);
+      st.setTag(who ? who.name : ghoul ? 'XX_GHOUL_XX' : st.name);
       const inMatch = who && link.match?.players.includes(who.id) && link.match.status !== 'lobby';
-      st.screen.setFree(!who, who?.name, inMatch ? 'IN THE DEATHMATCH' : 'FRAGGING');
+      st.screen.setFree(!who && !ghoul, who?.name ?? (ghoul ? 'XX_GHOUL_XX' : undefined), ghoul ? 'DESCENT' : inMatch ? 'IN THE DEATHMATCH' : 'FRAGGING');
     }
   }
 }
+
+refreshStations();   // Ghoul is already at PC-04 when the room opens
 
 function setNetStatus() {
   if (!link.online) {

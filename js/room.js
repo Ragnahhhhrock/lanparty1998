@@ -1018,8 +1018,8 @@ const GAMER_DESKS = [
   // right wall, two PCs facing the wall. Players face +x.
   // The pair on this wall are bots playing each other in the real DOOM: spectator mode (js/spectator.js). The fifth entry is which fighter.
   { x: 5.45, z: 2.0, segments: 2, yaw: -Math.PI / 2, pcs: [['K-Rad', 1.25, 'DEATHMATCH', 'speakers', 0], ['n00bslayer', 2.75, 'DEATHMATCH', 'speakers', 1]] },
-  // front-left corner, where the snack table leaves off. Players face -x.
-  { x: -5.45, z: 1.838 + TABLE_LEN / 2, segments: 1, yaw: Math.PI / 2, pcs: [['xX_Ghoul_Xx', 1.838 + TABLE_LEN / 2, 'AMIGA', 'speakers', 'amiga']] },
+  // front-left corner, where the snack table leaves off. Players face -x. The Amiga is nobody's: xX_Ghoul_Xx plays at PC-04 (main.js GHOUL_PC)
+  { x: -5.45, z: 1.838 + TABLE_LEN / 2, segments: 1, yaw: Math.PI / 2, pcs: [['AMIGA 500', 1.838 + TABLE_LEN / 2, 'AMIGA', 'speakers', 'amiga']] },
 ];
 const COUCH_SEATS = [['MACCA', 0], ['PhatBass', 2]]; // [who, cushion]: 0 is the near end, 1 the middle, 2 the far end
 
@@ -1070,7 +1070,7 @@ function buildGamers(scene, out, labelVolt) {
         out.interactables.push(hit);
         out.amigaDesk = { x: d.x, z, who, view: g.localToWorld(new THREE.Vector3(0, TABLE_Y + 0.42, 0.78)), look: g.localToWorld(new THREE.Vector3(0, TABLE_Y + 0.22, 0.04)) };
       }
-      out.seats[who] = { chair, group: g, audio };
+      if (!isAmiga) out.seats[who] = { chair, group: g, audio };   // the Amiga's chair is empty: anyone can use it
       const at = chair.getWorldPosition(new THREE.Vector3());
       out.colliders.push({ minX: at.x - 0.25, maxX: at.x + 0.25, minZ: at.z - 0.25, maxZ: at.z + 0.25 });
     });
