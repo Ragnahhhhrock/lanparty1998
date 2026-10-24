@@ -60,6 +60,8 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
   background: rgba(255, 255, 255, .85); box-shadow: 0 0 0 1px rgba(0, 0, 0, .6); }
 #prompt { position: absolute; left: 50%; top: calc(50% + 28px); transform: translateX(-50%);
   font: var(--text-crt-md)/1 var(--font-crt); color: var(--phosphor); background: var(--hud-bg); padding: 6px 10px; white-space: nowrap; }
+#prompt .prompt-part + .prompt-part { margin-left: var(--space-4); }
+#prompt kbd { font: var(--text-crt-md)/1 var(--font-crt); margin-right: var(--space-1); }
 #meters { position: absolute; left: 16px; bottom: calc(var(--taskbar-h) + var(--space-4)); padding: 8px 10px; display: grid; gap: 5px; min-width: 180px; }
 .meter { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 8px; font-size: var(--text-ui-xs); font-weight: bold; letter-spacing: .04em; }
 .bar { height: 10px; background: var(--w98-light); box-shadow: var(--bevel-sunken); padding: 2px; }

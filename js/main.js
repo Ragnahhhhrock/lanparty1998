@@ -399,6 +399,21 @@ function findTarget() {
   return null;
 }
 
+// "E · Sit down  ·  F · Open the case" becomes keycaps: <kbd>E</kbd> Sit down   <kbd>F</kbd> Open the case
+let promptShown = '';
+function setPrompt(text) {
+  if (text === promptShown) return;
+  promptShown = text;
+  ui.prompt.replaceChildren(...text.split('  ·  ').map((part) => {
+    const m = part.match(/^(\S{1,3}) · (.+)$/);
+    const span = document.createElement('span');
+    span.className = 'prompt-part';
+    if (m) { const k = document.createElement('kbd'); k.textContent = m[1]; span.append(k, ` ${m[2]}`); }
+    else span.textContent = part;
+    return span;
+  }));
+}
+
 const PROMPTS = {
   sit: (t) => {
     const who = link.occupant(t.station.index);
@@ -1099,7 +1114,7 @@ function sitInBean() {
     bean.sinkT = 0;
     mode = 'bean';
     sfx.beanBag(true);
-    ui.prompt.textContent = 'E · Get up';
+    setPrompt('E · Get up');
     ui.prompt.hidden = false;
   });
 }
@@ -1426,7 +1441,7 @@ function frame() {
     walk(dt);
     target = findTarget();
     ui.prompt.hidden = !target;
-    if (target) ui.prompt.textContent = PROMPTS[target.kind](target);
+    if (target) setPrompt(PROMPTS[target.kind](target));
   } else if (mode === 'bean') {
     // you sink into the vinyl for a moment after landing, then it holds you
     bean.sinkT = Math.min(1, bean.sinkT + dt / 0.45);

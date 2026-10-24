@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'Keys are printed on the prompts',
+    text: 'Look at anything in the room and the little label now shows the key as a keycap: E to sit, switch the lights, open the pizza box, F to open the case or close the lid. Somebody has also stopped asking where the F key is.',
+  },
+  {
     date: '1998-02-07', kind: 'fix', title: 'The basement door sticks no more',
     text: 'Some people pressed Walk in and got a dark room and nobody home. A stale copy of the game on their machine was not speaking to the new one. Every part of the game now carries a version tag, so the two agree on who is who.',
   },
