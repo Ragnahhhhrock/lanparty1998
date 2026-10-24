@@ -4253,7 +4253,8 @@ class EmulatorJS {
         if (option === "shader") {
             this.enableShader(value);
         } else if (option === "disk") {
-            this.gameManager.setCurrentDisk(value);
+            const n = parseInt(value); // LAN PARTY 98 patch: never hand the core a disk number it has not been given (see SOURCES.md)
+            if (Number.isInteger(n) && n >= 0 && n < this.gameManager.getDiskCount() && n !== this.gameManager.getCurrentDisk()) this.gameManager.setCurrentDisk(n);
         } else if (option === "virtual-gamepad") {
             this.toggleVirtualGamepad(value !== "disabled");
         } else if (option === "menu-bar-button") {
@@ -4341,6 +4342,7 @@ class EmulatorJS {
         this.saveSettings();
     }
     setupDisksMenu() {
+        this.allSettings ??= {}; // LAN PARTY 98 patch: the settings menu is built after this one, and a multi-disk game sets "disk" first (see SOURCES.md)
         this.disksMenu = this.createElement("div");
         this.disksMenu.classList.add("ejs_settings_parent");
         const nested = this.createElement("div");

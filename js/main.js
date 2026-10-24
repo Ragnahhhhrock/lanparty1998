@@ -1,5 +1,6 @@
 // LAN Party '98: walk the basement with everyone else who's online, grab a free PC,
 // play a shareware game (DOOM, Quake, Hexen, Heretic, Descent), and start a deathmatch with whoever's sitting down.
+import { setupAmigaPanel } from './amiga-panel.js';
 import * as THREE from 'three';
 import { buildRoom, ROOM, shackBoxMats } from './room.js';
 import { DosPC } from './emulator.js';
@@ -425,7 +426,7 @@ const PROMPTS = {
   drink: () => 'E · Crack a Volt Cola',
   soda: () => 'E · Pour a Citrus Zap into a red cup',
   eat: () => 'E · Grab a handful of Nachoz or Cheez Curlz',
-  amiga: () => 'E · Use the Amiga 500',
+  amiga: () => 'E · Use the Amiga',
   console: () => 'E · Play the console (it runs N64 ROMs from your own drive)',
   beanbag: () => 'E · Sit in the bean bag',
   eject: (t) => `E · ${t.station.tower.cdrom?.open ? 'Close' : 'Open'} the CD-ROM tray`,
@@ -1171,6 +1172,7 @@ function leaveAmiga() {
   if (mode !== 'amiga') return;
   room.amiga.leave();
   ui.amigaBar.hidden = true;
+  amigaPanel?.close();
   const { look } = room.amigaDesk;
   const pos = new THREE.Vector3(look.x + 1.3, EYE, look.z);
   const q = cameraPoseLookingAt(pos, look);
@@ -1182,7 +1184,9 @@ function leaveAmiga() {
     lockPointer();
   });
 }
+let amigaPanel = null;
 $('ami-stand').addEventListener('click', leaveAmiga);
+$('ami-setup').addEventListener('click', () => { amigaPanel ??= setupAmigaPanel(room.amiga); amigaPanel.toggle(); $('ami-setup').blur(); });
 $('ami-reset').addEventListener('click', () => { room.amiga.reset(); $('ami-reset').blur(); });
 
 n64.onstand = leaveConsole;

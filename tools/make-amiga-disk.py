@@ -87,8 +87,8 @@ def dated(block):
     long(block, 105, DAYS); long(block, 106, MINS); long(block, 107, TICKS)
 
 
-def build():
-    body = SOURCE.read_bytes().replace(b"\r\n", b"\n")
+def build(source=SOURCE, volume=VOLUME):
+    body = source.read_bytes().replace(b"\r\n", b"\n")
     image = bytearray(BLOCKS * BLOCK)
     used = {ROOT_BLOCK, BITMAP_BLOCK}
     nxt = [ROOT_BLOCK + 2]
@@ -147,7 +147,7 @@ def build():
     long(root, 6 + hash_name("S"), s_dir)
     long(root, 78, 0xFFFFFFFF); long(root, 79, BITMAP_BLOCK)
     dated(root)                                     # the root's own change date, the volume's, and its creation date
-    put_name(root, 432, VOLUME)
+    put_name(root, 432, volume)
     for base in (118, 121):
         long(root, base, DAYS); long(root, base + 1, MINS); long(root, base + 2, TICKS)
     long(root, 127, ST_ROOT)
@@ -165,7 +165,21 @@ def build():
     return bytes(image)
 
 
+# The floppies that come in the disk box. (file, volume name, script)
+DISKS = [
+    ("lanparty-amiga.adf", "LANPARTY", ROOT / "tools/amiga/Startup-Sequence"),
+    ("dazza-disk.adf", "DAZZA", ROOT / "tools/amiga/dazza.Startup-Sequence"),
+]
+
 if __name__ == "__main__":
-    DEST.write_bytes(build())
-    print(f"wrote {DEST.relative_to(ROOT)} ({DEST.stat().st_size} bytes) from {SOURCE.relative_to(ROOT)}")
+    args = sys.argv[1:]
+    if args:        # python3 tools/make-amiga-disk.py SCRIPT VOLUME OUT.adf: one disk, for trying things out
+        out = pathlib.Path(args[2])
+        out.write_bytes(build(pathlib.Path(args[0]), args[1]))
+        print(f"wrote {out}")
+    else:
+        for name, volume, script in DISKS:
+            dest = ROOT / "bundles" / name
+            dest.write_bytes(build(script, volume))
+            print(f"wrote {dest.relative_to(ROOT)} ({dest.stat().st_size} bytes) from {script.relative_to(ROOT)}")
     sys.exit(0)

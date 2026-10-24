@@ -8,6 +8,7 @@ import { headphones } from './headphones.js';
 import { GAME_IDS } from './games.js';
 import { Spectator } from './spectator.js';
 import { AmigaMachine } from './amiga.js';
+import { FLOPPY_COLOURS, floppyIndex } from './amiga-disks.js';
 
 export const ROOM = { minX: -6, maxX: 6, minZ: -5, maxZ: 5, height: 2.8 };
 const TABLE_Y = 0.74;
@@ -334,43 +335,125 @@ function pcSetup(g, screen, tagText, chairYaw, burner = false, audio = 'speakers
   return { mon, tw, tagTex, chair, phones };
 }
 
-// The Amiga 500 desk: a charcoal monitor, the computer (keyboard and all in one wedge of beige) with its floppy drive
-// down the right-hand side, a mouse on a mat, a couple of floppies and a Volt can. Same layout as pcSetup (the monitor
-// faces -z, the chair is at +z) so the power and glow code treat it like any other PC. Colours are tokens: --beige,
-// --beige-light, --console-dark, --disk-case (charcoal), --floppy-black, --disk-metal, --volt, --mat-cloth.
+// The Amiga desk: a charcoal monitor, the computer (an Amiga 500 or 1200, keyboard and all in one wedge of beige, or an
+// Amiga 2000 desktop case with the monitor on it and a separate keyboard), up to two external floppy drives, a hard
+// disk and a CD-ROM drive, a mouse on a mat, and the disk box with the floppies that are not in a drive. Same layout as
+// pcSetup (the monitor faces -z, the chair is at +z) so the power and glow code treat it like any other PC.
+// desk.apply(machine) shows what the machine's config says is fitted and inserted (js/amiga.js, js/amiga-disks.js).
+// Colours are tokens: --beige, --beige-light, --console-dark, --disk-case (charcoal), --disk-smoke, --floppy-black/blue/
+// red/yellow/green/grey, --disk-metal, --volt, --mat-cloth, --w98-dark.
 const amigaShell = new THREE.MeshStandardMaterial({ color: 0x44474b, roughness: 0.6 });      // --console-dark
 const amigaShellDark = new THREE.MeshStandardMaterial({ color: 0x26262b, roughness: 0.65 }); // --disk-case
+const beigeLight = new THREE.MeshStandardMaterial({ color: 0xebe4cf, roughness: 0.7 });      // --beige-light
+const slotMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0a });                            // --w98-dark
+const floppyMats = FLOPPY_COLOURS.map((c) => new THREE.MeshStandardMaterial({ color: c.hex, roughness: 0.6 }));   // --floppy-black/blue/red/yellow/green/grey
+const shutterMat = new THREE.MeshStandardMaterial({ color: 0xb9bdc2, metalness: 0.4, roughness: 0.4 }); // --disk-metal
+
+// a 3.5" floppy lying flat (origin: its middle; the shutter end toward -z)
+function floppyMesh(id = '') {
+  const f = new THREE.Group();
+  f.add(box(0.09, 0.004, 0.09, floppyMats[floppyIndex(id)], 0, 0, 0));
+  f.add(box(0.03, 0.0045, 0.03, shutterMat, 0, 0, -0.026));
+  return f;
+}
+
 function amigaSetup(g, machine, tagText, chairYaw) {
   const mon = crt(machine.texture, amigaShell, amigaShellDark);
   mon.group.position.set(0, TABLE_Y, -0.12);
   g.add(mon.group);
 
-  // the computer: a low wedge, the keyboard on top of it
-  const a500 = new THREE.Group();
+  // the computers. Each has the slot DF0 is in, and a floppy that shows when something is in it.
   const keys = new THREE.MeshStandardMaterial({ map: T.keyboardTop(), roughness: 0.7 });
-  a500.add(box(0.46, 0.045, 0.34, beige, 0, 0.0225, 0));                  // the case
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.012, 0.2), [beige, beige, keys, beige, beige, beige]);
-  deck.position.set(0, 0.051, 0.06);
-  deck.rotation.x = 0.06;
-  a500.add(deck);
-  a500.add(box(0.46, 0.02, 0.1, beige, 0, 0.055, -0.12));                // the raised back
-  a500.add(box(0.008, 0.012, 0.09, new THREE.MeshBasicMaterial({ color: 0x0a0a0a }), 0.231, 0.03, 0.04)); // floppy slot, right side (--w98-dark)
-  a500.add(box(0.01, 0.006, 0.006, new THREE.MeshBasicMaterial({ color: 0x3cff5a }), 0.232, 0.014, 0.1));  // drive light
-  const power = box(0.012, 0.006, 0.004, new THREE.MeshBasicMaterial({ color: 0xe2231a }), -0.19, 0.04, 0.172); // power light (--volt)
-  a500.add(power);
-  a500.position.set(-0.02, TABLE_Y, 0.2);
-  g.add(a500);
+  const wedge = (w, d, mat, led) => {
+    const c = new THREE.Group();
+    c.add(box(w, 0.045, d, mat, 0, 0.0225, 0));                          // the case
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(w - 0.02, 0.012, d * 0.6), [mat, mat, keys, mat, mat, mat]);
+    deck.position.set(0, 0.051, d * 0.18);
+    deck.rotation.x = 0.06;
+    c.add(deck);
+    c.add(box(w, 0.02, d * 0.3, mat, 0, 0.055, -d * 0.35));              // the raised back
+    c.add(box(0.008, 0.012, 0.09, slotMat, w / 2 + 0.001, 0.03, 0.04));   // floppy slot, right side
+    c.add(box(0.01, 0.006, 0.006, new THREE.MeshBasicMaterial({ color: 0x3cff5a }), w / 2 + 0.002, 0.014, 0.1)); // drive light
+    c.add(box(0.012, 0.006, 0.004, new THREE.MeshBasicMaterial({ color: 0xe2231a }), -w / 2 + 0.04, 0.04, d / 2 + 0.002)); // power light (--volt)
+    const disk = floppyMesh(); disk.position.set(w / 2 + 0.012, 0.03, 0.04); disk.rotation.z = 0; disk.rotation.y = Math.PI / 2; disk.visible = false;
+    c.add(disk);
+    c.position.set(-0.02, TABLE_Y, 0.2);
+    c.userData.disk = disk;
+    return c;
+  };
+  const a500 = wedge(0.46, 0.34, beige);
+  const a1200 = wedge(0.5, 0.36, beigeLight);
+  a1200.add(box(0.008, 0.016, 0.07, slotMat, 0.251, 0.03, -0.1));        // the card slot, on the right
+  const a2000 = new THREE.Group();                                         // the desktop case; the monitor sits on it
+  a2000.add(box(0.56, 0.13, 0.4, beige, 0, 0.065, 0));
+  a2000.add(box(0.14, 0.012, 0.004, slotMat, -0.17, 0.095, 0.201));       // DF0, in the front
+  a2000.add(box(0.14, 0.012, 0.004, slotMat, -0.17, 0.045, 0.201));       // a second bay with nothing in it
+  a2000.add(box(0.012, 0.006, 0.004, new THREE.MeshBasicMaterial({ color: 0x3cff5a }), -0.09, 0.095, 0.202));
+  a2000.add(box(0.012, 0.006, 0.004, new THREE.MeshBasicMaterial({ color: 0xe2231a }), 0.2, 0.1, 0.202));       // power light (--volt)
+  a2000.add(box(0.04, 0.02, 0.01, beigeDark, 0.23, 0.095, 0.205));       // the power switch
+  const d2000 = floppyMesh(); d2000.position.set(-0.17, 0.095, 0.215); d2000.visible = false; a2000.add(d2000);
+  a2000.userData.disk = d2000;
+  a2000.position.set(0, TABLE_Y, -0.1);
+  const kb2000 = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.025, 0.17), [beige, beige, keys, beige, beige, beige]);
+  kb2000.position.set(-0.02, TABLE_Y + 0.013, 0.24);
+  kb2000.rotation.x = 0.05;
+  g.add(a500, a1200, a2000, kb2000);
 
   g.add(box(0.06, 0.03, 0.1, beige, 0.33, TABLE_Y + 0.015, 0.26));        // mouse
   g.add(box(0.2, 0.004, 0.18, new THREE.MeshStandardMaterial({ color: 0x1c3b6e }), 0.34, TABLE_Y + 0.002, 0.25)); // mousepad, --mat-cloth
-  for (const [x, z, r] of [[0.5, 0.18, 0.3], [0.46, 0.05, -0.2]]) {        // floppies, left lying about
-    const f = new THREE.Group();
-    f.add(box(0.09, 0.004, 0.09, new THREE.MeshStandardMaterial({ color: 0x1c1c1f, roughness: 0.6 }), 0, 0, 0));   // --floppy-black
-    f.add(box(0.03, 0.0045, 0.03, new THREE.MeshStandardMaterial({ color: 0xb9bdc2, metalness: 0.4, roughness: 0.4 }), 0, 0, -0.026)); // --disk-metal
-    f.position.set(x, TABLE_Y + 0.003, z);
-    f.rotation.y = r;
-    g.add(f);
-  }
+
+  // external floppy drives
+  const extDrive = (x) => {
+    const u = new THREE.Group();
+    u.add(box(0.095, 0.05, 0.24, beige, 0, 0.025, 0));
+    u.add(box(0.07, 0.01, 0.004, slotMat, 0, 0.032, 0.121));
+    u.add(box(0.008, 0.006, 0.004, new THREE.MeshBasicMaterial({ color: 0x3cff5a }), 0.03, 0.012, 0.121));
+    const disk = floppyMesh(); disk.position.set(0, 0.032, 0.135); disk.visible = false; u.add(disk);
+    u.position.set(x, TABLE_Y, -0.12);
+    u.userData.disk = disk;
+    u.visible = false;
+    g.add(u);
+    return u;
+  };
+  const df1 = extDrive(0.52), df2 = extDrive(0.64);
+
+  // a hard disk, and a CD-ROM drive that sits on it (or on the table without one)
+  const hd = new THREE.Group();
+  hd.add(box(0.2, 0.075, 0.3, beigeDark, 0, 0.0375, 0));
+  for (let i = 0; i < 4; i++) hd.add(box(0.14, 0.004, 0.004, slotMat, 0, 0.02 + i * 0.01, 0.151));   // vents
+  hd.add(box(0.01, 0.006, 0.004, new THREE.MeshBasicMaterial({ color: 0x3cff5a }), 0.08, 0.06, 0.151));
+  hd.position.set(-0.62, TABLE_Y, -0.1);
+  hd.visible = false;
+  const cd = new THREE.Group();
+  cd.add(box(0.2, 0.06, 0.28, beige, 0, 0.03, 0));
+  cd.add(box(0.15, 0.006, 0.004, slotMat, 0, 0.035, 0.141));
+  const tray = box(0.13, 0.004, 0.07, beigeDark, 0, 0.021, 0.17);
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.002, 28), new THREE.MeshStandardMaterial({ color: 0xb9bdc2, metalness: 0.7, roughness: 0.25 }));  // --disk-metal
+  disc.position.set(0, 0.025, 0.17);
+  cd.add(tray, disc);
+  cd.userData.disc = disc; cd.userData.tray = tray;
+  cd.position.set(-0.62, TABLE_Y, -0.1);
+  cd.visible = false;
+  g.add(hd, cd);
+
+  // the disk box: an open tray, the floppies that are not in a drive standing in it
+  const dbox = new THREE.Group();
+  dbox.add(box(0.2, 0.008, 0.12, amigaShellDark, 0, 0.004, 0));
+  dbox.add(box(0.2, 0.1, 0.006, amigaShellDark, 0, 0.05, -0.057));
+  for (const sx of [-1, 1]) dbox.add(box(0.006, 0.07, 0.12, amigaShellDark, sx * 0.097, 0.035, 0));
+  dbox.add(box(0.2, 0.03, 0.006, amigaShellDark, 0, 0.015, 0.057));
+  const lid = box(0.2, 0.004, 0.1, new THREE.MeshStandardMaterial({ color: 0x3a3d42, roughness: 0.4, transparent: true, opacity: 0.75 }), 0, 0, 0);   // --disk-smoke
+  const lidHinge = new THREE.Group();
+  lid.position.set(0, 0, 0.05);
+  lidHinge.add(lid);
+  lidHinge.position.set(0, 0.1, -0.057);
+  lidHinge.rotation.x = -1.7;
+  dbox.add(lidHinge);
+  const upright = new THREE.Group();
+  dbox.add(upright);
+  dbox.position.set(0.72, TABLE_Y, 0.26);
+  g.add(dbox);
+  const standing = [];
 
   g.add(speakerPair());
 
@@ -383,7 +466,43 @@ function amigaSetup(g, machine, tagText, chairYaw) {
   chair.position.set(0, 0, 0.82);
   chair.rotation.y = chairYaw;
   g.add(chair);
-  return { mon, tw: null, tagTex, chair, phones: null };
+
+  // show what the machine's config says
+  const desk = { look: null, group: g };
+  const colourOf = (mesh, id) => { mesh.children[0].material = floppyMats[floppyIndex(id)]; };
+  desk.apply = () => {
+    const c = machine.config, m = c.model, ins = c.inserted;
+    a500.visible = m === 'A500'; a1200.visible = m === 'A1200'; a2000.visible = kb2000.visible = m === 'A2000';
+    const lift = m === 'A2000' ? 0.13 : 0;
+    mon.group.position.y = TABLE_Y + lift;
+    if (desk.look) desk.look.y = desk.lookBase + lift;
+    for (const [u, on] of [[df1, c.df1], [df2, c.df2]]) u.visible = on;
+    hd.visible = c.hd; cd.visible = c.cd;
+    cd.position.y = TABLE_Y + (c.hd ? 0.075 : 0);
+    const put = (mesh, id) => { const d = id && machine.disk(id); mesh.visible = !!d; if (d) colourOf(mesh, id); };
+    for (const comp of [a500, a1200, a2000]) put(comp.userData.disk, ins.df0);
+    put(df1.userData.disk, ins.df1); put(df2.userData.disk, ins.df2);
+    const cdIn = c.cd && ins.cd && machine.disk(ins.cd);
+    cd.userData.disc.visible = !!cdIn; cd.userData.tray.visible = true;
+    // the box: every floppy that is not in a drive, front to back, each a little higher than the one in front so the tops show
+    const inBox = machine.library.filter((d) => d.kind === 'floppy' && !machine.where(d.id)).slice(0, 18);
+    const pitch = Math.min(0.0075, 0.1 / Math.max(1, inBox.length));
+    while (standing.length < inBox.length) {
+      const f = new THREE.Group();
+      f.add(box(0.092, 0.09, 0.003, floppyMats[0], 0, 0, 0));
+      f.add(box(0.03, 0.028, 0.0034, shutterMat, 0, 0.03, 0));
+      standing.push(f); upright.add(f);
+    }
+    standing.forEach((f, i) => {
+      f.visible = i < inBox.length;
+      if (!f.visible) return;
+      f.children[0].material = floppyMats[floppyIndex(inBox[i].id)];
+      f.position.set(0, 0.058 + i * 0.0025, 0.045 - i * pitch);
+      f.rotation.x = -0.12;
+    });
+  };
+  desk.lookBase = 0;
+  return { mon, tw: null, tagTex, chair, phones: null, desk };
 }
 
 // Six PCs. Nobody owns one any more: whoever sits down first gets it. The idle screens are
@@ -1043,10 +1162,13 @@ function buildGamers(scene, out, labelVolt) {
       g.rotation.y = d.yaw;
       scene.add(g);
       const isAmiga = fighter === 'amiga';
-      let screen, built;
+      let screen, built, amigaBuilt = null;
       if (isAmiga) {                                  // the Amiga 500: the real thing, running (js/amiga.js)
         screen = out.amiga = new AmigaMachine();
         built = amigaSetup(g, screen, who.toUpperCase(), 0.1 * (pi + 1) - 0.15);
+        built.desk.apply();
+        screen.watch(() => built.desk.apply());
+        amigaBuilt = built;
       } else {
         screen = new T.Screen('remote', 20 + di * 3 + pi);
         screen.setFree(false, who.toUpperCase(), what);
@@ -1063,12 +1185,15 @@ function buildGamers(scene, out, labelVolt) {
       g.updateMatrixWorld(true);
       if (isAmiga) {
         // E at the monitor or the computer: lean in and type. view is where the camera goes, look is the glass.
-        const hit = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.75), new THREE.MeshBasicMaterial({ visible: false }));
-        hit.position.set(0, TABLE_Y + 0.25, 0.05);
+        const hit = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.55, 0.75), new THREE.MeshBasicMaterial({ visible: false }));
+        hit.position.set(0.05, TABLE_Y + 0.27, 0.0);
         hit.userData.interact = { kind: 'amiga' };
         g.add(hit);
         out.interactables.push(hit);
         out.amigaDesk = { x: d.x, z, who, view: g.localToWorld(new THREE.Vector3(0, TABLE_Y + 0.42, 0.78)), look: g.localToWorld(new THREE.Vector3(0, TABLE_Y + 0.22, 0.04)) };
+        amigaBuilt.desk.look = out.amigaDesk.look;
+        amigaBuilt.desk.lookBase = out.amigaDesk.look.y;
+        amigaBuilt.desk.apply();
       }
       if (!isAmiga) out.seats[who] = { chair, group: g, audio };   // the Amiga's chair is empty: anyone can use it
       const at = chair.getWorldPosition(new THREE.Vector3());

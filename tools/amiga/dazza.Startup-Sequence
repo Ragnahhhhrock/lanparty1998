@@ -1,0 +1,11 @@
+; DAZZA: the second disk in the box. Boots like any other, says its piece, and has nothing else on it.
+Prompt "DAZZA> "
+Echo "*E[7m DAZZA'S DISK *E[0m"
+Echo ""
+Echo "This is Dazza's disk. It is meant to have Workbench on it."
+Echo "It has this note instead. He says it is the same thing."
+Echo ""
+Echo "Type *E[7mHELP*E[0m."
+Echo ""
+Alias help Echo "HELP  FOOTY  ENDCLI*NThat is everything this disk knows."
+Alias footy Echo "Dazza is at the footy. The disk is not."

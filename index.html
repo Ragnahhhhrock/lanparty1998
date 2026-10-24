@@ -188,7 +188,40 @@ Press any key to continue _</div>
   <div id="amiga-bar" hidden>
     <button id="ami-stand" class="w98-btn" type="button">Stand up <kbd>`</kbd></button>
     <button id="ami-reset" class="w98-btn" type="button">Reset</button>
+    <button id="ami-setup" class="w98-btn" type="button" aria-expanded="false" aria-controls="amiga-panel">Setup &amp; disks</button>
     <span id="amiga-status" role="status" aria-live="polite">Type HELP</span>
+  </div>
+
+  <!-- The Amiga's setup and disk box (js/amiga-panel.js) -->
+  <div id="amiga-panel" class="w98-window" data-owns-keys hidden role="dialog" aria-label="Amiga setup and disk box">
+    <div class="w98-title"><span>Amiga setup</span><b id="amp-close" role="button" tabindex="0" aria-label="Close">x</b></div>
+    <div class="w98-body">
+      <div class="amp-row">
+        <label for="amp-model">Machine</label>
+        <select id="amp-model"></select>
+      </div>
+      <fieldset class="amp-drives"><legend>Fitted</legend>
+        <label><input type="checkbox" data-fit="df1"> DF1</label>
+        <label><input type="checkbox" data-fit="df2"> DF2</label>
+        <label><input type="checkbox" data-fit="hd"> Hard disk</label>
+        <label><input type="checkbox" data-fit="cd"> CD-ROM</label>
+      </fieldset>
+      <div id="amp-bays" class="amp-bays" aria-label="Drives"></div>
+      <div class="amp-box-head">
+        <b>Disk box</b>
+        <input id="amp-filter" type="search" placeholder="Filter" aria-label="Filter disks">
+      </div>
+      <div id="amp-box" class="amp-box" aria-label="Disk box"></div>
+      <div class="amp-actions">
+        <button id="amp-scan" class="w98-btn" type="button">Scan folder</button>
+        <button id="amp-files" class="w98-btn" type="button">Add files</button>
+        <button id="amp-rescan" class="w98-btn" type="button" hidden>Rescan</button>
+        <button id="amp-forget" class="w98-btn" type="button" hidden>Forget folders</button>
+      </div>
+      <p id="amp-note" class="amp-note" role="status" aria-live="polite">Drag a disk onto a drive. Drop disk files or folders here to add them. Files stay on your computer.</p>
+      <input id="amp-input-files" type="file" multiple accept=".adf,.adz,.dms,.hdf,.hdz,.iso,.chd" hidden>
+      <input id="amp-input-dir" type="file" webkitdirectory multiple hidden>
+    </div>
   </div>
 
   <!-- Errands: one message box, filled in by whatever you're fiddling with -->
