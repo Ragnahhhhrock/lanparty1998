@@ -8,6 +8,10 @@
 
 export const NEWS = [
   {
+    date: '1998-02-07', kind: 'new', title: 'The basement has no front desk',
+    text: 'The page opens and you are already standing in the basement. There is no title card and no button to press. Everything that used to float over the room now lives on the computers: sit at any PC and its screen fills yours, with IRC, the music player, this browser and the games as icons down the left. Click a game and the box reboots into it. Quit to Windows under the screen gets you back. H is for help, and the shop is under Start > BUILDPC.EXE.',
+  },
+  {
     date: '1998-02-07', kind: 'new', title: 'Keys are printed on the prompts',
     text: 'Look at anything in the room and the little label now shows the key as a keycap: E to sit, switch the lights, open the pizza box, F to open the case or close the lid. Somebody has also stopped asking where the F key is.',
   },

@@ -75,18 +75,18 @@
 "./js/amiga-panel.js": "./js/amiga-panel.js?v=9a847a5573",
 "./js/amiga.js": "./js/amiga.js?v=6e5d049590",
 "./js/analytics.js": "./js/analytics.js?v=1a992c3d77",
-"./js/app-browser.js": "./js/app-browser.js?v=39a2f4fdf0",
+"./js/app-browser.js": "./js/app-browser.js?v=8bbe85e0fb",
 "./js/app-reminders.js": "./js/app-reminders.js?v=c26bcc6261",
 "./js/app-ski.js": "./js/app-ski.js?v=91632c35fe",
 "./js/app-snapster.js": "./js/app-snapster.js?v=aa84abab55",
 "./js/app-solitaire.js": "./js/app-solitaire.js?v=839eb7c674",
-"./js/apps.js": "./js/apps.js?v=53efbcaa8a",
+"./js/apps.js": "./js/apps.js?v=3d7873c4cf",
 "./js/avatars.js": "./js/avatars.js?v=1dd8d670e5",
 "./js/bench-plan.js": "./js/bench-plan.js?v=5a8a5dbdc2",
 "./js/bench.js": "./js/bench.js?v=2880aa11b3",
 "./js/build.js": "./js/build.js?v=306ef1242f",
 "./js/calc.js": "./js/calc.js?v=22934133e9",
-"./js/desktop.js": "./js/desktop.js?v=7ac3e71050",
+"./js/desktop.js": "./js/desktop.js?v=b47bfc6816",
 "./js/dialog.js": "./js/dialog.js?v=d3ee9495c1",
 "./js/dm-demos.js": "./js/dm-demos.js?v=6ea8d91e66",
 "./js/emulator.js": "./js/emulator.js?v=a22ba437cf",
@@ -105,7 +105,7 @@
 "./js/n64-roms.js": "./js/n64-roms.js?v=1c293d53d1",
 "./js/n64-term.js": "./js/n64-term.js?v=adbcbb567b",
 "./js/n64.js": "./js/n64.js?v=2eeb61fb11",
-"./js/net.js": "./js/net.js?v=eea7b18c3c",
+"./js/net.js": "./js/net.js?v=ac8f28a582",
 "./js/party.js": "./js/party.js?v=7f72d472aa",
 "./js/phone.js": "./js/phone.js?v=aa09e8778e",
 "./js/power-plan.js": "./js/power-plan.js?v=1ad648af93",
@@ -127,10 +127,10 @@
 "./js/voice-logic.js": "./js/voice-logic.js?v=6c7b7e5409",
 "./js/voice.js": "./js/voice.js?v=ae5795f4d3",
 "./js/voices.js": "./js/voices.js?v=90b9f3d712",
-"./js/web-news.js": "./js/web-news.js?v=7a48d03fe2",
+"./js/web-news.js": "./js/web-news.js?v=76a77aeb90",
 "./js/web-pages.js": "./js/web-pages.js?v=2217c2e260",
 "./js/web-static.js": "./js/web-static.js?v=956f213e6f",
-"./js/wizard.js": "./js/wizard.js?v=3ee3e0e7e8",
+"./js/wizard.js": "./js/wizard.js?v=bb85b806b4",
 "./js/zip.js": "./js/zip.js?v=fadee13fbf"
 }
 }
@@ -153,6 +153,8 @@
       <div id="voice-status" role="status" aria-live="polite"></div>
     </div>
     <div id="toast" hidden></div>
+    <div id="lookhint" hidden><span id="lookhint-text"></span><button id="help-btn" class="w98-btn" type="button">Help <kbd>H</kbd></button></div>
+    <a id="donate-corner" class="w98-btn default" href="https://buy.stripe.com/aFa5kvbqp2pL5kY46oaAw04" target="_blank" rel="noopener noreferrer" data-donate="stripe" title="Shout the webmaster a Volt Cola. $5 AUD, card or Apple Pay, via Stripe.">Shout me a Volt Cola <b>$5</b></a>
     <aside id="setup" class="w98-window" aria-label="Setting up your PC" hidden>
       <div class="w98-title"><span class="w98-ttext">SETUP.EXE</span></div>
       <div class="setup-body">
@@ -169,48 +171,52 @@
     <form id="chat-form" hidden><input id="chat-input" maxlength="120" autocomplete="off" placeholder="Say something, then Enter"></form>
   </div>
 
-  <!-- The desktop: draggable windows (IRC, LANamp and the Start menu programs) over the room.
-       Tab frees the mouse so you can use them; clicking the room takes it back. -->
-  <div id="desktop" aria-label="Desktop">
-    <!-- LANamp: the music player. M shows or hides it; Z X C V B work like the real thing. -->
-    <div id="lanamp" aria-label="LANamp music player">
-      <div class="w98-title amp-title"><span class="w98-ttext">LANAMP 2.0</span></div>
-      <div class="amp-main">
-        <div class="amp-screen"><canvas id="amp-vis" width="76" height="28"></canvas><div id="amp-time">0:00</div></div>
-        <div id="amp-marquee"><span id="amp-song"></span></div>
-        <div class="amp-info"><span id="amp-genre"></span><span id="amp-kind">SYNTH 22kHz</span></div>
-        <div class="amp-row">
-          <button id="amp-prev" aria-label="Previous">|&lt;</button><button id="amp-play" aria-label="Play">&gt;</button><button id="amp-pause" aria-label="Pause">||</button><button id="amp-stop" aria-label="Stop">[]</button><button id="amp-next" aria-label="Next">&gt;|</button>
-          <button id="amp-shuffle" aria-pressed="false">SHUF</button><button id="amp-repeat" aria-pressed="false">REP</button>
-          <input id="amp-vol" type="range" min="0" max="100" value="0" aria-label="Volume">
+  <!-- The PC's screen. Nothing of the desktop shows while you walk around: sit at a PC and you lean in to this Windows 98
+       desktop, where IRC, LANamp, Internet Explorer, the little programs and the games all live. -->
+  <div id="pcscreen" hidden>
+    <div id="pcbox">
+      <div id="desk-icons" role="group" aria-label="Desktop icons"></div>
+      <div id="desktop" aria-label="Desktop">
+        <!-- LANamp: the music player. Z X C V B work like the real thing, in the room as well as at a PC. -->
+        <div id="lanamp" aria-label="LANamp music player">
+          <div class="w98-title amp-title"><span class="w98-ttext">LANAMP 2.0</span></div>
+          <div class="amp-main">
+            <div class="amp-screen"><canvas id="amp-vis" width="76" height="28"></canvas><div id="amp-time">0:00</div></div>
+            <div id="amp-marquee"><span id="amp-song"></span></div>
+            <div class="amp-info"><span id="amp-genre"></span><span id="amp-kind">SYNTH 22kHz</span></div>
+            <div class="amp-row">
+              <button id="amp-prev" aria-label="Previous">|&lt;</button><button id="amp-play" aria-label="Play">&gt;</button><button id="amp-pause" aria-label="Pause">||</button><button id="amp-stop" aria-label="Stop">[]</button><button id="amp-next" aria-label="Next">&gt;|</button>
+              <button id="amp-shuffle" aria-pressed="false">SHUF</button><button id="amp-repeat" aria-pressed="false">REP</button>
+              <input id="amp-vol" type="range" min="0" max="100" value="0" aria-label="Volume">
+            </div>
+            <!-- Your own MP3s: pick a folder (or drop files or folders on this window). They are played from your drive and never uploaded. -->
+            <div class="amp-row amp-lib">
+              <button id="amp-add" type="button" title="Add a folder of MP3 files">ADD DIR</button><button id="amp-rescan" type="button" title="Scan your saved folders again" hidden>RESCAN</button><button id="amp-clear" type="button" title="Remove your files and go back to the tape" hidden>CLR</button>
+              <span id="amp-status" role="status" aria-live="polite"></span>
+            </div>
+            <input id="amp-files" type="file" accept=".mp3,audio/mpeg" webkitdirectory multiple hidden aria-label="Choose a folder of MP3 files">
+          </div>
+          <ol id="amp-list"></ol>
         </div>
-        <!-- Your own MP3s: pick a folder (or drop files or folders on this window). They are played from your drive and never uploaded. -->
-        <div class="amp-row amp-lib">
-          <button id="amp-add" type="button" title="Add a folder of MP3 files">ADD DIR</button><button id="amp-rescan" type="button" title="Scan your saved folders again" hidden>RESCAN</button><button id="amp-clear" type="button" title="Remove your files and go back to the tape" hidden>CLR</button>
-          <span id="amp-status" role="status" aria-live="polite"></span>
+        <!-- #lanparty98: the group's IRC channel. -->
+        <div id="irc" class="w98-window" aria-label="IRC channel #lanparty98">
+          <div class="w98-title"><span class="w98-ttext">mIRC32 - [#lanparty98]</span></div>
+          <div id="irc-body"><div id="irc-log"></div><ul id="irc-nicks"></ul></div>
         </div>
-        <input id="amp-files" type="file" accept=".mp3,audio/mpeg" webkitdirectory multiple hidden aria-label="Choose a folder of MP3 files">
       </div>
-      <ol id="amp-list"></ol>
-    </div>
-    <!-- #lanparty98: the group's IRC channel. I toggles it. -->
-    <div id="irc" class="w98-window" aria-label="IRC channel #lanparty98">
-      <div class="w98-title"><span class="w98-ttext">mIRC32 - [#lanparty98]</span></div>
-      <div id="irc-body"><div id="irc-log"></div><ul id="irc-nicks"></ul></div>
+
+      <div id="startmenu" role="menu" aria-label="Start menu" hidden></div>
+      <nav id="taskbar" aria-label="Taskbar">
+        <button id="start-btn" class="w98-btn" type="button" aria-haspopup="true" aria-expanded="false"><span class="start-icon"></span><b>Start</b></button>
+        <div id="tasks" role="group" aria-label="Open windows"></div>
+        <a id="donate-btn" class="w98-btn default" href="https://buy.stripe.com/aFa5kvbqp2pL5kY46oaAw04" target="_blank" rel="noopener noreferrer" data-donate="stripe" title="Shout the webmaster a Volt Cola. $5 AUD, card or Apple Pay, via Stripe."><span class="donate-icon"></span><b class="donate-text">Shout me a Volt Cola</b><b class="donate-short">Volt Cola</b><span class="donate-price">$5</span></a>
+        <div id="tray">
+          <button id="tray-amp" type="button" aria-label="Show or hide LANamp" title="LANamp"></button>
+          <div id="clock">7:30 PM</div>
+        </div>
+      </nav>
     </div>
   </div>
-
-  <div id="startmenu" role="menu" aria-label="Start menu" hidden></div>
-  <nav id="taskbar" aria-label="Taskbar">
-    <button id="start-btn" class="w98-btn" type="button" aria-haspopup="true" aria-expanded="false"><span class="start-icon"></span><b>Start</b></button>
-    <div id="tasks" role="group" aria-label="Open windows"></div>
-    <a id="donate-btn" class="w98-btn default" href="https://buy.stripe.com/aFa5kvbqp2pL5kY46oaAw04" target="_blank" rel="noopener noreferrer" data-donate="stripe" title="Shout the webmaster a Volt Cola. $5 AUD, card or Apple Pay, via Stripe."><span class="donate-icon"></span><b class="donate-text">Shout me a Volt Cola</b><b class="donate-short">Volt Cola</b><span class="donate-price">$5</span></a>
-    <div id="tray">
-      <span id="tray-hint"></span>
-      <button id="tray-amp" type="button" aria-label="Show or hide LANamp" title="LANamp"></button>
-      <div id="clock">7:30 PM</div>
-    </div>
-  </nav>
 
   <!-- The DOS screen, laid exactly over your CRT when seated -->
   <div id="monitor" hidden>
@@ -305,28 +311,27 @@ Press any key to continue _</div>
   <!-- The mobile phone from the desk at PC-02 (built by js/phone.js) -->
   <div id="phone" hidden></div>
 
-  <!-- Intro dialog -->
-  <div id="intro">
+  <!-- Help: how to get around, your handle, sharing and supporting. Not shown on load: you walk straight into the room. -->
+  <div id="intro" hidden>
     <div class="w98-window">
       <div class="w98-title"><span>LANPARTY.EXE</span><b>×</b></div>
       <div class="w98-body">
         <h1>LAN Party '98</h1>
-        <p>Saturday night, somebody's basement. Six beige boxes, one 10BASE-T hub, a crate of Volt Cola and far too many Nachoz. Walk straight in and grab a seat, or build your own PC at the shop first, carry it down and plug it in, then start a deathmatch with mates in DOOM, Quake, Hexen, Heretic, Descent or Duke Nukem 3D. It is shooters first; at midnight somebody puts StarCraft on.</p>
-        <p>Between rounds there is plenty to do: order a pepperoni on the wall phone, ring Dazza on the Nokka 51, surf the web in Internet Explorer, hunt songs on Snapster, play Minesweeper, Solitaire or Downhill, rip the case off a mate's tower, or flick the lights off and let the monitors do the work. Trip the yellow extension lead and you will be the one fixing it.</p>
+        <p>Saturday night, somebody's basement. Six beige boxes, one 10BASE-T hub, a crate of Volt Cola and far too many Nachoz. Sit at any PC: IRC, the music player, Internet Explorer, the little programs and the games all live on its desktop. Start a deathmatch with mates in DOOM, Quake, Hexen, Heretic, Descent or Duke Nukem 3D. It is shooters first; at midnight somebody puts StarCraft on.</p>
+        <p>Between rounds there is plenty to do: order a pepperoni on the wall phone, ring Dazza on the Nokka 51, hunt songs on Snapster, play Minesweeper, Solitaire or Downhill, rip the case off a mate's tower, or flick the lights off and let the monitors do the work. Trip the yellow extension lead and you will be the one fixing it.</p>
         <label class="handle">Your handle <input id="handle" maxlength="12" autocomplete="off" spellcheck="false" placeholder="e.g. FRAGMASTER"></label>
         <table class="keys">
           <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> + mouse</td><td>Walk and look</td></tr>
-          <tr><td><kbd>E</kbd></td><td>Sit down · drink · eat · answer the door · pick up a phone · flip the light switch · use whatever you're looking at</td></tr>
+          <tr><td><kbd>E</kbd></td><td>Sit down at a PC · drink · eat · answer the door · pick up a phone · flip the light switch · use whatever you're looking at</td></tr>
           <tr><td><kbd>F</kbd></td><td>Open the case of the PC you are looking at, or open and shut the lid of a pizza box</td></tr>
           <tr><td><kbd>G</kbd></td><td>Unwrap and eat the garlic bread the pizza driver left you</td></tr>
           <tr><td><kbd>E</kbd> at the TV</td><td>Sit at the console and run N64 ROMs from your own drive (bring your own; none are supplied)</td></tr>
           <tr><td><kbd>T</kbd></td><td>Chat (shows up in #lanparty98)</td></tr>
-          <tr><td><kbd>I</kbd> <kbd>M</kbd> <kbd>H</kbd></td><td>Show or hide the IRC window · the music player · Internet Explorer</td></tr>
+          <tr><td><kbd>H</kbd></td><td>This help</td></tr>
           <tr><td><kbd>N</kbd></td><td>Noises on or off (burps, and the speaker PCs)</td></tr>
-          <tr><td><kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd><kbd>V</kbd><kbd>B</kbd></td><td>Music: previous · play · pause · stop · next</td></tr>
+          <tr><td><kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd><kbd>V</kbd><kbd>B</kbd></td><td>Music: previous · play · pause · stop · next (the player itself is on any PC)</td></tr>
           <tr><td><kbd>`</kbd></td><td>Stand up from your PC (leaves any deathmatch)</td></tr>
-          <tr><td><kbd>Tab</kbd></td><td>Free the mouse for the taskbar, Start menu and windows, including Shout me a Volt Cola (click the room to get it back)</td></tr>
-          <tr><td><kbd>Esc</kbd></td><td>Release the mouse</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Release the mouse (click the room to get it back)</td></tr>
         </table>
         <div id="share" class="share" role="group" aria-label="Share LAN Party '98">
           <span class="share-label">SHARE</span>
@@ -345,8 +350,8 @@ Press any key to continue _</div>
         </div>
         <div class="w98-actions">
           <a class="w98-link" href="mailto:contact@lanparty1998.com">contact@lanparty1998.com</a>
-          <button id="build-btn" class="w98-btn">Build a PC first (optional)</button>
-          <button id="enter-btn" class="w98-btn default">Walk in</button>
+          <button id="build-btn" class="w98-btn">Build a PC (optional)</button>
+          <button id="enter-btn" class="w98-btn default">Close</button>
         </div>
         <p class="w98-credit">Another <a href="https://malgordon.com/">Mal Gordon</a> creation</p>
       </div>
@@ -386,6 +391,7 @@ Press any key to continue _</div>
         <span>ACCOUNT <b id="wiz-acct"></b></span><span>BASKET <b id="wiz-basket"></b></span><span>LEFT <b id="wiz-left"></b></span><span id="wiz-ide"></span>
       </div>
       <div class="w98-actions wiz-actions">
+        <button id="wiz-cancel" class="w98-btn" type="button" title="Leave the shop without buying anything">Cancel</button>
         <button id="wiz-std" class="w98-btn" type="button" title="Skip the shopping and take the usual machine">Standard PC</button>
         <button id="wiz-back" class="w98-btn" type="button">&lt; Back</button>
         <button id="wiz-next" class="w98-btn default" type="button">Next &gt;</button>
@@ -394,6 +400,6 @@ Press any key to continue _</div>
   </div>
 
   <script src="vendor/js-dos/js-dos.js"></script>
-  <script type="module" src="js/main.js?v=05c71caf11"></script>
+  <script type="module" src="js/main.js?v=e1882a26c4"></script>
 </body>
 </html>

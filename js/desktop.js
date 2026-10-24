@@ -1,6 +1,6 @@
-// The desktop around the room: a Win95-style taskbar and Start menu, and windows you can
-// drag, minimise, close and open again. The IRC channel and LANamp are windows on it, and so
-// are the little programs in apps.js.
+// The desktop on the PC's screen (#pcscreen, shown when you sit down): a Win95-style taskbar and Start menu, and
+// windows you can drag, minimise, close and open again. The IRC channel and LANamp are windows on it, and so
+// are the little programs in apps.js. Sizes and positions are relative to #desktop, not the browser window.
 //
 // An app is { id, title, icon, size: [w, h?], pos: [x, y]?, center?, resize?, min: [w, h]?, build(ctx), menus(ctx)?, keep? }.
 // `resize: true` gives the window sizing borders and a Maximise button; `min` is its smallest size.
@@ -106,7 +106,7 @@ export class Desktop {
     this.cascade = 0;
     this.msgCount = 0;
     this.onStart = () => {};
-    this.startWith = []; // [{ id, arg? }] opened after IRC and LANamp when you walk in
+    this.onShutdown = () => {}; // Shut Down > "shut down the computer": main.js stands you up from the PC
 
     this.startBtn.querySelector('.start-icon').innerHTML = icon('crt');
     const can = document.querySelector('#donate-btn .donate-icon');
@@ -128,14 +128,8 @@ export class Desktop {
 
   /* ---------- apps and windows ---------- */
 
-  // the windows that are open when you walk in (or switch the computer back on)
-  start() {
-    this.closeAll();
-    if (innerWidth < 700) return; // not enough room beside the 3D view
-    this.open('irc');
-    this.open('lanamp');
-    for (const { id, arg } of this.startWith) this.open(id, arg); // last, so they are on top
-  }
+  // a clean desktop: nothing open (when you walk in, or switch the computer back on)
+  start() { this.closeAll(); }
 
   define(app) { this.apps.set(app.id, app); return this; }
 
@@ -225,7 +219,7 @@ export class Desktop {
     if (!r.width) return; // still hidden: place it when it opens
     win.placed = true;
     if (app.center) {
-      this.place(win, (innerWidth - r.width) / 2, (innerHeight - $('taskbar').offsetHeight - r.height) / 2);
+      this.place(win, (this.layer.clientWidth - r.width) / 2, (this.layer.clientHeight - r.height) / 2);
     } else if (app.pos) {
       this.place(win, app.pos[0], app.pos[1]);
     } else if (!win.root.style.left && !win.root.style.top && getComputedStyle(win.root).position === 'absolute' && !app.keep) {
@@ -309,9 +303,9 @@ export class Desktop {
 
   place(win, x, y) {
     const r = win.root.getBoundingClientRect();
-    const maxY = innerHeight - $('taskbar').offsetHeight - 24;
+    const maxY = this.layer.clientHeight - 24;
     const s = win.root.style;
-    s.left = `${Math.round(clamp(x, 96 - r.width, innerWidth - 96))}px`;
+    s.left = `${Math.round(clamp(x, 96 - r.width, this.layer.clientWidth - 96))}px`;
     s.top = `${Math.round(clamp(y, 0, maxY))}px`;
     s.right = 'auto';
     s.bottom = 'auto';
@@ -399,6 +393,7 @@ export class Desktop {
   }
 
   clampAll() {
+    if (!this.layer.clientWidth) return; // the PC screen is hidden (you are walking about): nothing to fit to
     for (const w of this.wins.values()) {
       if (w.state === 'closed') continue;
       if (w.maxed) { this.fitMaxed(w); continue; }
@@ -414,7 +409,7 @@ export class Desktop {
 
   /* ---------- Start menu ---------- */
 
-  // [{ app, arg? } | { label, icon, items } | { label, icon, open, arg? } | { sep: true } | { label, disabled }]
+  // [{ app, arg? } | { label, icon, items } | { label, icon, open, arg? } | { label, icon, run } | { sep: true } | { label, disabled }]
   setMenu(defs) {
     const banner = make('div', 'sm-banner', '<span><b>LAN Party</b> 98</span>');
     this.menu.replaceChildren(banner, this.buildList(defs, true));
@@ -440,7 +435,8 @@ export class Desktop {
       } else {
         li.append(b);
         // Entries with no app/open target are decoys (e.g. the joke files in Documents): clicking does nothing.
-        if (d.app || d.open) b.addEventListener('click', () => { this.closeMenu(); this.open(d.app ?? d.open, d.arg); });
+        if (d.run) b.addEventListener('click', () => { this.closeMenu(); d.run(); });
+        else if (d.app || d.open) b.addEventListener('click', () => { this.closeMenu(); this.open(d.app ?? d.open, d.arg); });
       }
       ul.append(li);
     }

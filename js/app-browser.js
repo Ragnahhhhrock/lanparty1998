@@ -29,13 +29,14 @@ const TOOLS = [
 
 const LINKS = [['Home', HOME], ['What\'s New', `${HOME}news.htm`], ['Games', `${HOME}games.htm`], ['How to Play', `${HOME}howto.htm`], ['Guestbook', `${HOME}guestbook.htm`]];
 
-// It opens big, so you walk in to several of the latest features without scrolling: the page column is
-// built for 800x600, so the window is 820 wide and as tall as the desktop allows, up to 780. Smaller
-// screens get as much window as there is room for.
+// It opens big, so you see several of the latest features without scrolling: the page column is built for
+// 800x600, so the window is 820 wide and as tall as the PC's screen allows, up to 780. Smaller screens get as much
+// window as there is room for.
 const OPEN_W = 820, OPEN_H = 780, EDGE = 24;
 const openSize = () => {
-  const bar = document.getElementById('taskbar')?.offsetHeight ?? 32;
-  return [Math.max(400, Math.min(OPEN_W, innerWidth - 2 * EDGE)), Math.max(280, Math.min(OPEN_H, innerHeight - bar - 2 * EDGE))];
+  const desk = document.getElementById('desktop'); // the PC screen, not the browser window
+  const w = desk?.clientWidth || innerWidth, h = desk?.clientHeight || innerHeight;
+  return [Math.max(400, Math.min(OPEN_W, w - 2 * EDGE)), Math.max(280, Math.min(OPEN_H, h - 2 * EDGE))];
 };
 
 export const ie = {

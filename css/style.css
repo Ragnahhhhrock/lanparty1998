@@ -58,11 +58,19 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: var(--z-hud); }
 #crosshair { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%;
   background: rgba(255, 255, 255, .85); box-shadow: 0 0 0 1px rgba(0, 0, 0, .6); }
+/* what to do with no PC in front of you: the hint line and the one link that asks for something */
+#lookhint { position: absolute; left: 50%; bottom: var(--space-4); transform: translateX(-50%); display: flex; align-items: center; gap: var(--space-3); max-width: calc(100vw - 2 * var(--gutter));
+  padding: var(--space-1) var(--space-3); background: var(--bar-bg); color: var(--paper); font: var(--text-crt)/1 var(--font-crt); pointer-events: auto; }
+#lookhint .w98-btn { min-width: 0; padding: var(--space-1) var(--space-3); font: var(--text-ui-sm)/1 var(--font-ui); }
+#donate-corner { position: absolute; right: var(--space-4); bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2); min-width: 0; padding: var(--space-1h) var(--space-3);
+  font-size: var(--text-ui); text-decoration: none; pointer-events: auto; }
+#donate-corner b { font: var(--text-crt-sm)/1 var(--font-crt); }
+@media (max-width: 700px) { #lookhint { display: none; } }
 #prompt { position: absolute; left: 50%; top: calc(50% + 28px); transform: translateX(-50%);
   font: var(--text-crt-md)/1 var(--font-crt); color: var(--phosphor); background: var(--hud-bg); padding: 6px 10px; white-space: nowrap; }
 #prompt .prompt-part + .prompt-part { margin-left: var(--space-4); }
 #prompt kbd { font: var(--text-crt-md)/1 var(--font-crt); margin-right: var(--space-1); }
-#meters { position: absolute; left: 16px; bottom: calc(var(--taskbar-h) + var(--space-4)); padding: 8px 10px; display: grid; gap: 5px; min-width: 180px; }
+#meters { position: absolute; left: 16px; bottom: var(--space-4); padding: 8px 10px; display: grid; gap: 5px; min-width: 180px; }
 .meter { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 8px; font-size: var(--text-ui-xs); font-weight: bold; letter-spacing: .04em; }
 .bar { height: 10px; background: var(--w98-light); box-shadow: var(--bevel-sunken); padding: 2px; }
 .bar i { display: block; height: 100%; width: 0; transition: width var(--dur-fast); }
@@ -128,7 +136,7 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
     radial-gradient(circle at 28% 62%, rgba(242,138,28,.35) 0 18px, transparent 34px),
     radial-gradient(circle at 34% 58%, rgba(242,138,28,.25) 0 10px, transparent 22px),
     radial-gradient(circle at 71% 40%, rgba(242,138,28,.3) 0 14px, transparent 28px); }
-#seated-bar, #console-bar, #amiga-bar { position: fixed; left: 50%; bottom: calc(var(--taskbar-h) + 14px); transform: translateX(-50%); z-index: var(--z-seated);
+#seated-bar, #console-bar, #amiga-bar { position: fixed; left: 50%; bottom: var(--space-4); transform: translateX(-50%); z-index: var(--z-seated);
   display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: center;
   color: var(--paper); font-size: var(--text-ui-sm); max-width: calc(100vw - 32px);
   background: var(--bar-bg); padding: 6px 10px; }
@@ -153,7 +161,7 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 .handle input:focus-visible { outline: 1px dotted var(--w98-text); outline-offset: -4px; }
 
 /* ---- Chat: in-world text over the basement, typed on a phosphor line ---- */
-#chat { position: fixed; left: 300px; bottom: calc(var(--taskbar-h) + 140px); z-index: var(--z-seated); width: min(420px, calc(100vw - 300px - var(--gutter))); pointer-events: none; }
+#chat { position: fixed; left: 300px; bottom: 140px; z-index: var(--z-seated); width: min(420px, calc(100vw - 300px - var(--gutter))); pointer-events: none; }
 #chat-log { display: flex; flex-direction: column; gap: var(--space-0); font: var(--text-crt)/1.15 var(--font-crt); color: var(--paper); text-shadow: var(--text-shadow-hard); }
 #chat-log div { transition: opacity var(--dur-slow); overflow-wrap: anywhere; }
 #chat-log div.old { opacity: 0; }
@@ -207,9 +215,20 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
   #chat-log div { transition: none; } .bar i, #dust { transition: none; } }
 
 /* ---- Desktop: windows, taskbar and Start menu around the room ---- */
-#desktop { position: fixed; inset: 0 0 var(--taskbar-h) 0; z-index: var(--z-window); pointer-events: none; }
+/* The PC's screen: sit down and the camera leans in to this 4:3 Windows 98 desktop. Nothing here shows while you walk. */
+#pcscreen { position: fixed; inset: 0; z-index: var(--z-monitor); display: grid; place-items: center; padding-bottom: var(--pc-reserve); box-sizing: border-box; background: var(--bar-bg); }
+#pcbox { position: relative; box-sizing: content-box; overflow: clip; /* clip, not hidden: focusing something off the edge must not scroll the screen */ background: var(--w98-desktop); border: var(--space-3) solid var(--beige); box-shadow: var(--bevel-sunken);
+  width: min(calc(100vw - 2 * (var(--gutter) + var(--space-3))), calc((100vh - var(--pc-reserve) - 2 * (var(--gutter) + var(--space-3))) * 4 / 3), var(--pc-max-w)); aspect-ratio: 4 / 3; }
+@media (max-width: 700px) { #pcscreen { padding: 0 0 var(--pc-reserve); } #pcbox { box-sizing: border-box; width: 100vw; height: calc(100vh - var(--pc-reserve)); aspect-ratio: auto; border: 0; } }
+#desk-icons { position: absolute; inset: var(--space-2) auto var(--taskbar-h) var(--space-2); display: flex; flex-flow: column wrap; align-content: flex-start; gap: var(--space-1); }
+.desk-icon { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); width: 76px; padding: var(--space-1); border: 1px solid transparent; background: none; color: var(--w98-light);
+  font: var(--text-ui-sm)/1.2 var(--font-ui); text-align: center; text-shadow: var(--text-shadow-hard); cursor: pointer; }
+.desk-icon:hover { border-color: var(--w98-light); border-style: dotted; }
+.desk-icon:focus-visible { outline: 1px dotted var(--w98-light); outline-offset: 1px; background: var(--w98-title); text-shadow: none; }
+.desk-icon .px-icon { filter: drop-shadow(1px 1px 0 var(--w98-dark)); }
+#desktop { position: absolute; inset: 0 0 var(--taskbar-h) 0; z-index: var(--z-window); pointer-events: none; }
 #desktop > .off, .dwin.off { display: none; }
-.dwin { position: absolute; pointer-events: auto; display: flex; flex-direction: column; box-sizing: border-box; width: max-content; max-width: calc(100vw - 2 * var(--gutter)); }
+.dwin { position: absolute; pointer-events: auto; display: flex; flex-direction: column; box-sizing: border-box; width: max-content; max-width: 100%; }
 .dwin:not(.active) .w98-title { background: var(--w98-title-off); }
 .dwin.moving { user-select: none; }
 .dwin-body { flex: 1; min-height: 0; }
@@ -262,7 +281,7 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 .sm-item.has-sub::after { content: ""; margin-left: auto; border: solid transparent; border-width: 4px 0 4px 4px; border-left-color: currentColor; }
 
 /* Start menu */
-#startmenu { position: fixed; left: 0; bottom: var(--taskbar-h); z-index: var(--z-startmenu); display: flex; padding: var(--space-0); background: var(--w98-face); box-shadow: var(--bevel-raised); }
+#startmenu { position: absolute; left: 0; bottom: var(--taskbar-h); z-index: var(--z-startmenu); display: flex; padding: var(--space-0); background: var(--w98-face); box-shadow: var(--bevel-raised); }
 .sm-banner { display: flex; align-items: flex-end; justify-content: center; width: var(--startmenu-banner-w); padding: var(--space-1) 0; background: var(--w98-title); color: var(--w98-light); }
 .sm-banner span { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font: var(--text-crt-md)/1 var(--font-crt); }
 .sm-banner b { font-weight: normal; }
@@ -274,7 +293,7 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 .sm-list li:hover > .sm-sub, .sm-list li:focus-within > .sm-sub { display: block; }
 
 /* Taskbar */
-#taskbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-taskbar); box-sizing: border-box; display: flex; align-items: center; gap: var(--space-1);
+#taskbar { position: absolute; left: 0; right: 0; bottom: 0; z-index: var(--z-taskbar); box-sizing: border-box; display: flex; align-items: center; gap: var(--space-1);
   height: var(--taskbar-h); padding: var(--space-0) var(--space-1) var(--space-1); background: var(--w98-face); box-shadow: inset 0 1px var(--w98-hilite), inset 0 2px var(--w98-light); }
 #start-btn { display: flex; align-items: center; gap: var(--space-1); min-width: 0; height: 22px; padding: 0 var(--space-2); font-size: var(--text-ui); }
 #start-btn[aria-expanded="true"] { box-shadow: var(--bevel-pressed); }
@@ -293,8 +312,6 @@ kbd { display: inline-block; font: var(--text-ui-sm)/1 var(--font-ui); backgroun
 #tray { display: flex; align-items: center; gap: var(--space-2); height: 22px; padding: 0 var(--space-2); box-shadow: var(--bevel-sunken); }
 #tray-amp { display: flex; padding: 0; border: 0; background: none; cursor: default; }
 #tray #clock { min-width: 8ch; }
-#tray-hint { font: var(--text-crt-sm)/1 var(--font-crt); color: var(--w98-text); white-space: nowrap; }
-@media (max-width: 700px) { #tray-hint { display: none; } }
 
 /* ---- Minesweeper ---- */
 .ms { margin: var(--space-0); padding: var(--space-1h); background: var(--w98-face); box-shadow: var(--bevel-raised); }
@@ -693,7 +710,7 @@ button.snap-th:focus-visible { outline: 1px dotted var(--w98-text); outline-offs
 .amiga-frame { position: fixed; right: 0; bottom: 0; width: 640px; height: 480px; border: 0; opacity: 0; pointer-events: none; z-index: -1; }
 
 /* ---- The Amiga's setup and disk box ---- */
-#amiga-panel { position: fixed; right: var(--space-3); top: var(--space-3); bottom: calc(var(--taskbar-h) + 70px); width: min(380px, calc(100vw - 2 * var(--space-3))); z-index: var(--z-seated);
+#amiga-panel { position: fixed; right: var(--space-3); top: var(--space-3); bottom: 70px; width: min(380px, calc(100vw - 2 * var(--space-3))); z-index: var(--z-seated);
   display: flex; flex-direction: column; }
 #amiga-panel[hidden] { display: none; }
 #amiga-panel .w98-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--space-2); overflow-y: auto; font-size: var(--text-ui-sm); }

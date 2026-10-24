@@ -233,6 +233,8 @@
   --startmenu-banner-w: 24px;
   --grip: 4px;         /* window resize border, as thick as the frame */
   --grip-corner: 12px; /* the corner zones of that border */
+  --pc-max-w: 1280px;  /* the widest the PC screen gets when you sit down and lean in (it is always 4:3) */
+  --pc-reserve: 112px; /* height kept clear under the PC screen for the seated bar */
 
   /* ---- Layers ---- */
   --z-scene: 0;

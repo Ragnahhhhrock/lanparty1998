@@ -1,4 +1,4 @@
-// The programs on the desktop: Internet Explorer, Minesweeper, Calculator, Notepad, Paint, an MS-DOS prompt, the
+// The programs on the PC's desktop: Internet Explorer, Minesweeper, Calculator, Notepad, Paint, an MS-DOS prompt, the
 // defragmenter, Help, Run and Shut Down. The game windows (IRC, LANamp) are adopted from the page.
 // Parody rule: nothing here uses a real brand's logo, and the file names are the party's own.
 import { icon } from './icons.js';
@@ -10,6 +10,7 @@ import { snapster } from './app-snapster.js';
 import { reminders } from './app-reminders.js';
 import { ie } from './app-browser.js';
 import { PAGE_LIST, parseUrl, HOME } from './web-pages.js';
+import { GAMES, GAME_IDS } from './games.js';
 
 const el = (tag, cls, html) => {
   const e = document.createElement(tag);
@@ -506,17 +507,16 @@ const help = {
   id: 'help', title: 'LAN Party Help', icon: 'help', size: [440], pos: [150, 70], resize: true, min: [240, 140],
   build(ctx) {
     ctx.body.classList.add('help');
-    ctx.body.innerHTML = `<h2>Getting around</h2>
+    ctx.body.innerHTML = `<h2>Getting around the room</h2>
       <table class="keys">
         <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>Walk, with the mouse to look</td></tr>
         <tr><td><kbd>E</kbd> <kbd>F</kbd></td><td>Use what you are looking at · open a PC's case</td></tr>
         <tr><td><kbd>T</kbd></td><td>Chat (shows up in #lanparty98)</td></tr>
-        <tr><td><kbd>I</kbd> <kbd>M</kbd> <kbd>H</kbd></td><td>Show or hide the IRC window · LANamp · Internet Explorer</td></tr>
-        <tr><td><kbd>Tab</kbd></td><td>Free the mouse to use the taskbar and windows</td></tr>
-        <tr><td><kbd>\`</kbd></td><td>Stand up from your PC</td></tr>
+        <tr><td><kbd>\`</kbd></td><td>Stand up from this PC</td></tr>
       </table>
-      <h2>The desktop</h2>
-      <p>Drag a window by its title bar. The <b>_</b> button puts it on the taskbar and the <b>×</b> closes it. Everything on the Programs menu is a real little program. Click the 3D room to get the mouse back for walking.</p>`;
+      <h2>This PC</h2>
+      <p>The games are the icons on the left: click one and the PC reboots into it. <b>Quit to Windows</b> under the screen brings you back here. IRC, LANamp, Internet Explorer and the little programs are on this desktop too, and on the Programs menu.</p>
+      <p>Drag a window by its title bar. The <b>_</b> button puts it on the taskbar and the <b>×</b> closes it.</p>`;
   },
 };
 
@@ -582,7 +582,7 @@ const shutdown = {
       const choice = ctx.body.querySelector('input[name="sd"]:checked').value;
       const d = ctx.desktop;
       d.closeAll();
-      if (choice === 'off') powerScreen("It's now safe to turn off your computer.", () => d.start());
+      if (choice === 'off') powerScreen("It's now safe to turn off your computer.", () => { d.start(); d.onShutdown(); });
       else if (choice === 'restart') powerScreen('Restarting the computer...', () => d.start(), 1800);
       else powerScreen('Restarting in MS-DOS mode...', () => d.open('dos'), 1800);
     });
@@ -633,11 +633,33 @@ const MENU = [
   { open: 'shutdown', label: 'Shut Down...', icon: 'crt' },
 ];
 
-export function registerApps(desktop, { irc, lanamp, gameTime }) {
+export function registerApps(desktop, { irc, lanamp, gameTime, launchGame, buildPc }) {
   desktop.gameTime = gameTime;
   desktop.adopt('irc', irc, { title: 'mIRC32 - [#lanparty98]', icon: 'irc', resize: true, min: [260, 140] });
   desktop.adopt('lanamp', lanamp, { title: 'LANamp 2.0', icon: 'amp' });
   for (const app of [ie, minesweeper, solitaire, downhill, snapster, reminders, calculator, notepad, paint, dosPrompt, defrag, help, run, shutdown]) desktop.define(app);
-  desktop.startWith = [{ id: 'ie', arg: `${HOME}news.htm#latest` }]; // walk in and the browser is already on the news
-  desktop.setMenu(MENU);
+
+  // the games are programs on this PC: icons on the desktop and a folder on the Start menu
+  const dosGames = GAME_IDS.map((id) => ({ label: GAMES[id].name, icon: 'dos', run: () => launchGame(id) }));
+  const menu = [...MENU];
+  menu[0] = { ...MENU[0], items: [{ label: 'MS-DOS Games', icon: 'folder', items: dosGames }, ...MENU[0].items] };
+  menu.splice(menu.length - 2, 0, { label: 'BUILDPC.EXE', icon: 'programs', run: buildPc }); // above the separator before Shut Down
+  desktop.setMenu(menu);
+
+  const iconBox = document.getElementById('desk-icons');
+  const entries = [
+    ...dosGames,
+    { label: 'Internet Explorer', icon: 'globe', run: () => desktop.open('ie', `${HOME}news.htm#latest`) },
+    { label: 'mIRC', icon: 'irc', run: () => desktop.open('irc') },
+    { label: 'LANamp', icon: 'amp', run: () => desktop.open('lanamp') },
+    { label: 'Snapster', icon: 'snap', run: () => desktop.open('snap') },
+    { label: 'Help', icon: 'help', run: () => desktop.open('help') },
+  ];
+  for (const e of entries) {
+    const b = el('button', 'desk-icon', `${icon(e.icon, 32)}<span></span>`);
+    b.type = 'button';
+    b.querySelector('span').textContent = e.label;
+    b.addEventListener('click', () => { e.run(); b.blur(); }); // blur: or Space and Enter in the game would click it again
+    iconBox.append(b);
+  }
 }

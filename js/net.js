@@ -28,6 +28,13 @@ export class RoomLink extends EventTarget {
     this.open();
   }
 
+  // a new handle: drop the socket and the reconnect says hello under the new name
+  rename(name) {
+    if (name === this.name) return;
+    this.name = name;
+    try { this.ws?.close(); } catch { /* already gone */ }
+  }
+
   open() {
     let ws;
     try { ws = new WebSocket(`${SERVER}/room/${ROOM_NAME}`); } catch { return this.later(); }

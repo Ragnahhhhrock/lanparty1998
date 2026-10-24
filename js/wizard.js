@@ -2,7 +2,7 @@
 // drives, network card, sound and a desk's worth of keyboard, mouse and mat out of the account's $1500, then carry
 // the boxes to your table. The parts, prices and rules are in js/build.js; this is only the window.
 //
-// new Wizard(root).open({ build, net, onDone(build) })
+// new Wizard(root).open({ build, net, onDone(build), onCancel() })
 import * as B from './build.js';
 
 const money = (n) => `$${n}`;
@@ -38,15 +38,18 @@ export class Wizard {
     this.build = B.defaultBuild();
     this.net = 'coax';
     this.onDone = null;
+    this.onCancel = null;
+    this.q('#wiz-cancel').addEventListener('click', () => { const cancel = this.onCancel; this.close(); cancel?.(); });
     this.q('#wiz-back').addEventListener('click', () => this.go(this.step - 1));
     this.q('#wiz-next').addEventListener('click', () => (this.step === STEPS.length - 1 ? this.finish() : this.go(this.step + 1)));
     this.q('#wiz-std').addEventListener('click', () => { this.build = B.defaultBuild(); this.go(STEPS.length - 1); });
   }
 
-  open({ build, net = 'coax', onDone }) {
+  open({ build, net = 'coax', onDone, onCancel }) {
     this.build = B.sanitize(build);
     this.net = net;
     this.onDone = onDone;
+    this.onCancel = onCancel;
     this.root.hidden = false;
     this.go(0);
     this.q('#wiz-next').focus();

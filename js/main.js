@@ -33,7 +33,7 @@ import { SEAT_BASE, benchOfSeat } from './bench-plan.js';
 const $ = (id) => document.getElementById(id);
 initShare();
 const ui = {
-  intro: $('intro'), enter: $('enter-btn'), build: $('build-btn'), hud: $('hud'), prompt: $('prompt'), toast: $('toast'),
+  intro: $('intro'), enter: $('enter-btn'), build: $('build-btn'), pcscreen: $('pcscreen'), lookHint: $('lookhint'), lookText: $('lookhint-text'), helpBtn: $('help-btn'), hud: $('hud'), prompt: $('prompt'), toast: $('toast'),
   caffeine: $('m-caffeine'), snacks: $('m-snacks'), cash: $('m-cash'), shares: $('m-shares'), clock: $('clock'), schedule: $('schedule'),
   monitor: $('monitor'), dos: $('dos'), dust: $('dust'), bsod: $('bsod'),
   consoleBar: $('console-bar'), consoleStatus: $('console-status'),
@@ -46,7 +46,8 @@ const ui = {
 
 /* ---------- the desktop: taskbar, Start menu and windows over the room ---------- */
 const desktop = new Desktop();
-registerApps(desktop, { irc: $('irc'), lanamp: $('lanamp'), gameTime: () => ui.clock.textContent });
+registerApps(desktop, { irc: $('irc'), lanamp: $('lanamp'), gameTime: () => ui.clock.textContent, launchGame, buildPc: openBuildPc });
+desktop.onShutdown = () => standUp(); // Shut Down > shut down the computer: you get up from the PC
 
 /* ---------- renderer, scene, camera ---------- */
 const renderer = new THREE.WebGLRenderer({ canvas: $('scene'), antialias: true });
@@ -72,7 +73,7 @@ const link = new RoomLink();
 // What I am playing goes to everyone else's copy of my PC's CRT (js/feed.js), but only while there is somebody to show it to.
 const feed = new FeedSender({
   host: ui.dos,
-  shouldSend: () => mode === 'seated' && !!seatedAt && pc.running && ui.bsod.hidden && !ui.monitor.hidden && link.online && link.players.size > 0,
+  shouldSend: () => gameOn() && !!seatedAt && ui.bsod.hidden && !ui.monitor.hidden && link.online && link.players.size > 0,
   send: (buf) => link.sendFrame(buf),
 });
 const crowd = new Crowd(scene, room.stations);
@@ -112,7 +113,9 @@ const driver = spawnNpc(scene, { name: 'DRIVER', color: '#b22a1e', yaw: Math.PI,
 driver.group.visible = false;
 
 /* ---------- state ---------- */
-let mode = 'intro'; // intro | walk | tween | seated | console | amiga | bean | dialog
+let mode = 'intro'; // intro (loading) | walk | tween | seated | console | amiga | bean | dialog
+let screenView = 'desktop'; // what the PC in front of you shows: its Windows 98 'desktop', or a 'game' on the CRT
+const gameOn = () => mode === 'seated' && screenView === 'game' && pc.running;
 const keys = new Set();
 const stats = { caffeine: 15, snacks: 40, dust: 0, cans: 0, handfuls: 0 };
 const held = { garlic: false };                                   // the garlic bread in foil you are carrying
@@ -127,31 +130,82 @@ let seatedAt = null; // station I'm sitting at (or walking to sit at)
 const canvas = renderer.domElement;
 const savedHandle = (() => { try { return localStorage.getItem('lan98-handle') || ''; } catch { return ''; } })();
 ui.handle.value = savedHandle;
-ui.handle.addEventListener('keydown', (e) => { if (e.key === 'Enter') ui.enter.click(); });
-/* ---------- the PC you build: BUILDPC.EXE comes between the intro and the basement ---------- */
+ui.handle.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'Escape') ui.enter.click(); });
+/* ---------- the PC you build: BUILDPC.EXE, the computer shop's wizard ---------- */
 const wizard = new Wizard($('wizard'));
 const savedBuild = () => { try { return JSON.parse(localStorage.getItem('lan98-build')); } catch { return null; } };
 let myBuild = BUILD.sanitize(savedBuild());
 
-// Building a PC is optional. "Walk in" goes straight to the basement and you sit at a club PC; "Build a PC first" runs
-// BUILDPC.EXE and then gives you a bench on the back table (wantsBench).
+// Building a PC is optional. Without one you sit at a club PC; BUILDPC.EXE gives you a bench on the back table (wantsBench).
 let wantsBench = false;
 
-function startParty() {
-  const name = ui.handle.value.trim().toUpperCase().slice(0, 12) || `PLAYER${Math.floor(Math.random() * 90 + 10)}`;
-  try { localStorage.setItem('lan98-handle', name); } catch { /* private mode */ }
-  myName = name;
-  ircMe(name);
-  ui.intro.hidden = true;
+const cleanName = (raw) => raw.trim().toUpperCase().slice(0, 12);
+const randomName = () => `PLAYER${Math.floor(Math.random() * 90 + 10)}`;
+
+// There is no title card: the page loads and you are standing in the basement. Your handle is the one you used last
+// time, or a PLAYERnn until you pick one in Help (H).
+function enterRoom() {
+  myName = cleanName(savedHandle) || randomName();
+  ui.handle.placeholder = myName;
+  ircMe(myName);
+  ui.hud.hidden = false;
+  ui.chat.hidden = false;
+  desktop.start();
+  mode = 'walk';
+  analytics.enterParty();
+  link.connect(myName);
+  refreshStations();
+  startBench();
+  // browsers only allow sound after a click or key press, so the audio and the music start with the first one
+  const unlock = () => {
+    removeEventListener('pointerdown', unlock, true); removeEventListener('keydown', unlock, true);
+    sfx.startAudio();
+    startMusic();
+  };
+  addEventListener('pointerdown', unlock, true);
+  addEventListener('keydown', unlock, true);
 }
 
-ui.enter.addEventListener('click', () => {
-  startParty();
-  walkIn();
-});
+/* ---------- Help (H): the controls, your handle, sharing and supporting ---------- */
+let helpOpen = false;
+function openHelp() {
+  if (mode !== 'walk' || helpOpen) return;
+  if (document.pointerLockElement) document.exitPointerLock();
+  ui.prompt.hidden = true;
+  helpOpen = true;
+  mode = 'dialog';
+  ui.intro.hidden = false;
+  ui.enter.focus({ preventScroll: true }); // the box is taller than a short screen: stay at its top
+}
+function closeHelp() {
+  if (!helpOpen) return;
+  helpOpen = false;
+  ui.intro.hidden = true;
+  const name = cleanName(ui.handle.value);
+  if (name && name !== myName) { // a new handle: remember it, tell the channel, and rejoin the hub under it
+    try { localStorage.setItem('lan98-handle', name); } catch { /* private mode */ }
+    myName = name;
+    ui.handle.placeholder = name;
+    ircMe(name);
+    link.rename(name);
+  }
+  mode = 'walk';
+  lockPointer();
+}
+ui.enter.addEventListener('click', closeHelp);
+ui.helpBtn.addEventListener('click', () => openHelp());
 
-ui.build.addEventListener('click', () => {
-  startParty();
+/* ---------- Build a PC: BUILDPC.EXE (the Start menu on any PC, or Help) ---------- */
+let pendingBuild = false;
+function openBuildPc() {
+  if (myBench) { toast(`You already built ${myBench.station.name}: it is on the back table.`); return; }
+  if (mode === 'seated') { pendingBuild = true; standUp(); return; } // leave the PC first; the shop opens when you are on your feet
+  if (mode !== 'walk' && !helpOpen) return;
+  helpOpen = false;
+  ui.intro.hidden = true;
+  if (document.pointerLockElement) document.exitPointerLock();
+  ui.prompt.hidden = true;
+  mode = 'dialog';
   wizard.open({
     build: savedBuild(),
     net: party.net,
@@ -159,25 +213,14 @@ ui.build.addEventListener('click', () => {
       myBuild = build;
       wantsBench = true;
       try { localStorage.setItem('lan98-build', JSON.stringify(build)); } catch { /* private mode */ }
-      walkIn();
+      mode = 'walk';
+      lockPointer();
+      startBench();
     },
+    onCancel: () => { mode = 'walk'; lockPointer(); },
   });
-});
-
-function walkIn() {
-  ui.hud.hidden = false;
-  ui.chat.hidden = false;
-  desktop.start();
-  mode = 'walk';
-  sfx.startAudio();
-  startMusic();
-  lockPointer();
-  analytics.enterParty();
-  link.connect(myName);
-  refreshStations();
-  startBench();
 }
-(savedHandle ? ui.enter : ui.handle).focus();
+ui.build.addEventListener('click', openBuildPc);
 
 /* ---------- the PC you built: your bench on the back table ---------- */
 // The server hands out PC-07 or PC-08. You carry the parts to the table (ghost outlines show where), plug everything in
@@ -315,15 +358,15 @@ party.addEventListener('bench-cable', (e) => {
 
 
 function lockPointer() {
-  if (document.activeElement?.closest?.('#desktop, #taskbar')) document.activeElement.blur(); // the keyboard goes back to the room
+  if (document.activeElement?.closest?.('#pcscreen, #intro')) document.activeElement.blur(); // the keyboard goes back to the room
   const p = canvas.requestPointerLock?.();
   if (p && p.catch) p.catch(() => {}); // pointer lock is optional; clicking again retries
 }
-// the taskbar says how to get the mouse back for the desktop (it's hidden while you're seated)
-const trayHint = $('tray-hint');
-function updateTrayHint() {
-  const want = mode !== 'walk' ? '' : document.pointerLockElement ? 'Tab: use the desktop' : 'Click the room to walk';
-  if (trayHint.textContent !== want) trayHint.textContent = want;
+// With the mouse free (before your first click, or after Esc) a line says how to get going; once you are looking around it goes away
+function updateLookHint() {
+  const show = mode === 'walk' && !document.pointerLockElement;
+  if (ui.lookHint.hidden === show) ui.lookHint.hidden = !show;
+  if (show && !ui.lookText.textContent) ui.lookText.textContent = 'Click the room to walk · W A S D to move · E to use things';
 }
 canvas.addEventListener('click', () => { if (mode === 'walk' && document.pointerLockElement !== canvas) lockPointer(); });
 
@@ -335,6 +378,7 @@ document.addEventListener('mousemove', (e) => {
 
 window.addEventListener('keydown', (e) => {
   if (e.target === ui.chatInput || e.target === ui.handle) return;
+  if (helpOpen) { if (e.code === 'Escape') closeHelp(); return; } // the help box owns the keyboard
   if (e.target.closest?.('[data-owns-keys]')) return; // typing into Notepad, the DOS prompt, Minesweeper...
   if (dialog.isOpen() || phone.isOpen()) return; // the message box and the phone own the keyboard
   if (mode === 'console') { // sitting in front of the TV: keys go to the terminal or the game; backtick stands up
@@ -355,10 +399,7 @@ window.addEventListener('keydown', (e) => {
   if (mode === 'bean' && (BEAN_UP_KEYS.has(e.code))) { e.preventDefault(); getUpFromBean(); return; } // any move key, E or Space
   if (mode !== 'walk' && mode !== 'bean') return;
   if (e.code === 'KeyT') { e.preventDefault(); openChat(); return; }
-  if (e.code === 'Tab' && document.pointerLockElement) { e.preventDefault(); document.exitPointerLock(); return; } // free the mouse for the desktop
-  if (e.code === 'KeyI') { desktop.toggle('irc'); return; }
-  if (e.code === 'KeyM') { desktop.toggle('lanamp'); return; }
-  if (e.code === 'KeyH') { e.preventDefault(); desktop.toggle('ie'); return; } // preventDefault: the window focuses its address bar, which would swallow the h
+  if (e.code === 'KeyH' && mode === 'walk') { e.preventDefault(); openHelp(); return; }
   if (e.code === 'KeyN') { toast(voices.toggle() ? 'Noises on.' : 'Noises off.'); return; }
   if (e.code === 'KeyG') { eatGarlic(); return; }
   if (e.code === 'KeyY') { e.preventDefault(); if (e.repeat) return; if (e.shiftKey) voice.leave(); else voice.toggleMic(); return; }
@@ -967,6 +1008,7 @@ function toast(text) {
 }
 
 function seatedStatusText() {
+  if (screenView === 'desktop') return 'Click a game to boot it, or open a program';
   if (!pc.running) return 'Booting...';
   if (pc.kind === 'solo') return 'Click the screen to play';
   return netHint(pc.game, pc.kind);
@@ -981,23 +1023,63 @@ try { myGame = gameOf(localStorage.getItem('lan98.game')).id; } catch { /* stora
 const gameTitle = () => `${gameOf(pc.game ?? myGame).name}${pc.kind && pc.kind !== 'solo' ? ' deathmatch' : ''}`;
 
 function updateGameBtn() {
-  const locked = inMatch(); // the match picks the game
+  const locked = inMatch(); // the match picks the game and keeps you in it
   const g = gameOf(locked ? link.match.game : myGame);
-  banter.game = g.id; // the regulars talk about what you are playing
-  ui.gameBtn.textContent = `Game: ${g.name}`;
+  banter.game = screenView === 'game' ? g.id : null; // the regulars talk about what you are playing
+  ui.gameBtn.hidden = screenView !== 'game';
+  ui.gameBtn.textContent = 'Quit to Windows';
   ui.gameBtn.disabled = locked;
-  ui.gameBtn.title = locked ? 'The deathmatch decides the game' : 'Reboot into another game';
+  ui.gameBtn.title = locked ? 'Leave the deathmatch first' : 'Quit the game and go back to the Windows desktop';
   ui.gameBtn.onmouseup = () => ui.gameBtn.blur(); // or Space and Enter in the game would click it
 }
 
-ui.gameBtn.addEventListener('click', () => {
-  if (mode !== 'seated' || inMatch()) return;
-  myGame = nextGame(myGame);
-  try { localStorage.setItem('lan98.game', myGame); } catch { /* fine, it just won't be remembered */ }
+ui.gameBtn.addEventListener('click', quitToWindows);
+
+/* ---------- the PC's two views: its Windows 98 desktop, and the game on the CRT ---------- */
+// Sit down and you lean in to the desktop (#pcscreen). Every program and every game starts from there. A game takes
+// over the glass of the CRT (#monitor); Quit to Windows brings the desktop back. A deathmatch puts you straight in the game.
+function showDesktopView() {
+  screenView = 'desktop';
+  ui.monitor.hidden = true;
+  ui.bsod.hidden = true;
+  ui.pcscreen.hidden = false;
+  desktop.clampAll();
+  ui.seatedStatus.textContent = seatedStatusText();
   updateGameBtn();
-  toast(`Rebooting into ${gameOf(myGame).name}...`);
-  if (ui.bsod.hidden) bootForMatch();
-});
+  updateDM();
+}
+
+function showGameView() {
+  screenView = 'game';
+  if (document.activeElement?.closest?.('#pcscreen')) document.activeElement.blur();
+  desktop.closeMenu();
+  ui.pcscreen.hidden = true;
+  placeMonitorOverlay(seatedAt);
+  ui.monitor.hidden = false;
+  updateGameBtn();
+}
+
+// put the game on the glass and boot it: your game solo, or the match's game on the IPX network
+function enterGame() {
+  if (mode !== 'seated' || !seatedAt) return;
+  if (screenView !== 'game') showGameView();
+  bootForMatch();
+}
+
+function launchGame(id) {
+  if (mode !== 'seated' || !seatedAt) return;
+  if (!inMatch()) {
+    myGame = gameOf(id).id;
+    try { localStorage.setItem('lan98.game', myGame); } catch { /* fine, it just won't be remembered */ }
+  }
+  enterGame();
+}
+
+async function quitToWindows() {
+  if (mode !== 'seated' || screenView !== 'game' || inMatch()) return;
+  showDesktopView();
+  await pc.shutdown(); // DOS is closed for good, not paused: the next game starts fresh
+}
 
 /* ---------- sitting and standing ---------- */
 const tmpV = new THREE.Vector3(), tmpQ = new THREE.Quaternion();
@@ -1027,6 +1109,7 @@ function sitDown(station) {
     ui.seatedBar.hidden = false;
     if (station.bench && !station.bench.ready) { // still in its POST: watch the screen until it gets to Windows
       ui.monitor.hidden = true;
+      ui.pcscreen.hidden = true;
       ui.seatedStatus.textContent = 'Starting up...';
       return;
     }
@@ -1036,27 +1119,23 @@ function sitDown(station) {
   analytics.sitDown(station);
 }
 
-// the PC is up and you are in front of it: the game's canvas goes over the glass and the machine boots
+// the PC is up and you are in front of it: you lean in to its Windows desktop (or, if you are in a deathmatch, to the game)
 function startSeat(station) {
-  {
-    applyCrtLook(station);
-    ui.monitor.hidden = false;
-    pc.onReady = () => {
-      analytics.gameStart(gameTitle());
-      if (mode === 'seated') ui.seatedStatus.textContent = seatedStatusText();
-    };
-    updateGameBtn();
-    if (party.phase() === 'rts' && !seatHintShown) { // the room moved on to StarCraft; this box still runs what it runs
-      seatHintShown = true;
-      toast(`StarCraft is on across the room. This box has ${gameOf(myGame).name}.`);
-    }
-    if (party.pcs[station.index].crashed) showCrash(); // somebody left it blue screened
-    else {
-      bootForMatch();
-      ui.seatedStatus.textContent = seatedStatusText();
-    }
-    updateDM();
+  applyCrtLook(station);
+  pc.onReady = () => {
+    analytics.gameStart(gameTitle());
+    if (mode === 'seated') ui.seatedStatus.textContent = seatedStatusText();
+  };
+  if (party.phase() === 'rts' && !seatHintShown) { // the room moved on to StarCraft; the shooters are still on this box's desktop
+    seatHintShown = true;
+    toast('StarCraft is on across the room. This box has the shooters.');
   }
+  if (party.pcs[station.index].crashed) { // somebody left it blue screened
+    showGameView();
+    showCrash();
+  } else if (inMatch()) enterGame();
+  else showDesktopView();
+  updateDM();
 }
 
 // the tube you chose: a small one is soft and a bit dim, a 19-inch is sharp. Club PCs are all 17-inch.
@@ -1074,7 +1153,11 @@ function standUp() {
   analytics.standUp(gameTitle());
   banter.game = null;
   if (document.pointerLockElement) document.exitPointerLock();
+  if (document.activeElement?.closest?.('#pcscreen')) document.activeElement.blur();
+  desktop.closeMenu();
   ui.monitor.hidden = true;
+  ui.pcscreen.hidden = true;
+  screenView = 'desktop';
   ui.seatedBar.hidden = true;
   seatedAt = null;
   link.send({ t: 'stand' });
@@ -1090,7 +1173,8 @@ function standUp() {
     player.pos.copy(pos); player.yaw = e.y; player.pitch = e.x;
     mode = 'walk';
     ui.hud.hidden = false;
-    lockPointer();
+    if (pendingBuild) { pendingBuild = false; openBuildPc(); } // you picked BUILDPC.EXE on the PC: the shop opens now you are up
+    else lockPointer();
   });
 }
 
@@ -1231,6 +1315,7 @@ addEventListener('drop', (e) => { if (mode !== 'console') return; e.preventDefau
 
 // A blue screen over your DOS window. Any key (or a click) restarts the game, with the case still hot.
 function showCrash() {
+  if (screenView !== 'game') showGameView(); // the blue screen is on the glass, whatever the PC was showing
   ui.bsod.hidden = false;
   pc.pause();
   ui.seatedStatus.textContent = 'Press any key to continue';
@@ -1242,7 +1327,8 @@ async function recoverFromCrash() {
   party.reboot(seatedAt.index);
   ui.seatedStatus.textContent = 'Rebooting...';
   await pc.shutdown();
-  if (mode === 'seated') bootForMatch();
+  if (mode !== 'seated') return;
+  if (inMatch()) enterGame(); else showDesktopView(); // Windows comes back up to its desktop
 }
 ui.bsod.addEventListener('click', recoverFromCrash);
 
@@ -1369,7 +1455,7 @@ function startMusic() {
   if (music || !ctx) return;
   music = new Player(ctx);
   amp = initLanamp($('lanamp'), music);
-  music.play(Math.floor(Math.random() * 8)); // the Walk in click counts as the user gesture
+  music.play(Math.floor(Math.random() * 8)); // called from your first click or key press, which is the user gesture the browser wants
 }
 
 /* ---------- #lanparty98: the group's IRC channel ---------- */
@@ -1400,7 +1486,7 @@ let screenTimer = 0, statTimer = 0, sendTimer = 0;
 
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
-  updateTrayHint();
+  updateLookHint();
   const now = performance.now() / 1000;
 
   crowd.update(dt, link.players, now);
@@ -1408,9 +1494,9 @@ function frame() {
   room.updateFan(dt, party.fan.on, party.fanSweep());
   room.updatePower(dt);
   room.spectator.update(dt, Math.hypot(player.pos.x - room.spectatorDesk.x, player.pos.z - room.spectatorDesk.z),
-    mode === 'intro' || document.hidden || (mode === 'seated' && pc.running));
+    mode === 'intro' || document.hidden || gameOn());
   room.amiga.update(dt, Math.hypot(player.pos.x - room.amigaDesk.x, player.pos.z - room.amigaDesk.z),
-    mode === 'intro' || document.hidden || (mode === 'seated' && pc.running));
+    mode === 'intro' || document.hidden || gameOn());
   regulars[0].group.visible = ghoulAtPc();   // Ghoul gets up when somebody else wants PC-04
   ui.amigaStatus.textContent = room.amiga.status;
   room.updatePizza(dt);
@@ -1466,7 +1552,7 @@ function frame() {
   }
 
   // blinkenlights
-  const playing = (mode === 'seated' && pc.running) || [...link.players.values()].some((p) => p.pc !== null);
+  const playing = gameOn() || [...link.players.values()].some((p) => p.pc !== null);
   room.hddLeds.forEach((led, i) => { if (!party.pcPowered(i)) led.material.color.setHex(0x100000); else if (Math.random() < 0.15) led.material.color.setHex(Math.random() < 0.4 ? 0xff2a1a : 0x400000); });
   room.netLeds.forEach((led, i) => {
     const used = i < PC_COUNT || !!party.pcs[i]?.cabled; // one port per PC; the rest are spare
@@ -1846,7 +1932,7 @@ link.addEventListener('match', (e) => {
   if (m?.status === 'starting' && was?.status === 'lobby') chatLine(`Deathmatch starting: ${m.players.map((id) => esc(link.nameOf(id))).join(' vs ')}`, true);
   refreshStations();
   updateDM();
-  if (mode === 'seated') bootForMatch();
+  if (mode === 'seated' && (screenView === 'game' || inMatch())) enterGame(); // in a match (or in the game when it ends) the PC runs the game
 });
 
 const inMatch = () => !!(link.match && link.me && link.match.players.includes(link.me.id));
@@ -1934,3 +2020,5 @@ function updateDM() {
 
 // handy for debugging from the console
 window.lan = { scene, camera, room, stats, player, sitDown, standUp, pc, link, crowd, n64 };
+
+enterRoom(); // last, once everything above exists: there is no title card, you are in the basement
