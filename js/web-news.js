@@ -336,7 +336,7 @@ export const NEWS = [
   },
   {
     date: '1998-01-07', kind: 'new', title: 'Contact address',
-    text: 'contact@lanparty1998.com is on the intro window and the 404 page.',
+    text: 'Webmaster contact details have been taken down to stop spam.',
   },
   {
     date: '1998-01-05', kind: 'fix', title: 'DOOM would not load on some servers',
